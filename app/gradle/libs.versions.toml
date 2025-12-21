@@ -25,6 +25,7 @@ circuit-annotations = { module = "com.slack.circuit:circuit-codegen-annotations"
 circuit-codegen = { module = "com.slack.circuit:circuit-codegen", version.ref = "circuit" }
 circuitx-overlays = { module = "com.slack.circuit:circuitx-overlays", version.ref = "circuit" }
 circuitx-gestureNav = { module = "com.slack.circuit:circuitx-gesture-navigation", version.ref = "circuit" }
+circuitx-android = { module = "com.slack.circuit:circuitx-android", version.ref = "circuit" }
 foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "composeMultiplatform" }
 material-icons = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
 material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }

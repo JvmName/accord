@@ -56,6 +56,7 @@ kotlin {
             implementation(libs.compose.ui.tooling)
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.circuitx.android)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)

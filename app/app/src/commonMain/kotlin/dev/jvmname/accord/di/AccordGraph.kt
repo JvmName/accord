@@ -13,19 +13,19 @@ import kotlinx.coroutines.SupervisorJob
 
 @DependencyGraph(scope = AppScope::class)
 interface AccordGraph {
-//    val circuit: Circuit
+    val circuit: Circuit
 
     @Provides
     @SingleIn(AppScope::class)
     val scope: CoroutineScope
         get() = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-//    @Provides
-//    @SingleIn(AppScope::class)
-//    fun circuit(presenterFactories: Set<Presenter.Factory>, uiFactories: Set<Ui.Factory>): Circuit {
-//        return Circuit.Builder()
-//            .addPresenterFactories(presenterFactories)
-//            .addUiFactories(uiFactories)
-//            .build()
-//    }
+    @Provides
+    @SingleIn(AppScope::class)
+    fun circuit(presenterFactories: Set<Presenter.Factory>, uiFactories: Set<Ui.Factory>): Circuit {
+        return Circuit.Builder()
+            .addPresenterFactories(presenterFactories)
+            .addUiFactories(uiFactories)
+            .build()
+    }
 }
