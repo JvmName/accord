@@ -1,12 +1,11 @@
-const { VidaServerController } = require('../../lib/server');
 const { BarController }        = require('./helpers/controllers/barController');
 const { FooController }        = require('./helpers/controllers/fooController');
 const { camelize }             = require('inflection');
 const   TestHelpers            = require('../helpers');
 
 
-describe('VidaServerController', () => {
-    describe('VidaServerController.actionNames', () => {
+describe('ServerController', () => {
+    describe('ServerController.actionNames', () => {
         it ('returns actions based on method names', () => {
             const names      = FooController.actionNames;
             const expected   = ['postIndex',
@@ -21,7 +20,7 @@ describe('VidaServerController', () => {
     });
 
 
-    describe('VidaServerController._constructAction', () => {
+    describe('ServerController._constructAction', () => {
         it ('returns an object with path, method, and action', () => {
             const expected   = {
               method: 'GET',
@@ -51,7 +50,7 @@ describe('VidaServerController', () => {
     });
 
 
-    describe('VidaServerController.validateParameters', () => {
+    describe('ServerController.validateParameters', () => {
         const paramName1      = TestHelpers.Faker.Text.randomString(10);
         const paramName2      = TestHelpers.Faker.Text.randomString(10);
         const value1          = TestHelpers.Faker.Text.randomString(10);
@@ -126,7 +125,7 @@ describe('VidaServerController', () => {
     });
 
 
-    describe('VidaServerController.validatePresence', () => {
+    describe('ServerController.validatePresence', () => {
         const controller = new FooController({}, {});
         it ('returns undefined when there is a value', () => {
             const result = controller.validatePresence(TestHelpers.Faker.Text.randomString());
@@ -140,7 +139,7 @@ describe('VidaServerController', () => {
     });
 
 
-    describe('VidaServerController.validateIsInteger', () => {
+    describe('ServerController.validateIsInteger', () => {
         const controller = new FooController({}, {});
         it ('returns undefined when there is an integer', () => {
             const val    = Math.ceil(Math.random() * 100);
@@ -168,7 +167,7 @@ describe('VidaServerController', () => {
     });
 
 
-    describe('VidaServerController.validateIsDateTime', () => {
+    describe('ServerController.validateIsDateTime', () => {
         const controller = new FooController({}, {});
         it ('returns undefined when passed a string of format YYYY-MM-DD', () => {
             const result = controller.validateIsDateTime('2025-12-17');
@@ -207,7 +206,7 @@ describe('VidaServerController', () => {
     });
 
 
-    describe('VidaServerController.validateIsEnum', () => {
+    describe('ServerController.validateIsEnum', () => {
         const controller = new FooController({}, {});
         const enums      = [Math.random(), Math.random(), Math.random()];
         const error      = TestHelpers.Faker.Text.randomString(10);
@@ -224,7 +223,7 @@ describe('VidaServerController', () => {
     });
 
 
-    describe('VidaServerController.validateFunction', () => {
+    describe('ServerController.validateFunction', () => {
         const controller   = new FooController({}, {});
         const correctValue = Math.random();
         const error        = TestHelpers.Faker.Text.randomString();
