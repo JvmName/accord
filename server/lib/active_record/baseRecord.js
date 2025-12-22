@@ -45,7 +45,7 @@ class BaseRecord extends Model {
 
         if (this._initialized) return;
 
-        const schema  = getActiveRecordSchema(this._tableName, this.databaseId);
+        const schema  = getActiveRecordSchema(this._tableName, this.databaseId, this.connection.dialect);
         const options = {
             createdAt: 'created_at',
             deletedAt: 'deleted_at',

@@ -94,9 +94,8 @@ class Migrator {
         return {
           id: {
             allowNull:     false,
-            autoIncrement: true,
             primaryKey:    true,
-            type:          this.DataTypes.INTEGER, }
+            type:          this.DataTypes.UUID, }
         };
     }
 

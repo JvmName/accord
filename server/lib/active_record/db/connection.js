@@ -54,9 +54,29 @@ class Connection {
 
     get sequelizeOptions() {
         const options = {
+            ...this.dialectOptions,
             define:  { underscored: true },
             dialect: this.dialect,
-            pool:    this.#configuration.pool,
+        };
+
+        if (!this.loggingEnabled) options.logging = false;
+
+        return options;
+    }
+
+
+    get dialectOptions() {
+        if (this.dialect == 'sqlite') {
+            return this.sqliteSequelizeOptions;
+        } else {
+            return this.postgresSequelizeOptions;
+        }
+    }
+
+
+    get postgresSequelizeOptions() {
+        const options = {
+            pool: this.#configuration.pool,
         };
 
         const primaryConfig = {
@@ -77,10 +97,14 @@ class Connection {
         }
 
         if (this.#configuration.ssl) options.dialectOptions = {ssl: {require: true}};
-
-        if (!this.loggingEnabled) options.logging = false;
-
         return options;
+    }
+
+
+    get sqliteSequelizeOptions() {
+        return {
+            storage: this.#configuration.storage
+        };
     }
 
 
@@ -93,7 +117,7 @@ class Connection {
 
 
     get dialect() {
-        return 'postgres'
+        return this.#configuration.dialect;
     }
 }
 
