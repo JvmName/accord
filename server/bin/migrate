@@ -1,0 +1,32 @@
+#!/usr/bin/env node
+
+const   migration = require('../lib/active_record/db/migration');
+const { Command } = require('commander');
+
+
+const program = new Command();
+program.name('Active Record Migration')
+       .description('A CLI for generating and running Active Record migrations')
+       .version('1.0.0');
+
+
+program.command('create_migration')
+       .argument('<Description>', 'Description of your migration')
+       .option('--databaseId <databaseId>', 'databaseId from db/config.js')
+       .action((migrationDescription, options) => {
+            migration.generateMigrationFile(migrationDescription, options.databaseId);
+       });
+
+
+program.command('migrate')
+       .action(async () => {
+            await migration.runMigrations();
+       });
+
+program.command('rollback')
+       .action(async () => {
+            await migration.rollbackMigration();
+       });
+
+
+program.parse();
