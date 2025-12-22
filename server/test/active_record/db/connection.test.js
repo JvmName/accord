@@ -55,6 +55,10 @@ const config3 = {
     username: TestHelpers.Faker.Text.randomString(10)
 }
 
+const sqliteConfig = {
+    dialect: 'sqlite'
+};
+
 const databaseId1 = TestHelpers.Faker.Text.randomString(10);
 const databaseId2 = TestHelpers.Faker.Text.randomString(10);
 
@@ -65,7 +69,8 @@ describe('Connection', () => {
         spy.mockImplementation(() => ({
             default:       {test: config1, development: config1, production: config1},
             [databaseId1]: {test: config2, production: {}},
-            [databaseId2]: {test: config3, production: {}}
+            [databaseId2]: {test: config3, production: {}},
+            sqlite:        {test: sqliteConfig}
         }));
     });
 
@@ -82,7 +87,7 @@ describe('Connection', () => {
             expect(conn1._sequelize).not.toBe(conn2._sequelize);
         });
 
-        describe('settings', () => {
+        describe('settings (postgres)', () => {
             it ('sets the connection settings to the correct values', () => {
                 const conn1 = new Connection();
                 expect(conn1._sequelize.options.database).toEqual(config1.database);
@@ -178,6 +183,15 @@ describe('Connection', () => {
                         read: config.readers
                     });
                 });
+            });
+        });
+
+
+        describe('settings (sqlite)', () => {
+            it ('sets the connection settings to the correct values for sqlite', () => {
+                const conn = new Connection('sqlite');
+                expect(conn._sequelize.options.dialect).toEqual('sqlite');
+                expect(conn._sequelize.options.storage).toEqual(`${process.cwd()}/config/db/database.test.sqlite`);
             });
         });
     });

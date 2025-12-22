@@ -1,6 +1,7 @@
 const { Connection }              = require('./connection');
 const { ConnectionConfiguration } = require('./connectionConfiguration');
 const   fs                        = require('node:fs');
+const   importSchema              = require('./importSchema');
 const { logger }                  = require('../../logger');
 const { Sequelize }               = require('sequelize');
 const   utils                     = require('../utils');
@@ -38,14 +39,14 @@ async function generateSchemaFilesForDatabase(databaseId) {
 
 function getActiveRecordSchema(tableName, databaseId, dialect) {
     const filePath = filePathForSchemaFile(databaseId);
-    const schemas  = require(filePath);
-    const schema   = schemas[tableName];
-    cleanSchema(schema, dialect);
-
+    const schema   = importSchema(filePath, tableName);
     if (!schema) throw new Error(`No schema found for table ${databaseId}.${tableName}`);
+
+    cleanSchema(schema, dialect);
 
     return schema;
 }
+
 
 function cleanSchema(schema, dialect) {
     for (const [col, details] of Object.entries(schema)) {
