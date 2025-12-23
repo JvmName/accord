@@ -64,12 +64,41 @@ class ServerController {
 
 
     render(body) {
-        if (typeof body == 'string') {
-            this._response.send(body);
-        } else {
-            this._response.json(body || {});
-        }
+        body = this.formatJSONBody(body);
+        this._response.json(body);
         this.#rendered = true;
+    }
+
+
+    formatJSONBody(body) {
+        body = this._formatJSONBody(body);
+        return {data: body, status: this.statusText};
+    }
+
+
+    _formatJSONBody(body) {
+        if (Array.isArray(body) || !(typeof body == 'object')) return body;
+
+        for (let [key, val] of Object.entries(body)) {
+            if (val.toApiResponse) val = val.toApiResponse();
+            body[key] = this._formatJSONBody(val);
+        }
+
+        return body;
+    }
+
+
+    get statusText() {
+        switch(this.statusCode) {
+            case 200:
+                return 'ok';
+            case 400:
+                return 'bad request'
+            case 401:
+                return 'unauthorized';
+            case 500:
+                return 'server error';
+        }
     }
 
 

@@ -219,6 +219,17 @@ class ApplicationServer {
 
 
     async performRequest(controllerInstance, action) {
+        try {
+            return await this._performRequest(controllerInstance, action);
+        } catch(err) {
+          console.log(await err.data());
+            controllerInstance.statusCode = 500;
+            controllerInstance.render({error: err.message});
+        }
+    }
+
+
+    async _performRequest(controllerInstance, action) {
         if (await controllerInstance.runBeforeCallbacks(action) === false) return false;
         const responseBody = await controllerInstance[action]();
         if (await controllerInstance.runAfterCallbacks(action) === false)  return false;
