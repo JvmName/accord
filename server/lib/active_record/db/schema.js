@@ -6,8 +6,6 @@ const { logger }                  = require('../../logger');
 const { Sequelize }               = require('sequelize');
 const   utils                     = require('../utils');
 
-const ALL_TYPES = Object.values(Sequelize.DataTypes).filter(dataType => dataType.types);
-
 async function generateActiveRecordSchemaFiles() {
     utils.ensureSchemasDirectory();
 
@@ -50,7 +48,8 @@ function getActiveRecordSchema(tableName, databaseId, dialect) {
 
 function cleanSchema(schema, dialect) {
     for (const [col, details] of Object.entries(schema)) {
-        details.type = dataTypeForColumn(details, dialect);
+        const dataType = dataTypeForColumn(details, dialect);
+        if (dataType) details.type = dataType;
         resolveAutoIncrementColumns(details);
         resolveUUIDColumns(details);
     }
@@ -69,11 +68,31 @@ function resolveAutoIncrementColumns(details) {
 
 
 function dataTypeForColumn(details, dialect) {
-    const typeStr         = details.type.replace(/\(.*\)/, '');
-    const dataType = ALL_TYPES.find(dataType => {
-        return dataType.types[dialect] && dataType.types[dialect].includes(typeStr);
-    });
-    return dataType;
+    const typeStr         = details.type.replace(/\(.*\)/, '').toUpperCase();
+
+    const typesForDialect = Object.values(Sequelize.DataTypes).filter(val => val.types && val.types[dialect]);
+    for (const dataType of typesForDialect) {
+        if (dataType.key == typeStr) return dataType;
+        let typeStrs            = dataType.types[dialect];
+        if (!typeStrs) typeStrs = [];
+        if (!Array.isArray(typeStrs)) {
+            typeStrs = Object.values(typeStrs).map(map => Object.values(map)).flat();
+        }
+        typeStrs = typeStrs.filter(Boolean);
+        typeStrs = typeStrs.map(aTypeStr => aTypeStr.toUpperCase());
+        if (typeStrs.includes(typeStr)) return Sequelize.DataTypes[dataType.key];
+    }
+
+    const typesByDialect  = Object.values(Sequelize.DataTypes[dialect]);
+    for (const dataType of typesByDialect) {
+        if (dataType.key == typeStr) return dataType;
+        try {
+            const aTypeStr = dataType.prototype.toSql().replace(/\(.*\)/, '').toUpperCase();
+            if (aTypeStr == typeStr) return Sequelize.DataTypes[dataType.key];
+        } catch(err) {}
+    }
+
+    if (typeStr.includes('CHAR')) return Sequelize.DataTypes.STRING;
 }
 
 
