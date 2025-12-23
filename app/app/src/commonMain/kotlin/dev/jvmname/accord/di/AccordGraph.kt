@@ -28,4 +28,9 @@ interface AccordGraph {
             .addUiFactories(uiFactories)
             .build()
     }
+
+    @DependencyGraph.Factory
+    fun interface Factory {
+        fun create(@Provides context: PlatformContext): AccordGraph
+    }
 }
