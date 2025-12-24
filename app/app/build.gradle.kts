@@ -47,6 +47,10 @@ kotlin {
 
                 implementation(libs.ktor.core)
                 implementation(libs.ktor.negotiation)
+                implementation(libs.ktor.json)
+                implementation(libs.ktor.websockets)
+                implementation(libs.serialization.json)
+                implementation(libs.androidx.datastore)
             }
         }
 

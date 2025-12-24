@@ -11,13 +11,13 @@ import com.slack.circuit.foundation.rememberCircuitNavigator
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuitx.android.rememberAndroidScreenAwareNavigator
 import dev.jvmname.accord.di.AccordGraph
-import dev.zacsweers.metro.createGraph
+import dev.zacsweers.metro.createGraphFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        val graph = createGraph<AccordGraph>()
+        val graph = createGraphFactory<AccordGraph.Factory>().create(this)
         setContent {
             App(graph.circuit, ::finish)
         }
