@@ -13,7 +13,7 @@ import dev.jvmname.accord.ui.theme.AccordTheme
 
 @Composable
 fun App(circuit: Circuit, onRootPop: () -> Unit) {
-    val backstack = rememberSaveableBackStack(root = MainScreen)
+    val backstack = rememberSaveableBackStack(root = MainScreen())
     val navigator = platformNavigator(backstack, onRootPop)
     AccordTheme {
         CircuitCompositionLocals(circuit) {

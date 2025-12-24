@@ -11,7 +11,8 @@ import com.slack.circuit.backstack.SaveableBackStack
 import com.slack.circuit.foundation.rememberCircuitNavigator
 import com.slack.circuit.runtime.Navigator
 import dev.jvmname.accord.di.AccordGraph
-import dev.zacsweers.metro.createGraph
+import dev.jvmname.accord.di.EmptyPlatformContext
+import dev.zacsweers.metro.createGraphFactory
 
 fun main() = application {
     val windowState =
@@ -21,7 +22,7 @@ fun main() = application {
             position = WindowPosition(Alignment.Center),
         )
 
-    val graph = createGraph<AccordGraph>()
+    val graph = createGraphFactory<AccordGraph.Factory>().create(EmptyPlatformContext)
 
     Window(
         title = "Accord",
