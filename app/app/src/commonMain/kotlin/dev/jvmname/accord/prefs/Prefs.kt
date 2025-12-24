@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.plus
 import kotlinx.serialization.json.Json
-import okio.Path.Companion.toPath
 
 @[Inject SingleIn(AppScope::class)]
 class Prefs(
@@ -30,7 +29,7 @@ class Prefs(
             corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
             migrations = emptyList(),
             scope = scope + Dispatchers.IO,
-            produceFile = { dirs.getDataStorePath(FILENAME).toPath() },
+            produceFile = { dirs.getDataStorePath(FILENAME) },
         )
     }
 
