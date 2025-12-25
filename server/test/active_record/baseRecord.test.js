@@ -78,7 +78,6 @@ describe('ActiveRecord', () => {
                                                     });
         });
 
-/*
         it ('uses `timestamps: false` when the schema has no timestamps', () => {
             importSchema.mockImplementation(() => ({}));
             class User extends BaseRecord {}
@@ -113,11 +112,9 @@ describe('ActiveRecord', () => {
         it ('will throw an error when run on BaseRecord', () => {
             expect(() => BaseRecord.initialize()).toThrow();
         });
-*/
     });
 
 
-/*
     describe('ActiveRecord.tableName', () => {
         it ('defaults to the puralized version of the class name', () => {
             class User extends BaseRecord {}
@@ -179,5 +176,4 @@ describe('ActiveRecord', () => {
             expect(Person.findAll).toHaveBeenCalledWith(expected);
         });
     });
-*/
 });
