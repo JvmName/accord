@@ -13,6 +13,7 @@ module.exports = {
             apiToken: {
                 allowNull: false,
                 type:      this.DataTypes.STRING,
+                unique: true,
             }
         });
     },

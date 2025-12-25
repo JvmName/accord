@@ -81,7 +81,7 @@ module.exports = {
             "type": "VARCHAR(255)",
             "allowNull": false,
             "primaryKey": false,
-            "unique": false
+            "unique": true
         },
         "created_at": {
             "type": "DATETIME",
