@@ -223,6 +223,27 @@ describe('ServerController', () => {
     });
 
 
+    describe('ServerController.validateIsEmail', () => {
+        const controller = new FooController({}, {});
+
+        it ('does not error on valid emails', () => {
+            const result = controller.validateIsEmail('bob@bayjiujitsu.com');
+            expect(result).toBe(undefined);
+        });
+
+        it ('supports subdomains', () => {
+            const result = controller.validateIsEmail('bob@bay.jiujitsu.com');
+            expect(result).toBe(undefined);
+
+        });
+
+        it ('returns an error for invalid emails', () => {
+            const result = controller.validateIsEmail('foo');
+            expect(result).toBe('invalid email');
+        });
+    });
+
+
     describe('ServerController.validateFunction', () => {
         const controller   = new FooController({}, {});
         const correctValue = Math.random();
