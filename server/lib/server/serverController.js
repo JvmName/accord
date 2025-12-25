@@ -70,6 +70,12 @@ class ServerController {
     }
 
 
+    renderErrors(errors) {
+        this.statusCode = 400;
+        this.render({ errors });
+    }
+
+
     formatJSONBody(body) {
         body = this._formatJSONBody(body);
         return {data: body, status: this.statusText};
@@ -170,8 +176,7 @@ class ServerController {
         }
 
         if (Object.keys(errors).length) {
-            this.statusCode = 400;
-            this.render({ errors });
+            this.renderErrors(errors);
             return false;
         }
 
@@ -191,8 +196,25 @@ class ServerController {
     }
 
 
-    validatePresence(value) {
-        if (!value) return 'required';
+    validateFunction(value, fnc) {
+        const error = fnc(value);
+        if (error) return error;
+    }
+
+
+    validateIsEnum(value, options) {
+        if (!options.enums.includes(value)) return options.error;
+    }
+
+
+    validateIsDateTime(value) {
+        if (new Date(value) == 'Invalid Date') return 'invalid date';
+    }
+
+
+    validateIsEmail(value) {
+        const regExp = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+(\.[a-zA-Z]{2,})+$/;
+        if (!regExp.test(String(value))) return 'invalid email';
     }
 
 
@@ -202,19 +224,8 @@ class ServerController {
     }
 
 
-    validateIsDateTime(value) {
-        if (new Date(value) == 'Invalid Date') return 'invalid date';
-    }
-
-
-    validateIsEnum(value, options) {
-        if (!options.enums.includes(value)) return options.error;
-    }
-
-
-    validateFunction(value, fnc) {
-        const error = fnc(value);
-        if (error) return error;
+    validatePresence(value) {
+        if (!value) return 'required';
     }
 
 
