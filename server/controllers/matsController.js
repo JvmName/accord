@@ -3,6 +3,10 @@ const { Mat }              = require('../models/mat');
 
 
 class MatsController extends ServerController {
+    setupCallbacks() {
+        this.beforeCallback('authenticateRequest');
+    }
+
 
     async postIndex() {
         if (!this.validateParameters(this.body, this.creationValidations)) return;

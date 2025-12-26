@@ -3,6 +3,10 @@ const { User }             = require('../models/user');
 
 
 class UsersController extends ServerController {
+    setupCallbacks() {
+        this.beforeCallback('authenticateRequest', {except: 'postIndex'});
+    }
+
 
     async postIndex() {
         if (!this.validateParameters(this.body, this.creationValidations)) return;

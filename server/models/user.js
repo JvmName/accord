@@ -9,8 +9,13 @@ class User extends BaseRecord {
     }
 
 
+    static async findByApiToken(token) {
+        return await this.findOne({where: {api_token: token}});
+    }
+
+
     toApiResponse() {
-        return {id: this.id, name: this.name, email: this.email};
+        return {id: this.id, name: this.name, email: this.email, api_token: this.api_token};
     }
 }
 

@@ -1,10 +1,12 @@
-const { logger }    = require('../logger');
 const { camelize }  = require('inflection');
+const { logger }    = require('../logger');
+const { User }      = require('../../models/user');
 
 
 class ServerController {
     #afterCallbacks  = [];
     #beforeCallbacks = [];
+    #currentUser;
     #rendered        = false;
     #request;
     #requestBody;
@@ -76,6 +78,12 @@ class ServerController {
     }
 
 
+    renderUnauthorizedResponse() {
+        this.statusCode = 401;
+        this.render({error: 'unauthorized'});
+    }
+
+
     formatJSONBody(body) {
         body = this._formatJSONBody(body);
         return {data: body, status: this.statusText};
@@ -111,7 +119,11 @@ class ServerController {
     /***********************************************************************************************
     * CALLBACKS
     ***********************************************************************************************/
-    async setupRequestState() {}
+    async setupRequestState() {
+        await this.#initCurrentUser();
+    }
+
+
     setupCallbacks() {}
 
 
@@ -226,6 +238,34 @@ class ServerController {
 
     validatePresence(value) {
         if (!value) return 'required';
+    }
+
+
+    /***********************************************************************************************
+    * AUTHENTICATION
+    ***********************************************************************************************/
+    async authenticateRequest() {
+        if (!this.currentUser) {
+            this.renderUnauthorizedResponse();
+            return false;
+        }
+    }
+
+
+    get currentUser() {
+        return this.#currentUser || null;
+    }
+
+
+    get apiToken() {
+        return this.requestHeaders['x-api-token'];
+    }
+
+
+    async #initCurrentUser() {
+        if (!this.apiToken) return;
+
+        this.#currentUser = await User.findByApiToken(this.apiToken);
     }
 
 
