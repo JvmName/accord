@@ -97,12 +97,40 @@ class BaseRecord extends Model {
 
 
     /***********************************************************************************************
+    * ASSOCIATIONS
+    ***********************************************************************************************/
+    static hasOne(model, options={}) {
+        options.onDelete = 'NO ACTION';
+        options.onUpdate = 'NO ACTION';
+        super.hasOne(model, options);
+    }
+
+
+    /***********************************************************************************************
     * MISC
     ***********************************************************************************************/
     [nodeUtil.inspect.custom](opts) {
         const args = Array.from(arguments);
         args.shift();
         return nodeUtil.inspect(this.dataValues, ...args);
+    }
+
+
+    get apiSafeKeys() {
+        const keys = Object.keys(this.dataValues).filter(key => {
+            return !['created_at', 'updated_at'].includes(key);
+        });
+        
+        return keys;
+    }
+
+
+    toApiResponse() {
+        const response = {};
+        for (const key of this.apiSafeKeys) {
+            response[key] = this.dataValues[key];
+        }
+        return response;
     }
 }
 

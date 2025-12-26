@@ -1,8 +1,8 @@
-const { ServerController } = require('../lib/server');
-const { User }             = require('../models/user');
+const { ApplicationController } = require('./applicationController');
+const { User }                  = require('../models/user');
 
 
-class UsersController extends ServerController {
+class UsersController extends ApplicationController {
     setupCallbacks() {
         this.beforeCallback('authenticateRequest', {except: 'postIndex'});
     }

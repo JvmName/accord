@@ -1,3 +1,4 @@
+const   CONSTANTS          = require('../constants');
 const   express            = require('express');
 const   fs                 = require('fs');
 const   httpLogger         = require('pino-http')
@@ -238,6 +239,7 @@ class ApplicationServer {
         } else {
             controllerInstance.statusCode = 500;
             controllerInstance.render({error: err.message});
+            if (CONSTANTS.DEV) throw err;
         }
     }
 
