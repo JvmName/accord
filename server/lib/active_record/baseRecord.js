@@ -158,7 +158,7 @@ class BaseRecord extends Model {
     toApiResponse() {
         const response = {};
         for (const key of this.apiSafeKeys) {
-            response[key] = this.dataValues[key] || null;
+            response[key] = this[key] || null;
         }
         return response;
     }
