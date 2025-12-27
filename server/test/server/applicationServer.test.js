@@ -235,11 +235,14 @@ describe('ApplicationServer', () => {
                 const server    = new TestServer();
                 const eventName = TestHelpers.Faker.Text.randomString(10);
                 const handler   = jest.fn();
+                const bind      = jest.fn(() => handler);
 
-                server.addWebSocketEventHandler(eventName, {bind: () => handler});
+                server.addWebSocketEventHandler(eventName, {bind });
 
                 expect(spy).toHaveBeenCalledTimes(1);
                 expect(spy).toHaveBeenCalledWith(eventName, handler);
+                expect(bind).toHaveBeenCalledTimes(1);
+                expect(bind).toHaveBeenCalledWith(server);
             });
         });
 
