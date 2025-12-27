@@ -1,10 +1,12 @@
 const { camelize }  = require('inflection');
 const { logger }    = require('../logger');
+const { User }      = require('../../models/user');
 
 
 class ServerController {
     #afterCallbacks  = [];
     #beforeCallbacks = [];
+    #currentUser;
     #params;
     #rendered        = false;
     #request;
@@ -248,6 +250,33 @@ class ServerController {
     validatePresence(value) {
         if (!value) return 'required';
     }
+
+
+    /***********************************************************************************************
+    * AUTHENTICATION
+    ***********************************************************************************************/
+    async setupRequestState() {
+        await this.#initCurrentUser();
+    }
+
+
+    async #initCurrentUser() {
+        if (!this.apiToken) return;
+
+        this.#currentUser = await User.findByApiToken(this.apiToken);
+    }
+
+
+    authenticateRequest() {
+        if (!this.currentUser) {
+            this.renderUnauthorizedResponse();
+            return false;
+        }
+    }
+
+
+    get currentUser() { return this.#currentUser || null; }
+    get apiToken()    { return this.requestHeaders['x-api-token']; }
 
 
     /***********************************************************************************************

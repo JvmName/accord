@@ -1,9 +1,9 @@
-const { ApplicationController } = require('../applicationController');
-const { Mat }                   = require('../../models/mat');
-const { User }                  = require('../../models/user');
+const { Mat }              = require('../../models/mat');
+const { ServerController } = require('../../lib/server');
+const { User }             = require('../../models/user');
 
 
-class UsersController extends ApplicationController {
+class UsersController extends ServerController {
     #currentMat;
 
     setupCallbacks() {
@@ -101,7 +101,6 @@ class UsersController extends ApplicationController {
         const authenticated = super.authenticateRequest();
         if (authenticated === false) return false;
 
-      console.log(this.params);
         if (!this.currentMat) {
             this.renderErrors({matCode: ['invalid mat code']});
             return false;

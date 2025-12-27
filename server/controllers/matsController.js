@@ -1,8 +1,8 @@
-const { ApplicationController } = require('./applicationController');
-const { Mat }                   = require('../models/mat');
+const { ServerController } = require('../lib/server');
+const { Mat }              = require('../models/mat');
 
 
-class MatsController extends ApplicationController {
+class MatsController extends ServerController {
     setupCallbacks() {
         this.beforeCallback('authenticateRequest');
     }
