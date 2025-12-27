@@ -103,13 +103,39 @@ module.exports = {
         }
     },
     "judges_mats": {
-        "judge_id": {
+        "mat_id": {
             "type": "UUID",
             "allowNull": false,
             "primaryKey": false,
             "unique": true
         },
+        "user_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": true
+        },
+        "created_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "updated_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        }
+    },
+    "mats_viewers": {
         "mat_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": true
+        },
+        "user_id": {
             "type": "UUID",
             "allowNull": false,
             "primaryKey": false,
