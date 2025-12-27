@@ -7,16 +7,14 @@ const CODE_SIZE = 3;
 
 
 class Mat extends BaseRecord {
+    static async findByCode(code) {
+        return await this.findOne({where: {code: code}});
+    }
+
 
     static async generateCode() {
         const words = await new WordGenerator().getWords(CODE_SIZE);
         return words.join('.');
-    }
-
-
-    get apiSafeKeys() {
-        const keys = super.apiSafeKeys;
-        return keys.filter(key => key != 'creatorId');
     }
 }
 
@@ -28,10 +26,15 @@ Mat.belongsTo(User, {
     foreignKey: 'creator_id',
     as: 'creator'
 });
+
 Mat.belongsToMany(User, {
-    as:       'judges',
-    otherKey: 'judge_id',
+    as:      'judges',
     through:  'judges_mats'
+});
+
+Mat.belongsToMany(User, {
+    as:       'viewers',
+    through:  'mats_viewers'
 });
 
 
