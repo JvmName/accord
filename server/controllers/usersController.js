@@ -9,8 +9,8 @@ class UsersController extends ApplicationController {
 
 
     async postIndex() {
-        if (!this.validateParameters(this.body, this.creationValidations)) return;
-        const user = await User.create({name: this.body.name, email: this.body.email});
+        if (!this.validateParameters(this.creationValidations)) return;
+        const user = await User.create({name: this.params.name, email: this.params.email});
         return { user }; 
     }
 

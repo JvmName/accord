@@ -14,24 +14,6 @@ class ApplicationController extends ServerController {
     }
 
 
-    async authenticateRequest() {
-        if (!this.currentUser) {
-            this.renderUnauthorizedResponse();
-            return false;
-        }
-    }
-
-
-    get currentUser() {
-        return this.#currentUser || null;
-    }
-
-
-    get apiToken() {
-        return this.requestHeaders['x-api-token'];
-    }
-
-
     async #initCurrentUser() {
         if (!this.apiToken) return;
 
@@ -39,6 +21,16 @@ class ApplicationController extends ServerController {
     }
 
 
+    authenticateRequest() {
+        if (!this.currentUser) {
+            this.renderUnauthorizedResponse();
+            return false;
+        }
+    }
+
+
+    get currentUser() { return this.#currentUser || null; }
+    get apiToken()    { return this.requestHeaders['x-api-token']; }
 }
 
 
