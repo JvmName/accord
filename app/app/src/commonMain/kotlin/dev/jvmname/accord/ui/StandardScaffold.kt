@@ -1,9 +1,15 @@
 package dev.jvmname.accord.ui
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
@@ -21,7 +27,11 @@ val LocalCoroutineScope = compositionLocalOf<CoroutineScope> {
 }
 
 @Composable
-fun StandardScaffold(modifier: Modifier = Modifier, content: @Composable (PaddingValues) -> Unit) {
+fun StandardScaffold(
+    modifier: Modifier = Modifier,
+    onBackClick: () -> Unit,
+    content: @Composable (PaddingValues) -> Unit
+) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     CompositionLocalProvider(
@@ -29,9 +39,24 @@ fun StandardScaffold(modifier: Modifier = Modifier, content: @Composable (Paddin
         LocalCoroutineScope provides scope
     ) {
         Scaffold(
+            modifier = modifier,
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text("Top app bar")
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Localized description"
+                            )
+                        }
+                    }
+                )
+            },
             content = content
         )
     }
-
 }

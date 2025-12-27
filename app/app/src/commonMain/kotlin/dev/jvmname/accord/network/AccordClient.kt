@@ -21,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @SingleIn(AppScope::class)
 @Inject
@@ -31,12 +32,14 @@ class AccordClient(
     private val baseURL = "http://localhost:3000"
 
     suspend fun createMat(name: String, judgeCount: Int): Result<MatInfo, Throwable> {
-        return catchRunning {
-            httpClient.post("${baseURL}/mat") {
-                setBody(CreateMatRequest(name, judgeCount))
+        return withContext(Dispatchers.IO) {
+            catchRunning {
+                httpClient.post("${baseURL}/mat") {
+                    setBody(CreateMatRequest(name, judgeCount))
+                }
             }
+                .map { it.body<MatInfo>() }
         }
-            .map { it.body<MatInfo>() }
     }
 
     fun observeMatStatus(/*TODO*/) {

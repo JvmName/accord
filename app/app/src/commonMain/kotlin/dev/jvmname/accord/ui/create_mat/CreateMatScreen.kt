@@ -16,10 +16,13 @@ data object CreateMatScreen : Screen {
 
 @Immutable
 data class CreateMatState(
-    val foo: Int,
+    val loading: Boolean = false,
+    val error: String? = null,
     val eventSink: (CreateMatEvent) -> Unit
 ) : CircuitUiState
 
 sealed interface CreateMatEvent : CircuitUiEvent {
+    data class CreateMat(val name: String, val count: Int) : CreateMatEvent
+    data object Back : CreateMatEvent
 
 }
