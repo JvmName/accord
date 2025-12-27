@@ -69,7 +69,7 @@ describe('ServerController', () => {
         let validator2;
         beforeEach(() => {
             response                                           = {json: jest.fn(), statusCode: 200};
-            controller                                         = new FooController({}, response);
+            controller                                         = new FooController({params}, response);
             controller.render                                  = jest.fn();
             validator1                                         = jest.fn();
             validator2                                         = jest.fn();
@@ -83,7 +83,7 @@ describe('ServerController', () => {
         };
 
         it ('runs validation checkers based on inputs', () => {
-            controller.validateParameters(params, validations);
+            controller.validateParameters(validations);
             expect(validator1).toBeCalledTimes(2);
             expect(validator1).toBeCalledWith(value1, options1);
             expect(validator1).toBeCalledWith(value2, options2);
@@ -94,7 +94,7 @@ describe('ServerController', () => {
 
         it ('sets the error status when there\'s an error', () => {
             validator1.mockImplementation(() => error1);
-            controller.validateParameters(params, validations);
+            controller.validateParameters(validations);
             expect(controller.render).toHaveBeenCalledTimes(1);
             const expected = {errors: {
                 [paramName1]: [error1],
@@ -107,7 +107,7 @@ describe('ServerController', () => {
         it ('sets the error status when there are multiple errors', () => {
             validator1.mockImplementation(() => error1);
             validator2.mockImplementation(() => error2);
-            controller.validateParameters(params, validations);
+            controller.validateParameters(validations);
             expect(controller.render).toHaveBeenCalledTimes(1);
             const expected = {errors: {
                 [paramName1]: [error1, error2],
@@ -118,7 +118,7 @@ describe('ServerController', () => {
         });
 
         it ('sets nothing when there is no error', () => {
-            controller.validateParameters(params, validations);
+            controller.validateParameters(validations);
             expect(controller.render).toHaveBeenCalledTimes(0);
             expect(response.statusCode).toEqual(200);
         });
