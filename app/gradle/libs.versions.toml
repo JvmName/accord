@@ -10,6 +10,7 @@ composeMultiplatform = "1.10.0-rc02"
 coroutines = "1.10.2"
 datastore = "1.2.0"
 kotlin = "2.3.0"
+kotlinResult = "2.1.0"
 ktor = "3.3.3"
 material3 = "1.9.0"
 materialIconsExtended = "1.7.3"
@@ -48,6 +49,9 @@ ktor-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = 
 ktor-websockets = { module = "io.ktor:ktor-client-websockets", version.ref = "ktor" }
 serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 
+
+kotlin-result = { module = "com.michael-bull.kotlin-result:kotlin-result", version.ref = "kotlinResult" }
+kotlin-result-coroutines = { module = "com.michael-bull.kotlin-result:kotlin-result-coroutines", version.ref = "kotlinResult" }
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }

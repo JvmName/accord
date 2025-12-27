@@ -51,6 +51,9 @@ kotlin {
                 implementation(libs.ktor.websockets)
                 implementation(libs.serialization.json)
                 implementation(libs.androidx.datastore)
+
+                implementation(libs.kotlin.result)
+                implementation(libs.kotlin.result.coroutines)
             }
         }
 
@@ -73,6 +76,7 @@ kotlin {
             compilerOptions {
                 progressiveMode = true
                 optIn.addAll(
+                    "kotlin.contracts.ExperimentalContracts",
                     "androidx.compose.material.ExperimentalMaterialApi",
                     "androidx.compose.material3.ExperimentalMaterial3Api",
                     "androidx.compose.ui.ExperimentalComposeUiApi",

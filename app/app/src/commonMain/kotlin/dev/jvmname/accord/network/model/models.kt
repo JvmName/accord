@@ -13,7 +13,11 @@ value class MatId(val id: String) : CommonParcelable
 @[Poko Serializable CommonParcelize]
 class MatInfo(
     val id: MatId,
-    val name: String
+    val name: String,
+    @SerialName("judge_count")
+    val judgeCount: Int,
+    @SerialName("code")
+    val joinCode: String,
 ) : CommonParcelable
 
 @[Poko Serializable]
