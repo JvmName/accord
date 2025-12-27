@@ -1,5 +1,5 @@
-const { logger }     = require('../logger');
-const { User }       = require('../../models/user');
+const { logger } = require('../logger');
+const { User }   = require('../../models/user');
 
 
 class WebSocket {
