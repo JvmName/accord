@@ -5,6 +5,7 @@ const { logger }    = require('../logger');
 class ServerController {
     #afterCallbacks  = [];
     #beforeCallbacks = [];
+    #params;
     #rendered        = false;
     #request;
     #requestBody;
@@ -24,10 +25,15 @@ class ServerController {
     get _request()        { return this.#request  };
     get _response()       { return this.#response };
 
+    get params()          { 
+        if (!this.#params) {
+            const body   = this.#processRequestData('body');
+            const query  = this.#processRequestData('query');
+            this.#params = {...this._request.params, ...body, ...query};
+        }
+        return structuredClone(this.#params);
+    }
 
-    get body()            { return this.#processRequestData('body');             }
-    get query()           { return this.#processRequestData('query');            }
-    get params()          { return structuredClone(this._request.params  || {}); }
     get requestHeaders()  { return structuredClone(this._request.headers || {}); }
     get responseHeaders() { return this._response.headers; };
     get contentType()     { return this.requestHeaders['content-type']; }
@@ -88,12 +94,21 @@ class ServerController {
     }
 
 
-    _formatJSONBody(body) {
-        if (Array.isArray(body) || !(typeof body == 'object')) return body;
+    _formatJSONBody(body,depth=0) {
+        if (!body || typeof body != 'object') return body;
 
-        for (let [key, val] of Object.entries(body)) {
-            if (val.toApiResponse) val = val.toApiResponse();
-            body[key] = this._formatJSONBody(val);
+        if (body.toApiResponse) {
+            return this._formatJSONBody(body.toApiResponse());
+
+        } else if (Array.isArray(body)) {
+            for (const idx in body) {
+                body[idx] = this._formatJSONBody(body[idx], depth+1);
+            }
+
+        } else {
+            for (let [key, val] of Object.entries(body)) {
+                body[key] = this._formatJSONBody(val, depth+1);
+            }
         }
 
         return body;
@@ -174,10 +189,10 @@ class ServerController {
     /***********************************************************************************************
     * VALIDATIONS
     ***********************************************************************************************/
-    validateParameters(parameters, validations) {
+    validateParameters(validations) {
         const errors = {};
         for (const [parameterName, parameterValidations] of Object.entries(validations)) {
-            const parameterErrors = this.validateParameter(parameters[parameterName], parameterValidations);
+            const parameterErrors = this.validateParameter(this.params[parameterName], parameterValidations);
             if (parameterErrors.length) errors[parameterName] = parameterErrors;
         }
 
@@ -209,7 +224,7 @@ class ServerController {
 
 
     validateIsEnum(value, options) {
-        if (!options.enums.includes(value)) return options.error;
+        if (!options.enums.includes(value)) return options.error || `must be one of [${options.enums.join(', ')}]`;
     }
 
 
