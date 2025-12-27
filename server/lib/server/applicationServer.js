@@ -9,6 +9,7 @@ const   IoServer           = require("socket.io")
 const { Server }           = require('http');
 const { SystemController } = require('./systemController');
 const { ServerController } = require('./serverController');
+const { WebSocket }        = require('./webSocket');
 
 
 class ApplicationServer {
@@ -29,6 +30,7 @@ class ApplicationServer {
 
     async listen() {
         await this.registerControllers();
+        this.startWebSocketServer();
 
         this.#httpServer.on('error', this.onError.bind(this));
         this.#httpServer.listen(this.#port, this.#host, () => {
@@ -54,11 +56,11 @@ class ApplicationServer {
       // handle specific listen errors with friendly messages
       switch (error.code) {
         case 'EACCES':
-          console.error(bind + ' requires elevated privileges');
+          logger.error(bind + ' requires elevated privileges');
           process.exit(1);
           break;
         case 'EADDRINUSE':
-          console.error(bind + ' is already in use');
+          logger.error(bind + ' is already in use');
           process.exit(1);
           break;
         default:
@@ -70,14 +72,39 @@ class ApplicationServer {
     /***********************************************************************************************
     * WEB SOCKETS
     ***********************************************************************************************/
-    get #ioServer() {
-        if (!this.#_ioServer) {
-            this.#_ioServer = IoServer(this.#httpServer, {
-                cors: { origin: this.corsOrigins, credentials: true }
-            });
-        }
+    startWebSocketServer() {
+        this.addWebSocketEventHandler('connection', this.#handleWebSocketConnection);
+    }
 
+
+    #handleWebSocketConnection(ioSocket) {
+        logger.info(`Web socket connected (${ioSocket.id})`);
+    }
+
+
+    get #ioServer() {
+        if (!this.#_ioServer) this.#initializeIoServer();
         return this.#_ioServer;
+    }
+
+
+    #initializeIoServer() {
+        this.#_ioServer = IoServer(this.#httpServer, {
+            cors: { origin: this.corsOrigins, credentials: true }
+        });
+
+        this.#_ioServer.use(this._initWebSocket);
+    }
+
+
+    async _initWebSocket(ioSocket, next) {
+        const socket = new WebSocket(ioSocket);
+        try {
+            await socket.init();
+            next();
+        } catch(err) {
+            return next(err);
+        }
     }
 
 
@@ -87,7 +114,7 @@ class ApplicationServer {
 
 
     addWebSocketEventHandler(eventName, eventHandler) {
-        this.#ioServer.on(eventName, eventHandler);
+        this.#ioServer.on(eventName, eventHandler.bind(this));
     }
 
 
