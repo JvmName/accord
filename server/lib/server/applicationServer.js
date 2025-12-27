@@ -210,8 +210,8 @@ class ApplicationServer {
 
             const responseBody = await this.performRequest(controllerInstance, action);
 
-            if (!controllerInstance.rendered && responseBody) {
-                controllerInstance.render(responseBody);
+            if (!controllerInstance.rendered) {
+                controllerInstance.render(responseBody || {});
             }
 
             response.end();
@@ -235,12 +235,14 @@ class ApplicationServer {
                 errors[activeRecordError.path] = errors[activeRecordError.path] || [];
                 errors[activeRecordError.path].push(activeRecordError.message);
             }
+            if (err.parent) errors[null] = err.parent.message;
             controllerInstance.renderErrors(errors);
         } else {
             controllerInstance.statusCode = 500;
             controllerInstance.render({error: err.message});
-            if (CONSTANTS.DEV) throw err;
         }
+
+        if (CONSTANTS.DEV) console.log(err);
     }
 
 
