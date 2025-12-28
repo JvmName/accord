@@ -16,6 +16,13 @@ class Mat extends BaseRecord {
         const words = await new WordGenerator().getWords(CODE_SIZE);
         return words.join('.');
     }
+
+
+    async toApiResponse() {
+        const response = await super.toApiResponse();
+        response.judges = await this.getJudges();
+        return response;
+    }
 }
 
 
