@@ -70,6 +70,8 @@ class UsersController extends ServerController {
 
 
     async addAsJudge() {
+        await this.authorize("judge", this.currentMat);
+
         const judges = await this.currentMat.getJudges()
         if (judges.some(judge => judge.id == this.currentUser.id)) {
             await this.renderErrors({matCode: ['user is already a judge']});

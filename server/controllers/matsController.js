@@ -22,7 +22,7 @@ class MatsController extends ServerController {
 
     async getMat() {
         const mat = await Mat.findByCode(this.params.matCode);
-        this.authorize("view", mat);
+        await this.authorize("view", mat);
         return { mat };
     }
 
