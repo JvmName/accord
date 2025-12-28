@@ -263,6 +263,7 @@ class ApplicationServer {
 
         } else if (err.constructor == AuthorizationError) {
             await controllerInstance.renderUnauthorizedResponse();
+            return;
 
         } else {
             controllerInstance.statusCode = 500;

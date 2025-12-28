@@ -250,9 +250,12 @@ class ServerController {
     }
 
 
-    validateIsInteger(value) {
+    validateIsInteger(value, options) {
         const num = parseFloat(value);
         if (/\D/.test(value) || isNaN(num) || !Number.isInteger(num)) return 'must be an integer';
+        if (options && options.gte !== undefined) {
+            if (num < options.gte) return `must be greater than or equal to ${options.gte}`;
+        }
     }
 
 

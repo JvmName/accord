@@ -166,6 +166,21 @@ describe('ServerController', () => {
             const result = controller.validateIsInteger(val)
             expect(result).toEqual('must be an integer');
         });
+
+        it ('returns an error when the number is less than the gte option', () => {
+            const result = controller.validateIsInteger(1, {gte: 2});
+            expect(result).toEqual('must be greater than or equal to 2');
+        });
+
+        it ('returns undefined when the number is greater than the gte option', () => {
+            const result = controller.validateIsInteger(3, {gte: 2});
+            expect(result).toEqual(undefined);
+        });
+
+        it ('returns undefined when the number is equal to the gte option', () => {
+            const result = controller.validateIsInteger(2, {gte: 2});
+            expect(result).toEqual(undefined);
+        });
     });
 
 
