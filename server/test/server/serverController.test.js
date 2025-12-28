@@ -1,3 +1,4 @@
+const { AuthorizationError }   = require('../../lib/server/serverController');
 const { BarController }        = require('./helpers/controllers/barController');
 const { FooController }        = require('./helpers/controllers/fooController');
 const { camelize }             = require('inflection');
@@ -160,7 +161,8 @@ describe('ServerController', () => {
         });
 
         it ('returns an error when there is a non integer string', () => {
-            const val    = TestHelpers.Faker.Text.randomString(10) + 'a';
+            // starts with a number because parseFloat converts a string to a float if it starts with a number
+            const val    = '1' + TestHelpers.Faker.Text.randomString(10);
             const result = controller.validateIsInteger(val)
             expect(result).toEqual('must be an integer');
         });
@@ -258,6 +260,32 @@ describe('ServerController', () => {
         it ('returns undefiend when passed a valid value', () => {
             const result = controller.validateFunction(Math.random(), validator);
             expect(result).toBe(error);
+        });
+    });
+
+
+    describe('ServerController.authorize', () => {
+        const user               = {};
+        const controllerWithUser = new FooController({}, {});
+        const currentUserSpy     = jest.spyOn(controllerWithUser, 'currentUser', 'get');
+        currentUserSpy.mockImplementation(() => user);
+
+        it ('throws an error when there is no `currentUser`', async () => {
+            const controller = new FooController({}, {});
+            await expect(async () => {
+                await controller.authorize('view', 'test')
+            }).rejects.toThrow(AuthorizationError);
+        });
+
+        it ('does not throw an error when the `currentUser` is authorized', async () => {
+            await controllerWithUser.authorize('view', 'test');
+        });
+
+        it ('throws an error when the `currentUser` is not authorized', async () => {
+            const controller = new FooController({}, {});
+            await expect(async () => {
+                await controller.authorize('view', 'foo')
+            }).rejects.toThrow(AuthorizationError);
         });
     });
 });
