@@ -51,6 +51,7 @@ import kotlinx.coroutines.launch
 fun CreateMatContent(state: CreateMatState, modifier: Modifier) {
     StandardScaffold(
         modifier = modifier.fillMaxSize(),
+        title = "Create Mat",
         onBackClick = { state.eventSink(Back) },
     ) { padding ->
         state.error?.let {

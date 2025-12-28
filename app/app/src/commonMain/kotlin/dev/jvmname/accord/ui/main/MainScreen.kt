@@ -19,5 +19,6 @@ data class MainState(
 sealed interface MainEvent : CircuitUiEvent {
     data object CreateMat : MainEvent
     data object JoinMat : MainEvent
-    data object ViewerModeClick : MainEvent
+
+    data object SoloRideTime : MainEvent
 }

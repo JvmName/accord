@@ -29,7 +29,8 @@ val LocalCoroutineScope = compositionLocalOf<CoroutineScope> {
 @Composable
 fun StandardScaffold(
     modifier: Modifier = Modifier,
-    onBackClick: () -> Unit,
+    title: String? = null,
+    onBackClick: (() -> Unit)? = null,
     content: @Composable (PaddingValues) -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -43,15 +44,15 @@ fun StandardScaffold(
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
             topBar = {
                 TopAppBar(
-                    title = {
-                        Text("Top app bar")
-                    },
+                    title = { title?.let { Text(it) } },
                     navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Localized description"
-                            )
+                        onBackClick?.let {
+                            IconButton(onClick = it) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Localized description"
+                                )
+                            }
                         }
                     }
                 )

@@ -39,12 +39,10 @@ class MainPresenter(
 
         return MainState(matInfoResult) {
             when (it) {
-                MainEvent.CreateMat -> {
-                    createMatNav.goTo(CreateMatScreen)
-                }
+                MainEvent.CreateMat -> createMatNav.goTo(CreateMatScreen)
 
                 MainEvent.JoinMat -> TODO()
-                MainEvent.ViewerModeClick -> TODO()
+                MainEvent.SoloRideTime ->
             }
         }
     }
