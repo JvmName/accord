@@ -9,16 +9,17 @@ const apiRoot     = "http://localhost:3000";
 const markToken   = 'bab61d9d-4e8d-4f56-bba9-f879747dbf92';
 const bruceToken  = '7f9de9bc-88c5-41cc-bc08-14b37215c141';
 const damianToken = 'f5a0c2b6-1651-42b1-a2cd-ec5f1fa9d653';
-const headers     = {'x-api-token': markToken};
-const matCode     = 'crow.wolf.camel';
+const headers     = {'x-api-token': damianToken};
+const judgeCode   = 'pigeon.dog.dolphin';
+const viewerCode  = 'catfish.buffalo.dragonfly';
 
 
 async function makeRequest() {
     const client   = new ApiClient();
     const options  = { headers };
     try {
-        const { data } = await client.get(`/mat/${matCode}/viewers`, options);
-        console.log(data.data);
+        const { data } = await client.get(`/mat/${judgeCode}/viewers`, options);
+        console.log(JSON.stringify(data.data, null, 2));
     } catch(err) {
         console.log("ERROR:", JSON.stringify(await err.data()));
     }
@@ -35,4 +36,4 @@ async function connectToWebSocket() {
 
 
 makeRequest();
-connectToWebSocket();
+//connectToWebSocket();
