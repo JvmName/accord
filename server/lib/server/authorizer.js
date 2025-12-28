@@ -7,7 +7,8 @@ class Authorizer {
 
 
     async can(action, scope) {
-        switch(scope.constructor.name) {
+        const cls = scope.constructor == Function ? scope : scope.constructor;
+        switch(cls.name) {
             case 'String':
                 return await this.simpleScopePermission(action, scope);
             case 'Mat':
@@ -24,6 +25,8 @@ class Authorizer {
 
     async matPermission(action, scope) {
         switch(action) {
+            case 'create':
+                return true;
             case 'judge':
                 return true;
             case 'view':
