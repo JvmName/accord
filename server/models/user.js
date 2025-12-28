@@ -14,6 +14,12 @@ class User extends BaseRecord {
     static async findByApiToken(token) {
         return await this.findOne({where: {api_token: token}});
     }
+
+
+    get apiSafeKeys() {
+        const keys = super.apiSafeKeys;
+        return keys.filter(key => key != 'api_token');
+    };
 }
 
 
