@@ -96,6 +96,11 @@ class BaseRecord extends Model {
     }
 
 
+    static async transaction(callback) {
+        return await this.connection.queryInterface.transaction(callback);
+    }
+
+
     /***********************************************************************************************
     * ASSOCIATIONS
     ***********************************************************************************************/

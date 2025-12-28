@@ -3,9 +3,6 @@ const { randomUUID } = require('crypto');
 
 
 class User extends BaseRecord {
-    static ROLES = {JUDGE: 'judge', VIEWER: 'viewer'};
-
-
     generateApiToken() {
         this.api_token = randomUUID();
     }

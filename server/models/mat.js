@@ -1,26 +1,23 @@
 const { BaseRecord }    = require('../lib/active_record');
-const { WordGenerator } = require('../lib/external_api/word_generator');
+const { MatCode }       = require('./matCode');
 const { User }          = require('./user');
-
-
-const CODE_SIZE = 3;
+const { WordGenerator } = require('../lib/external_api/word_generator');
 
 
 class Mat extends BaseRecord {
-    static async findByCode(code) {
-        return await this.findOne({where: {code: code}});
+    static async findByCode(codeStr) {
+        const code = await MatCode.findByCode(codeStr);
+        if (!code) return;
+        return await code.getMat();
     }
 
 
-    static async generateCode() {
-        const words = await new WordGenerator().getWords(CODE_SIZE);
-        return words.join('.');
-    }
-
-
-    async toApiResponse() {
-        const response = await super.toApiResponse();
+    async toApiResponse(options={}) {
+        const response  = await super.toApiResponse();
         response.judges = await this.getJudges();
+
+        if (options.includeCodes) response.codes = await this.getMatCodes();
+
         return response;
     }
 }
@@ -43,6 +40,10 @@ Mat.belongsToMany(User, {
     as:       'viewers',
     through:  'mats_viewers'
 });
+
+
+Mat.hasMany(MatCode);
+MatCode.belongsTo(Mat);
 
 
 module.exports = {

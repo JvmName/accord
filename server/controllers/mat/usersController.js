@@ -1,10 +1,9 @@
 const { Mat }              = require('../../models/mat');
+const { MatCode }          = require('../../models/matCode');
 const { ServerController } = require('../../lib/server');
-const { User }             = require('../../models/user');
 
 
 class UsersController extends ServerController {
-    #currentMat;
 
     setupCallbacks() {
         this.beforeCallback('authenticateRequest');
@@ -14,22 +13,27 @@ class UsersController extends ServerController {
     /***********************************************************************************************
     * ACTIONS
     ***********************************************************************************************/
-    async getJudges()     { return await this.listUsers(User.ROLES.JUDGE); }
-    async getViewers()    { return await this.listUsers(User.ROLES.VIEWER); }
-    async postJudges()    { return await this.addUser(User.ROLES.JUDGE); }
-    async postViewers()   { return await this.addUser(User.ROLES.VIEWER); }
-    async deleteJudges()  { return await this.removeUser(User.ROLES.JUDGE); }
-    async deleteViewers() { return await this.removeUser(User.ROLES.VIEWER); }
+    async getJoin() {
+        if (!await this.validateParameters(this.listValidations)) return;
+        return await this.listUsers(this.currentMatCode.role);
+    }
+
+
+    async postJoin() {
+        return await this.addUser(this.currentMatCode.role);
+    }
+
+
+    async deleteJoin() {
+        return await this.removeUser(this.currentMatCode.role);
+    }
 
 
     static get routes() {
         return {
-            getJudges:     '/mat/:matCode/judges',
-            postJudges:    '/mat/:matCode/judges',
-            deleteJudges:  '/mat/:matCode/judges',
-            getViewers:    '/mat/:matCode/viewers',
-            postViewers:   '/mat/:matCode/viewers',
-            deleteViewers: '/mat/:matCode/viewers',
+            deleteJoin: '/mat/:matCode/join',
+            getJoin:    '/mat/:matCode/join',
+            postJoin:   '/mat/:matCode/join',
         }
     }
 
@@ -37,8 +41,13 @@ class UsersController extends ServerController {
     /***********************************************************************************************
     * HELPERS
     ***********************************************************************************************/
+    get listValidations() {
+        return {role: {isEnum: MatCode.ROLES}};
+    }
+
+
     async addUser(role) {
-        if (role == User.ROLES.JUDGE) {
+        if (role == MatCode.ROLES.JUDGE) {
             await this.addAsJudge();
         } else {
             await this.addAsViewer();
@@ -50,7 +59,7 @@ class UsersController extends ServerController {
 
     async listUsers(role) {
         let users;
-        if (role == User.ROLES.JUDGE) {
+        if (role == MatCode.ROLES.JUDGE) {
             users = await this.currentMat.getJudges();
         } else {
             users = await this.currentMat.getViewers();
@@ -61,7 +70,7 @@ class UsersController extends ServerController {
 
 
     async removeUser(role) {
-        if (role == User.ROLES.JUDGE) {
+        if (role == MatCode.ROLES.JUDGE) {
             await this.currentMat.removeJudge(this.currentUser);
         } else {
             await this.currentMat.removeViewer(this.currentUser);
@@ -110,16 +119,6 @@ class UsersController extends ServerController {
 
         await this.authorize('view', this.currentMat);
     }
-
-
-    async setupRequestState() {
-        await super.setupRequestState();
-        if (this.matCode) this.#currentMat = await Mat.findByCode(this.matCode);
-    }
-
-
-    get currentMat() { return this.#currentMat || null; }
-    get matCode()    { return this.params.matCode; }
 }
 
 

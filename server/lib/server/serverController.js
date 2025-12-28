@@ -1,6 +1,7 @@
+const { Authorizer } = require('./authorizer');
 const { camelize }   = require('inflection');
 const { logger }     = require('../logger');
-const { Authorizer } = require('./authorizer');
+const { MatCode }    = require('../../models/matCode');
 const { User }       = require('../../models/user');
 
 
@@ -8,6 +9,8 @@ class ServerController {
     #afterCallbacks  = [];
     #authorizer;
     #beforeCallbacks = [];
+    #currentMat;
+    #currentMatCode;
     #currentUser;
     #params;
     #rendered        = false;
@@ -73,8 +76,8 @@ class ServerController {
     }
 
 
-    async render(body) {
-        body = await this.formatJSONBody(body);
+    async render(body, options={}) {
+        body = await this.formatJSONBody(body, options);
         this._response.json(body);
         this.#rendered = true;
     }
@@ -96,27 +99,27 @@ class ServerController {
     }
 
 
-    async formatJSONBody(body) {
-        body = await this._formatJSONBody(body);
+    async formatJSONBody(body, options) {
+        body = await this._formatJSONBody(body, options);
         return {data: body, status: this.statusText};
     }
 
 
-    async _formatJSONBody(body,depth=0) {
+    async _formatJSONBody(body, options) {
         if (!body || typeof body != 'object') return body;
 
         if (body.toApiResponse) {
-            const formattedBody = await body.toApiResponse();
-            return await this._formatJSONBody(formattedBody);
+            const formattedBody = await body.toApiResponse(options);
+            return await this._formatJSONBody(formattedBody, options);
 
         } else if (Array.isArray(body)) {
             for (const idx in body) {
-                body[idx] = await this._formatJSONBody(body[idx], depth+1);
+                body[idx] = await this._formatJSONBody(body[idx], options);
             }
 
         } else {
             for (let [key, val] of Object.entries(body)) {
-                body[key] = await this._formatJSONBody(val, depth+1);
+                body[key] = await this._formatJSONBody(val, options);
             }
         }
 
@@ -273,9 +276,9 @@ class ServerController {
 
 
     async #initCurrentUser() {
-        if (!this.apiToken) return;
-
-        this.#currentUser = await User.findByApiToken(this.apiToken);
+        if (this.apiToken)        this.#currentUser    = await User.findByApiToken(this.apiToken);
+        if (this.params.matCode)  this.#currentMatCode = await MatCode.findByCode(this.params.matCode);
+        if (this.#currentMatCode) this.#currentMat     = await this.#currentMatCode.getMat();
     }
 
 
@@ -295,11 +298,13 @@ class ServerController {
     }
 
 
-    get currentUser() { return this.#currentUser || null; }
-    get apiToken()    { return this.requestHeaders['x-api-token']; }
+    get apiToken()       { return this.requestHeaders['x-api-token']; }
+    get currentUser()    { return this.#currentUser    || null; }
+    get currentMat()     { return this.#currentMat     || null; }
+    get currentMatCode() { return this.#currentMatCode || null; }
     get authorizer()  {
         if (!this.currentUser) return;
-        if (!this.#authorizer) this.#authorizer = new Authorizer(this.currentUser);
+        if (!this.#authorizer) this.#authorizer = new Authorizer(this.currentUser, this.matCode);
         return this.#authorizer;
     }
 
