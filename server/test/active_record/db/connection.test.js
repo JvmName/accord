@@ -1,5 +1,6 @@
 const { Connection }              = require('../../../lib/active_record/db/connection');
 const { ConnectionConfiguration } = require('../../../lib/active_record/db/connectionConfiguration');
+const   CONSTANTS                 = require('../../../lib/constants');
 const   TestHelpers               = require('../../helpers');
 
 
@@ -17,12 +18,12 @@ jest.mock('sequelize', () => {
 
 
 let spy;
-const origEnv = process.env.NODE_ENV;
+const origEnv = CONSTANTS.ENV;
 afterEach(() => {
     if (spy) spy.mockRestore();
     spy = null;
     Connection.clearConnectionsCache();
-    process.env.NODE_ENV = origEnv;
+    CONSTANTS.ENV = origEnv;
 });
 
 
@@ -112,13 +113,13 @@ describe('Connection', () => {
             });
 
             it ('enables logging in development', () => {
-                process.env.NODE_ENV = 'development';
+                CONSTANTS.ENV = 'development';
                 const conn = new Connection();
                 expect(conn._sequelize.options.logging).toBe(undefined); // undefined defaults to true
             });
 
             it ('does not enable logging in production', () => {
-                process.env.NODE_ENV = 'production';
+                CONSTANTS.ENV = 'production';
                 const conn = new Connection();
                 expect(conn._sequelize.options.logging).toBeFalsy();
             });

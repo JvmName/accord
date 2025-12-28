@@ -1,4 +1,5 @@
-const utils = require('../utils');
+const CONSTANTS = require('../../constants');
+const utils     = require('../utils');
 
 
 class ConnectionConfiguration {
@@ -88,7 +89,7 @@ class ConnectionConfiguration {
 
 
     static get env() {
-        return process.env.NODE_ENV || 'development';
+        return CONSTANTS.ENV;
     }
 
 

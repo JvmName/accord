@@ -1,4 +1,5 @@
 const { ConnectionConfiguration } = require('../../../lib/active_record/db/connectionConfiguration');
+const   CONSTANTS                 = require('../../../lib/constants');
 const   TestHelpers               = require('../../helpers');
 
 
@@ -27,9 +28,11 @@ const databaseId2 = TestHelpers.Faker.Text.randomString(10);
 const origEnvDBPoolMin = process.env.DB_POOL_MIN;
 const origEnvDBPoolMax = process.env.DB_POOL_MAX;
 
-const spy = jest.spyOn(ConnectionConfiguration, '_fetchAllConfigs');
+const defaultEnv = CONSTANTS.ENV;
+const spy        = jest.spyOn(ConnectionConfiguration, '_fetchAllConfigs');
 afterEach(() => {
     spy.mockReset();
+    CONSTANTS.ENV = defaultEnv;
 });
 
 
@@ -82,27 +85,19 @@ describe('ConnectionConfiguration', () => {
 
     describe('ConnectionConfiguration#loggingEnabled', () => {
         it ('enables logging in development', () => {
-            const origEnv = process.env.NODE_ENV;
-            process.env.NODE_ENV = 'development';
-
+            CONSTANTS.ENV = 'development';
             spy.mockImplementation(() => ({[databaseId1]: {development: test}}));
 
             const config = new ConnectionConfiguration(databaseId1);
             expect(config.loggingEnabled).toBeTruthy();
-
-            process.env.NODE_ENV = origEnv;
         });
 
         it ('does not enable logging in production', () => {
-            const origEnv = process.env.NODE_ENV;
-            process.env.NODE_ENV = 'production';
-
+            CONSTANTS.ENV = 'production';
             spy.mockImplementation(() => ({[databaseId1]: { production }}));
 
             const config = new ConnectionConfiguration(databaseId1);
             expect(config.loggingEnabled).toBeFalsy();
-
-            process.env.NODE_ENV = origEnv;
         });
     });
 

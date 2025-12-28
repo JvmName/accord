@@ -1,14 +1,21 @@
-const { ServerController } = require('../lib/server');
-const { Mat }              = require('../models/mat');
+const { ApplicationController } = require('./applicationController');
+const { Mat }                   = require('../models/mat');
 
 
-class MatsController extends ServerController {
+class MatsController extends ApplicationController {
+    setupCallbacks() {
+        this.beforeCallback('authenticateRequest');
+    }
+
 
     async postIndex() {
-        if (!this.validateParameters(this.body, this.creationValidations)) return;
+        if (!this.validateParameters(this.creationValidations)) return;
 
         const code = await Mat.generateCode();
-        const mat  = await Mat.create({name: this.body.name, judge_count: this.body.judge_count, code });
+        const mat  = await Mat.create({creator_id:  this.currentUser.id,
+                                       code,
+                                       judge_count: this.params.judge_count,
+                                       name:        this.params.name});
         return { mat };
     }
 

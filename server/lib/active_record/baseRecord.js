@@ -1,7 +1,7 @@
 const { Connection, DEFAULT_DATABASE_ID } = require('./db/connection');
 const { getActiveRecordSchema }           = require('./db/schema');
 const { Model, Op }                       = require('sequelize');
-const { tableize }                        = require('inflection');
+const { tableize, underscore }            = require('inflection');
 const   utils                             = require('./utils');
 const   nodeUtil                          = require('util');
 
@@ -97,12 +97,70 @@ class BaseRecord extends Model {
 
 
     /***********************************************************************************************
+    * ASSOCIATIONS
+    ***********************************************************************************************/
+    static belongsTo(model, options={}) {
+        options.onDelete = 'NO ACTION';
+        options.onUpdate = 'NO ACTION';
+        super.belongsTo(model, options);
+    }
+
+
+    static belongsToMany(model, options) {
+        options.onDelete = 'NO ACTION';
+        options.onUpdate = 'NO ACTION';
+
+        let tableName;
+        if (typeof options.through == 'string') {
+            tableName       = options.through;
+            options.through = {};
+        } else if (options.through.tableName) {
+            tableName = options.through.tableName;
+            delete options.through.tableName;
+        }
+
+        if (tableName) {
+            const schema     = getActiveRecordSchema(tableName, this.databaseId, this.connection.dialect);
+            const foreignKey = options.foreignKey || `${underscore(this.name)}_id`;
+            const otherKey   = options.otherKey   || `${underscore(model.name)}_id`;
+
+            delete schema[foreignKey];
+            delete schema[otherKey];
+            delete schema.updated_at;
+            delete schema.created_at;
+
+            options.through.model = this.connection._sequelize.define(tableName, schema);
+        }
+
+        super.belongsToMany(model, options);
+    }
+
+
+    /***********************************************************************************************
     * MISC
     ***********************************************************************************************/
     [nodeUtil.inspect.custom](opts) {
         const args = Array.from(arguments);
         args.shift();
         return nodeUtil.inspect(this.dataValues, ...args);
+    }
+
+
+    get apiSafeKeys() {
+        const keys = Object.keys(this.rawAttributes).filter(key => {
+            return !['created_at', 'updated_at', 'mats_users'].includes(key);
+        });
+
+        return keys;
+    }
+
+
+    toApiResponse() {
+        const response = {};
+        for (const key of this.apiSafeKeys) {
+            response[key] = this.dataValues[key] || null;
+        }
+        return response;
     }
 }
 

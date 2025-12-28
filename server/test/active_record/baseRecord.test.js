@@ -78,7 +78,6 @@ describe('ActiveRecord', () => {
                                                     });
         });
 
-/*
         it ('uses `timestamps: false` when the schema has no timestamps', () => {
             importSchema.mockImplementation(() => ({}));
             class User extends BaseRecord {}
@@ -113,11 +112,9 @@ describe('ActiveRecord', () => {
         it ('will throw an error when run on BaseRecord', () => {
             expect(() => BaseRecord.initialize()).toThrow();
         });
-*/
     });
 
 
-/*
     describe('ActiveRecord.tableName', () => {
         it ('defaults to the puralized version of the class name', () => {
             class User extends BaseRecord {}
@@ -179,5 +176,26 @@ describe('ActiveRecord', () => {
             expect(Person.findAll).toHaveBeenCalledWith(expected);
         });
     });
-*/
+
+
+    describe('ActiveRecord#apiSafeKeys', () => {
+        class Person extends BaseRecord {}
+        it ('does not return created_at or updated_at by default', () => {
+            const person = new Person();
+            person.dataValues = {key1: 'foo', key2: 'bar', created_at: 'baz', updated_at: 'ban'};
+            expect(person.apiSafeKeys).toEqual(['key1', 'key2']);
+        });
+    });
+
+
+    describe('ActiveRecord#toApiResponse', () => {
+        class Person extends BaseRecord {}
+        it ('only returns keys specified by `apiSafeKeys`', () => {
+            const person = new Person();
+            const spy    = jest.spyOn(person, 'apiSafeKeys', 'get');
+            spy.mockImplementation(() => ['key1', 'created_at']);
+            person.dataValues = {key1: 'foo', key2: 'bar', created_at: 'baz', updated_at: 'ban'};
+            expect(person.toApiResponse()).toEqual({key1: 'foo', created_at: 'baz'});
+        });
+    });
 });

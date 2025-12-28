@@ -69,7 +69,6 @@ function resolveAutoIncrementColumns(details) {
 
 function dataTypeForColumn(details, dialect) {
     const typeStr         = details.type.replace(/\(.*\)/, '').toUpperCase();
-
     const typesForDialect = Object.values(Sequelize.DataTypes).filter(val => val.types && val.types[dialect]);
     for (const dataType of typesForDialect) {
         if (dataType.key == typeStr) return dataType;

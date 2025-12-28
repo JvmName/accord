@@ -1,3 +1,4 @@
+const   CONSTANTS          = require('../constants');
 const   express            = require('express');
 const   fs                 = require('fs');
 const   httpLogger         = require('pino-http')
@@ -209,8 +210,8 @@ class ApplicationServer {
 
             const responseBody = await this.performRequest(controllerInstance, action);
 
-            if (!controllerInstance.rendered && responseBody) {
-                controllerInstance.render(responseBody);
+            if (!controllerInstance.rendered) {
+                controllerInstance.render(responseBody || {});
             }
 
             response.end();
@@ -222,10 +223,26 @@ class ApplicationServer {
         try {
             return await this._performRequest(controllerInstance, action);
         } catch(err) {
-          console.log(await err.data());
+            this.handleError(err, controllerInstance);
+        }
+    }
+
+
+    handleError(err, controllerInstance) {
+        if (err.name == 'SequelizeUniqueConstraintError') {
+            const errors = {};
+            for (const activeRecordError of err.errors) {
+                errors[activeRecordError.path] = errors[activeRecordError.path] || [];
+                errors[activeRecordError.path].push(activeRecordError.message);
+            }
+            if (err.parent) errors[null] = err.parent.message;
+            controllerInstance.renderErrors(errors);
+        } else {
             controllerInstance.statusCode = 500;
             controllerInstance.render({error: err.message});
         }
+
+        if (CONSTANTS.DEV) console.log(err);
     }
 
 
