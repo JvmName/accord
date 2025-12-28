@@ -9,7 +9,7 @@ class MatsController extends ServerController {
 
 
     async postIndex() {
-        if (!this.validateParameters(this.creationValidations)) return;
+        if (!await this.validateParameters(this.creationValidations)) return;
 
         const code = await Mat.generateCode();
         const mat  = await Mat.create({creator_id:  this.currentUser.id,
@@ -20,8 +20,22 @@ class MatsController extends ServerController {
     }
 
 
+    async getMat() {
+        const mat = await Mat.findByCode(this.params.matCode);
+        this.authorize("view", mat);
+        return { mat };
+    }
+
+
     get creationValidations() {
         return {name: {presence: true}, judge_count: {isInteger: true}};
+    }
+
+
+    static get routes() {
+        return {
+            getMat: '/mat/:matCode'
+        };
     }
 }
 

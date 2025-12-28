@@ -1,15 +1,15 @@
-const   CONSTANTS          = require('../constants');
-const   express            = require('express');
-const   fs                 = require('fs');
-const   httpLogger         = require('pino-http')
-const { logger }           = require('../logger');
-const { pino }             = require('pino');
-const   responseTime       = require('response-time');
-const   IoServer           = require("socket.io")
-const { Server }           = require('http');
-const { SystemController } = require('./systemController');
-const { ServerController } = require('./serverController');
-const { WebSocket }        = require('./webSocket');
+const   CONSTANTS                              = require('../constants');
+const   express                                = require('express');
+const   fs                                     = require('fs');
+const   httpLogger                             = require('pino-http')
+const { logger }                               = require('../logger');
+const { pino }                                 = require('pino');
+const   responseTime                           = require('response-time');
+const   IoServer                               = require("socket.io")
+const { Server }                               = require('http');
+const { SystemController }                     = require('./systemController');
+const { ServerController, AuthorizationError } = require('./serverController');
+const { WebSocket }                            = require('./webSocket');
 
 
 class ApplicationServer {
@@ -46,26 +46,22 @@ class ApplicationServer {
 
     onError(error) {
       if (error.syscall !== 'listen') {
-        throw error;
+          throw error;
       }
-
-      var bind = typeof this.#port === 'string'
-        ? 'Pipe ' + this.#port
-        : 'Port ' + this.#port;
 
       // handle specific listen errors with friendly messages
       switch (error.code) {
-        case 'EACCES':
-          logger.error(bind + ' requires elevated privileges');
-          process.exit(1);
-          break;
-        case 'EADDRINUSE':
-          logger.error(bind + ' is already in use');
-          process.exit(1);
-          break;
-        default:
-          throw error;
-      }
+          case 'EACCES':
+              logger.error('Port requires elevated privileges');
+              process.exit(1);
+              break;
+          case 'EADDRINUSE':
+              logger.error('Port is already in use');
+              process.exit(1);
+              break;
+          default:
+              throw error;
+        }
     }
 
 
@@ -238,7 +234,7 @@ class ApplicationServer {
             const responseBody = await this.performRequest(controllerInstance, action);
 
             if (!controllerInstance.rendered) {
-                controllerInstance.render(responseBody || {});
+                await controllerInstance.render(responseBody || {});
             }
 
             response.end();
@@ -250,12 +246,12 @@ class ApplicationServer {
         try {
             return await this._performRequest(controllerInstance, action);
         } catch(err) {
-            this.handleError(err, controllerInstance);
+            await this.handleError(err, controllerInstance);
         }
     }
 
 
-    handleError(err, controllerInstance) {
+    async handleError(err, controllerInstance) {
         if (err.name == 'SequelizeUniqueConstraintError') {
             const errors = {};
             for (const activeRecordError of err.errors) {
@@ -263,10 +259,14 @@ class ApplicationServer {
                 errors[activeRecordError.path].push(activeRecordError.message);
             }
             if (err.parent) errors[null] = err.parent.message;
-            controllerInstance.renderErrors(errors);
+            await controllerInstance.renderErrors(errors);
+
+        } else if (err.constructor == AuthorizationError) {
+            await controllerInstance.renderUnauthorizedResponse();
+
         } else {
             controllerInstance.statusCode = 500;
-            controllerInstance.render({error: err.message});
+            await controllerInstance.render({error: err.message});
         }
 
         if (CONSTANTS.DEV) console.log(err);

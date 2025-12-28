@@ -1,10 +1,12 @@
-const { camelize }  = require('inflection');
-const { logger }    = require('../logger');
-const { User }      = require('../../models/user');
+const { camelize }   = require('inflection');
+const { logger }     = require('../logger');
+const { Authorizer } = require('./authorizer');
+const { User }       = require('../../models/user');
 
 
 class ServerController {
     #afterCallbacks  = [];
+    #authorizer;
     #beforeCallbacks = [];
     #currentUser;
     #params;
@@ -71,45 +73,50 @@ class ServerController {
     }
 
 
-    render(body) {
-        body = this.formatJSONBody(body);
+    async render(body) {
+        body = await this.formatJSONBody(body);
         this._response.json(body);
         this.#rendered = true;
     }
 
 
-    renderErrors(errors) {
+    async renderErrors(errors) {
         this.statusCode = 400;
-        this.render({ errors });
+        await this.render({ errors });
+    }
+
+
+    renderNotFoundResponse() {
+        this.statusCode = 404;
     }
 
 
     renderUnauthorizedResponse() {
         this.statusCode = 401;
-        this.render({error: 'unauthorized'});
     }
 
 
-    formatJSONBody(body) {
-        body = this._formatJSONBody(body);
+    async formatJSONBody(body) {
+        body = await this._formatJSONBody(body);
         return {data: body, status: this.statusText};
     }
 
 
-    _formatJSONBody(body,depth=0) {
+    async _formatJSONBody(body,depth=0) {
         if (!body || typeof body != 'object') return body;
 
         if (body.toApiResponse) {
-            return this._formatJSONBody(body.toApiResponse());
+            const formattedBody = await body.toApiResponse();
+            return await this._formatJSONBody(formattedBody);
 
         } else if (Array.isArray(body)) {
             for (const idx in body) {
-                body[idx] = this._formatJSONBody(body[idx], depth+1);
+                body[idx] = await this._formatJSONBody(body[idx], depth+1);
             }
 
         } else {
             for (let [key, val] of Object.entries(body)) {
-                body[key] = this._formatJSONBody(val, depth+1);
+                body[key] = await this._formatJSONBody(val, depth+1);
             }
         }
 
@@ -125,6 +132,8 @@ class ServerController {
                 return 'bad request'
             case 401:
                 return 'unauthorized';
+            case 404:
+                return 'not found';
             case 500:
                 return 'server error';
         }
@@ -191,7 +200,7 @@ class ServerController {
     /***********************************************************************************************
     * VALIDATIONS
     ***********************************************************************************************/
-    validateParameters(validations) {
+    async validateParameters(validations) {
         const errors = {};
         for (const [parameterName, parameterValidations] of Object.entries(validations)) {
             const parameterErrors = this.validateParameter(this.params[parameterName], parameterValidations);
@@ -199,7 +208,7 @@ class ServerController {
         }
 
         if (Object.keys(errors).length) {
-            this.renderErrors(errors);
+            await this.renderErrors(errors);
             return false;
         }
 
@@ -243,7 +252,7 @@ class ServerController {
 
     validateIsInteger(value) {
         const num = parseFloat(value);
-        if (isNaN(num) || !Number.isInteger(num)) return 'must be an integer';
+        if (/\D/.test(value) || isNaN(num) || !Number.isInteger(num)) return 'must be an integer';
     }
 
 
@@ -267,16 +276,29 @@ class ServerController {
     }
 
 
-    authenticateRequest() {
+    async authenticateRequest() {
         if (!this.currentUser) {
-            this.renderUnauthorizedResponse();
+            await this.renderUnauthorizedResponse();
             return false;
         }
     }
 
 
+    async authorize(action, scope) {
+        if (!this.authorizer) throw new AuthorizationError();
+
+        const authorized = await this.authorizer.can(action, scope)
+        if (!authorized) throw new AuthorizationError();
+    }
+
+
     get currentUser() { return this.#currentUser || null; }
     get apiToken()    { return this.requestHeaders['x-api-token']; }
+    get authorizer()  {
+        if (!this.currentUser) return;
+        if (!this.#authorizer) this.#authorizer = new Authorizer(this.currentUser);
+        return this.#authorizer;
+    }
 
 
     /***********************************************************************************************
@@ -346,4 +368,10 @@ class ServerController {
 }
 
 
-module.exports = { ServerController };
+class AuthorizationError extends Error {}
+
+
+module.exports = { 
+    AuthorizationError,
+    ServerController
+};

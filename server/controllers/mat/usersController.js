@@ -72,12 +72,12 @@ class UsersController extends ServerController {
     async addAsJudge() {
         const judges = await this.currentMat.getJudges()
         if (judges.some(judge => judge.id == this.currentUser.id)) {
-            this.renderErrors({matCode: ['user is already a judge']});
+            await this.renderErrors({matCode: ['user is already a judge']});
             return;
         }
 
         if (judges.length >= this.currentMat.judge_count) {
-            this.renderErrors({matCode: ['maximum judge count reached']});
+            await this.renderErrors({matCode: ['maximum judge count reached']});
             return;
         }
         await this.currentMat.addJudge(this.currentUser);
@@ -87,7 +87,7 @@ class UsersController extends ServerController {
     async addAsViewer() {
         const viewers = await this.currentMat.getViewers({where: {id: this.currentUser.id}});
         if (viewers.length) {
-            this.renderErrors({matCode: ['user is already a viewer']});
+            await this.renderErrors({matCode: ['user is already a viewer']});
             return;
         }
         await this.currentMat.addViewer(this.currentUser);
@@ -97,14 +97,16 @@ class UsersController extends ServerController {
     /***********************************************************************************************
     * AUTHENTICATION
     ***********************************************************************************************/
-    authenticateRequest() {
+    async authenticateRequest() {
         const authenticated = super.authenticateRequest();
         if (authenticated === false) return false;
 
         if (!this.currentMat) {
-            this.renderErrors({matCode: ['invalid mat code']});
+            await this.renderNotFoundResponse();
             return false;
         }
+
+        await this.authorize('view', this.currentMat);
     }
 
 
