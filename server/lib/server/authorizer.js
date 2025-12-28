@@ -1,8 +1,13 @@
+const { MatCode } = require('../../models/matCode');
+
+
 class Authorizer {
+    #matCode;
     #user;
 
-    constructor(user) {
-        this.#user = user;
+    constructor(user, matCode) {
+        this.#user    = user;
+        this.#matCode = matCode;
     }
 
 
@@ -28,7 +33,7 @@ class Authorizer {
             case 'create':
                 return true;
             case 'judge':
-                return true;
+                return this.#matCode && this.#matCode.role == MatCode.ROLES.JUDGE;
             case 'view':
                 return true;
         }

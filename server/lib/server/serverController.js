@@ -304,7 +304,7 @@ class ServerController {
     get currentMatCode() { return this.#currentMatCode || null; }
     get authorizer()  {
         if (!this.currentUser) return;
-        if (!this.#authorizer) this.#authorizer = new Authorizer(this.currentUser, this.matCode);
+        if (!this.#authorizer) this.#authorizer = new Authorizer(this.currentUser, this.currentMatCode);
         return this.#authorizer;
     }
 
