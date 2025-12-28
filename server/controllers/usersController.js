@@ -9,9 +9,9 @@ class UsersController extends ServerController {
 
 
     async postIndex() {
-        if (!this.validateParameters(this.creationValidations)) return;
+        if (!await this.validateParameters(this.creationValidations)) return;
         const user = await User.create({name: this.params.name, email: this.params.email});
-        return { user }; 
+        return { user, api_token: user.api_token }; 
     }
 
 
