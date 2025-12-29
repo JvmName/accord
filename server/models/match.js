@@ -4,8 +4,13 @@ const { Mat }        = require('./mat');
 
 
 class Match extends BaseRecord {
+    get sortKey() {
+        return this.created_at.getTime();
+    }
+
+
     get apiSafeKeys() {
-        return ['creator_id', 'mat_id', 'started_at', 'ended_at'];
+        return ['creator_id', 'id', 'mat_id', 'started_at', 'completed_at'];
     }
 
 
@@ -17,6 +22,16 @@ class Match extends BaseRecord {
         if (options.includeMat) response.mat = await this.getMat();
 
         return response;
+    }
+
+
+    get completed() {
+        return Boolean(this.completed_at);
+    }
+
+
+    get started() {
+        return Boolean(this.started_at);
     }
 }
 
@@ -37,6 +52,7 @@ Match.belongsTo(User, {
     as:         'blueCompetitor'
 });
 Match.belongsTo(Mat);
+Mat.hasMany(Match);
 
 
 module.exports = {

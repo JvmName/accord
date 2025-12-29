@@ -5,6 +5,9 @@ const { User }             = require('../models/user');
 
 
 class MatchesController extends ServerController {
+    #currentMatch;
+
+
     setupCallbacks() {
         this.beforeCallback('authenticateRequest');
     }
@@ -17,7 +20,7 @@ class MatchesController extends ServerController {
         await this.authorize('create', Match);
 
         const { red, blue, errors } = await this.getMatCreationVariables();
-        if (Object.keys(errors).length) return this.renderErrors(errors);
+        if (Object.keys(errors).length) return await this.renderErrors(errors);
 
         await this.authorize('assign', this.currentMat);
         await this.authorize('assign', red);
@@ -31,6 +34,52 @@ class MatchesController extends ServerController {
         });
 
         await this.render({ match }, {includeMat: true});
+    }
+
+
+    async postStartMatch() {
+        await this.authorize('manage', this.#currentMatch);
+        if (this.#currentMatch.started) {
+            return await this.renderErrors({matchId: ['match has already started']});
+        }
+
+        this.#currentMatch.started_at = new Date();
+        await this.#currentMatch.save();
+    }
+
+
+    async postCompleteMatch() {
+        await this.authorize('manage', this.#currentMatch);
+        if (!this.#currentMatch.started) {
+            return await this.renderErrors({matchId: ['this match has not started']});
+        }
+        if (this.#currentMatch.completed) {
+            return await this.renderErrors({matchId: ['this match has already completed']});
+        }
+
+        this.#currentMatch.completed_at = new Date();
+        await this.#currentMatch.save();
+    }
+
+
+    static get routes() {
+        return {
+            postCompleteMatch: '/match/:matchId/complete',
+            postStartMatch: '/match/:matchId/start'
+        };
+    }
+
+
+    async setupRequestState() {
+        await super.setupRequestState();
+        if (this.params.matchId) {
+            this.#currentMatch = await Match.find(this.params.matchId);
+            if (!this.#currentMatch) {
+                await this.renderNotFoundResponse();
+            } else {
+                await this.authorize('view', this.#currentMatch);
+            }
+        }
     }
 
 

@@ -28,7 +28,14 @@ class MatsController extends ServerController {
 
     async getMat() {
         await this.authorize("view", this.currentMat);
-        return { mat: this.currentMat };
+        await this.render({ mat: this.currentMat }, {includeMatches: true});
+    }
+
+
+    static get routes() {
+        return {
+            getMat: '/mat/:matId'
+        };
     }
 
 
@@ -55,13 +62,6 @@ class MatsController extends ServerController {
     get creationValidations() {
         return {name: {presence: true},
                 judge_count: {isInteger: {gte: 1}}};
-    }
-
-
-    static get routes() {
-        return {
-            getMat: '/mat/:matId'
-        };
     }
 }
 

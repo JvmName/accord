@@ -50,6 +50,8 @@ class Authorizer {
         switch(action) {
             case 'create':
                 return true;
+            case 'manage':
+                return true;
             case 'view':
                 return true;
         }
