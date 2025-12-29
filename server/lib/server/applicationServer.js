@@ -229,6 +229,12 @@ class ApplicationServer {
         return async function(request, response) {
             const controllerInstance = this.buildController(controllerCls, request, response);
             await controllerInstance.setupRequestState();
+
+            if (controllerInstance.rendered) {
+                response.end();
+                return;
+            }
+
             controllerInstance.setupCallbacks();
 
             const responseBody = await this.performRequest(controllerInstance, action);
