@@ -1,6 +1,7 @@
 package dev.jvmname.accord.ui
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
@@ -31,6 +32,7 @@ fun StandardScaffold(
     modifier: Modifier = Modifier,
     title: String? = null,
     onBackClick: (() -> Unit)? = null,
+    topBarActions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -42,22 +44,29 @@ fun StandardScaffold(
         Scaffold(
             modifier = modifier,
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-            topBar = {
-                TopAppBar(
-                    title = { title?.let { Text(it) } },
-                    navigationIcon = {
-                        onBackClick?.let {
-                            IconButton(onClick = it) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Localized description"
-                                )
-                            }
-                        }
-                    }
-                )
-            },
+            topBar = { TopBar(title, onBackClick, topBarActions) },
             content = content
         )
     }
+}
+
+@Composable
+internal fun TopBar(
+    title: String?,
+    onBackClick: (() -> Unit)?,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
+    TopAppBar(
+        title = { title?.let { Text(it) } },
+        navigationIcon = {
+            if (onBackClick == null) return@TopAppBar
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = ""
+                )
+            }
+        },
+        actions = actions
+    )
 }

@@ -10,6 +10,7 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlin.time.Clock
 
 @DependencyGraph(scope = AppScope::class)
 interface AccordGraph {
@@ -31,6 +32,9 @@ interface AccordGraph {
 
     @DependencyGraph.Factory
     fun interface Factory {
-        fun create(@Provides context: PlatformContext): AccordGraph
+        fun create(
+            @Provides context: PlatformContext,
+            @Provides clock: Clock,
+        ): AccordGraph
     }
 }

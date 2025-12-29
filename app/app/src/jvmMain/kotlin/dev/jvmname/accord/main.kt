@@ -13,6 +13,7 @@ import com.slack.circuit.runtime.Navigator
 import dev.jvmname.accord.di.AccordGraph
 import dev.jvmname.accord.di.EmptyPlatformContext
 import dev.zacsweers.metro.createGraphFactory
+import kotlin.time.Clock
 
 fun main() = application {
     val windowState =
@@ -22,7 +23,7 @@ fun main() = application {
             position = WindowPosition(Alignment.Center),
         )
 
-    val graph = createGraphFactory<AccordGraph.Factory>().create(EmptyPlatformContext)
+    val graph = createGraphFactory<AccordGraph.Factory>().create(EmptyPlatformContext, Clock.System)
 
     Window(
         title = "Accord",

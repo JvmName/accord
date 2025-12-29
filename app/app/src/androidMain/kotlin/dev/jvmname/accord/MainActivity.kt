@@ -12,12 +12,13 @@ import com.slack.circuit.runtime.Navigator
 import com.slack.circuitx.android.rememberAndroidScreenAwareNavigator
 import dev.jvmname.accord.di.AccordGraph
 import dev.zacsweers.metro.createGraphFactory
+import kotlin.time.Clock
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        val graph = createGraphFactory<AccordGraph.Factory>().create(this)
+        val graph = createGraphFactory<AccordGraph.Factory>().create(this, Clock.System)
         setContent {
             App(graph.circuit, ::finish)
         }
