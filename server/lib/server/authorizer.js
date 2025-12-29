@@ -18,6 +18,10 @@ class Authorizer {
                 return await this.simpleScopePermission(action, scope);
             case 'Mat':
                 return await this.matPermission(action, scope)
+            case 'Match':
+                return await this.matchPermission(action, scope)
+            case 'User':
+                return await this.userPermission(action, scope)
         }
     }
 
@@ -30,11 +34,31 @@ class Authorizer {
 
     async matPermission(action, scope) {
         switch(action) {
+            case 'assign':
+              return true;
             case 'create':
                 return true;
             case 'judge':
                 return this.#matCode && this.#matCode.role == MatCode.ROLES.JUDGE;
             case 'view':
+                return true;
+        }
+    }
+
+
+    async matchPermission(action, scope) {
+        switch(action) {
+            case 'create':
+                return true;
+            case 'view':
+                return true;
+        }
+    }
+
+
+    async userPermission(action, scope) {
+        switch(action) {
+            case 'assign':
                 return true;
         }
     }
