@@ -90,13 +90,15 @@ class ServerController {
     }
 
 
-    renderNotFoundResponse() {
+    async renderNotFoundResponse() {
         this.statusCode = 404;
+        await this.render();
     }
 
 
-    renderUnauthorizedResponse() {
+    async renderUnauthorizedResponse() {
         this.statusCode = 401;
+        await this.render();
     }
 
 
@@ -107,6 +109,7 @@ class ServerController {
 
 
     async _formatJSONBody(body, options) {
+        if (body === undefined)               return null;
         if (!body || typeof body != 'object') return body;
 
         if (body.toApiResponse) {
@@ -117,6 +120,9 @@ class ServerController {
             for (const idx in body) {
                 body[idx] = await this._formatJSONBody(body[idx], options);
             }
+
+        } else if (body.constructor == Date) {
+            return body.getTime();
 
         } else {
             for (let [key, val] of Object.entries(body)) {
