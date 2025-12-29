@@ -28,17 +28,17 @@ Mat.initialize();
 
 Mat.belongsTo(User, {
     foreignKey: 'creator_id',
-    as: 'creator'
+    as:         'creator'
 });
 
 Mat.belongsToMany(User, {
     as:      'judges',
-    through:  'judges_mats'
+    through: 'judges_mats'
 });
 
 Mat.belongsToMany(User, {
-    as:       'viewers',
-    through:  'mats_viewers'
+    as:      'viewers',
+    through: 'mats_viewers'
 });
 
 

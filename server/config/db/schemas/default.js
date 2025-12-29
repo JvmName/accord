@@ -185,5 +185,75 @@ module.exports = {
             "primaryKey": false,
             "unique": false
         }
+    },
+    "matches": {
+        "id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": true,
+            "unique": true
+        },
+        "creator_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "mat_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "red_competitor_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "blue_competitor_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "red_score": {
+            "type": "INTEGER",
+            "allowNull": false,
+            "defaultValue": "0",
+            "primaryKey": false,
+            "unique": false
+        },
+        "blue_score": {
+            "type": "INTEGER",
+            "allowNull": false,
+            "defaultValue": "0",
+            "primaryKey": false,
+            "unique": false
+        },
+        "started_at": {
+            "type": "DATETIME",
+            "allowNull": true,
+            "primaryKey": false,
+            "unique": false
+        },
+        "ended_at": {
+            "type": "DATETIME",
+            "allowNull": true,
+            "primaryKey": false,
+            "unique": false
+        },
+        "created_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "updated_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        }
     }
 };
