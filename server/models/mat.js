@@ -12,11 +12,22 @@ class Mat extends BaseRecord {
     }
 
 
+    async getIncompleteMatches() {
+        return await this.getMatches({where: {completed_at: null}});
+    }
+
+
     async toApiResponse(options={}) {
         const response  = await super.toApiResponse();
         response.judges = await this.getJudges();
 
         if (options.includeCodes) response.codes = await this.getMatCodes();
+        if (options.includeMatches) {
+            const matches = await this.getIncompleteMatches();
+            matches.sort((m1, m2) => m1.sortKey - m2.sortKey);
+            response.currentMatch = matches.find(m => m.started);
+            response.matches      = matches.filter(m => !m.started);
+        }
 
         return response;
     }
