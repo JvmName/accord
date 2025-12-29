@@ -81,6 +81,7 @@ kotlin {
                     "androidx.compose.material3.ExperimentalMaterial3Api",
                     "androidx.compose.ui.ExperimentalComposeUiApi",
                     "kotlinx.serialization.ExperimentalSerializationApi",
+                    "kotlin.concurrent.atomics.ExperimentalAtomicApi",
                 )
                 freeCompilerArgs.addAll(
                     "-Xexpect-actual-classes",
