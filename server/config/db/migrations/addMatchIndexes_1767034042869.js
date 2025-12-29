@@ -1,7 +1,7 @@
 module.exports = {
     up: async function() {
         await this.addIndex('matches', ['mat_id']);
-        await this.addIndex('matches', ['mat_id'], {where: {completed_at: null},
+        await this.addIndex('matches', ['mat_id'], {where: {ended_at: null},
                                                     name: 'incomplete_matches_idx'});
     },
 

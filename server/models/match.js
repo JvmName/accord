@@ -10,7 +10,7 @@ class Match extends BaseRecord {
 
 
     get apiSafeKeys() {
-        return ['creator_id', 'id', 'mat_id', 'started_at', 'completed_at'];
+        return ['creator_id', 'id', 'mat_id', 'started_at', 'ended_at'];
     }
 
 
@@ -25,8 +25,8 @@ class Match extends BaseRecord {
     }
 
 
-    get completed() {
-        return Boolean(this.completed_at);
+    get ended() {
+        return Boolean(this.ended_at);
     }
 
 

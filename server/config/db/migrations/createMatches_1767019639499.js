@@ -27,8 +27,8 @@ module.exports = {
                 defaultValue: 0,
                 type: this.DataTypes.INTEGER
             },
-            started_at:   this.DataTypes.DATE,
-            completed_at: this.DataTypes.DATE,
+            started_at: this.DataTypes.DATE,
+            ended_at:   this.DataTypes.DATE,
         });
     },
 

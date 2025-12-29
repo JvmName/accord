@@ -48,23 +48,30 @@ class MatchesController extends ServerController {
     }
 
 
-    async postCompleteMatch() {
+    async deleteEndMatch() {
         await this.authorize('manage', this.#currentMatch);
         if (!this.#currentMatch.started) {
             return await this.renderErrors({matchId: ['this match has not started']});
         }
-        if (this.#currentMatch.completed) {
-            return await this.renderErrors({matchId: ['this match has already completed']});
+        if (this.#currentMatch.ended) {
+            return await this.renderErrors({matchId: ['this match has already ended']});
         }
 
-        this.#currentMatch.completed_at = new Date();
+        this.#currentMatch.ended_at = new Date();
         await this.#currentMatch.save();
+    }
+
+
+    async getMatch() {
+        return {match: this.#currentMatch};
     }
 
 
     static get routes() {
         return {
-            postCompleteMatch: '/match/:matchId/complete',
+            deleteEndMatch: '/match/:matchId/start',
+            getMatch:       '/match/:matchId',
+            postIndex:      '/mat/:matId/matches',
             postStartMatch: '/match/:matchId/start'
         };
     }

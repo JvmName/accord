@@ -237,7 +237,7 @@ module.exports = {
             "primaryKey": false,
             "unique": false
         },
-        "completed_at": {
+        "ended_at": {
             "type": "DATETIME",
             "allowNull": true,
             "primaryKey": false,
