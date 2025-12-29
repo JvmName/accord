@@ -25,8 +25,8 @@ class Mat extends BaseRecord {
         if (options.includeMatches) {
             const matches = await this.getIncompleteMatches();
             matches.sort((m1, m2) => m1.sortKey - m2.sortKey);
-            response.currentMatch = matches.find(m => m.started);
-            response.matches      = matches.filter(m => !m.started);
+            response.current_match    = matches.find(m => m.started);
+            response.upcoming_matches = matches.filter(m => !m.started);
         }
 
         return response;
