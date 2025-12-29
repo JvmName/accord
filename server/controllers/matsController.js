@@ -27,9 +27,8 @@ class MatsController extends ServerController {
 
 
     async getMat() {
-        const mat = await Mat.findByCode(this.params.matCode);
-        await this.authorize("view", mat);
-        return { mat };
+        await this.authorize("view", this.currentMat);
+        return { mat: this.currentMat };
     }
 
 
@@ -61,7 +60,7 @@ class MatsController extends ServerController {
 
     static get routes() {
         return {
-            getMat: '/mat/:matCode'
+            getMat: '/mat/:matId'
         };
     }
 }

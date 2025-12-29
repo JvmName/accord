@@ -1,6 +1,7 @@
 const { Authorizer } = require('./authorizer');
 const { camelize }   = require('inflection');
 const { logger }     = require('../logger');
+const { Mat }        = require('../../models/mat');
 const { MatCode }    = require('../../models/matCode');
 const { User }       = require('../../models/user');
 
@@ -272,13 +273,31 @@ class ServerController {
     ***********************************************************************************************/
     async setupRequestState() {
         await this.#initCurrentUser();
+        await this.#initCurrentMat();
     }
 
 
     async #initCurrentUser() {
-        if (this.apiToken)        this.#currentUser    = await User.findByApiToken(this.apiToken);
-        if (this.params.matCode)  this.#currentMatCode = await MatCode.findByCode(this.params.matCode);
-        if (this.#currentMatCode) this.#currentMat     = await this.#currentMatCode.getMat();
+        if (this.apiToken) this.#currentUser = await User.findByApiToken(this.apiToken);
+    }
+
+
+    async #initCurrentMat() {
+        let matCode = this.params.matCode;
+        if (!matCode && this.params.matId) {
+            if (MatCode.CODE_REGEXP.test(this.params.matId)) {
+                matCode = this.params.matId;
+            } else {
+                this.#currentMat = await Mat.find(this.params.matId);
+            }
+        }
+
+        if (matCode) {
+            this.#currentMatCode = await MatCode.findByCode(matCode);
+            if (this.#currentMatCode) {
+                this.#currentMat = await this.#currentMatCode.getMat();
+            }
+        }
     }
 
 
@@ -286,6 +305,10 @@ class ServerController {
         if (!this.currentUser) {
             await this.renderUnauthorizedResponse();
             return false;
+        }
+
+        if (this.currentMat) {
+            await this.authorize('view', this.currentMat);
         }
     }
 

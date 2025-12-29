@@ -106,8 +106,6 @@ class UsersController extends ServerController {
             await this.renderNotFoundResponse();
             return false;
         }
-
-        await this.authorize('view', this.currentMat);
     }
 }
 

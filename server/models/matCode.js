@@ -6,7 +6,8 @@ const CODE_SIZE = 3;
 
 
 class MatCode extends BaseRecord {
-    static ROLES = {JUDGE: 'judge', VIEWER: 'viewer'};
+    static ROLES       = {JUDGE: 'judge', VIEWER: 'viewer'};
+    static CODE_REGEXP = /\w+\.\w+\.\w+/
 
 
     static async findByCode(code) {

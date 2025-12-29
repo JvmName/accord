@@ -16,7 +16,7 @@ class MatchesController extends ServerController {
     async postIndex() {
         await this.authorize('create', Match);
 
-        const { mat, red, blue, errors } = await this.getMatCreationVariables();
+        const { red, blue, errors } = await this.getMatCreationVariables();
         if (Object.keys(errors).length) return this.renderErrors(errors);
 
         await this.authorize('assign', this.currentMat);
@@ -24,7 +24,7 @@ class MatchesController extends ServerController {
         await this.authorize('assign', blue);
 
         const match = await Match.create({
-            mat_id:             mat.id,
+            mat_id:             this.currentMat.id,
             creator_id:         this.currentUser.id,
             red_competitor_id:  red.id,
             blue_competitor_id: blue.id,
@@ -39,19 +39,18 @@ class MatchesController extends ServerController {
     ***********************************************************************************************/
     async getMatCreationVariables() {
         const errors = {};
-        const mat    = await this.getMat();
         const red    = await this.getUser('red_competitor_id');
         const blue   = await this.getUser('blue_competitor_id');
 
-        if (!mat)  errors.matId              = ['invalid'];
-        if (!red)  errors.red_competitor_id  = ['invalid'];
-        if (!blue) errors.blue_competitor_id = ['invalid'];
+        if (!this.currentMat) errors.matId              = ['invalid'];
+        if (!red)             errors.red_competitor_id  = ['invalid'];
+        if (!blue)            errors.blue_competitor_id = ['invalid'];
         if (blue && red && blue.id == red.id) {
             errors.red_competitor_id  = ['red and blue competitors must be different'];
             errors.blue_competitor_id = ['red and blue competitors must be different'];
         }
 
-        return { mat, red, blue, errors };
+        return { red, blue, errors };
     }
 
 
