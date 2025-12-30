@@ -1,9 +1,10 @@
-package dev.jvmname.accord.domain
+package dev.jvmname.accord.domain.control
 
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import dev.jvmname.accord.domain.ButtonEvent.SteadyState.SteadyStateError
+import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.domain.control.ButtonEvent.SteadyState.SteadyStateError
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.SingleIn

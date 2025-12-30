@@ -1,6 +1,8 @@
-package dev.jvmname.accord.domain
+package dev.jvmname.accord.domain.control
 
-import dev.zacsweers.metro.Inject
+import dev.jvmname.accord.domain.Competitor
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -11,11 +13,17 @@ import kotlinx.coroutines.flow.update
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-@Inject
-class ScoreKeeper(
+
+interface ScoreKeeper {
+    val score: StateFlow<Score>
+    fun resetScores()
+}
+
+@[ContributesBinding(AppScope::class)]
+class RealScoreKeeper(
     tracker: ButtonPressTracker,
     scope: CoroutineScope
-) {
+) : ScoreKeeper {
 
     private val _score = MutableStateFlow(
         Score(
@@ -23,10 +31,10 @@ class ScoreKeeper(
             bluePoints = 0,
             activeControlTime = null,
             activeCompetitor = null,
-            technicalSuperiorityWinner = null
+            techFallWin = null
         )
     )
-    val score: StateFlow<Score> = _score.asStateFlow()
+    override val score: StateFlow<Score> = _score.asStateFlow()
 
     companion object {
         private val OneSecond = 1.seconds
@@ -61,7 +69,7 @@ class ScoreKeeper(
                                 bluePoints = newBluePoints,
                                 activeControlTime = remainingTime,
                                 activeCompetitor = event.competitor,
-                                technicalSuperiorityWinner = calculateTechnicalSuperiorityWinner(
+                                techFallWin = calculateTechnicalSuperiorityWinner(
                                     newRedPoints,
                                     newBluePoints
                                 )
@@ -94,13 +102,13 @@ class ScoreKeeper(
     }
 
     // TODO: Hook this up to round end event when available
-    fun resetScores() {
+    override fun resetScores() {
         _score.value = Score(
             redPoints = 0,
             bluePoints = 0,
             activeControlTime = null,
             activeCompetitor = null,
-            technicalSuperiorityWinner = null
+            techFallWin = null
         )
     }
 }
@@ -110,5 +118,5 @@ data class Score(
     val bluePoints: Int,
     val activeControlTime: Duration?, // 0-2 seconds, null when no active control
     val activeCompetitor: Competitor?, // null when no one is controlling
-    val technicalSuperiorityWinner: Competitor? // null until threshold reached
+    val techFallWin: Competitor? // null until threshold reached
 )
