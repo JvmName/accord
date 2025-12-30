@@ -1,6 +1,9 @@
 package dev.jvmname.accord.domain.control
 
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import dev.jvmname.accord.domain.Competitor
@@ -34,6 +37,7 @@ sealed class ButtonEvent {
     data class Release(val competitor: Competitor) : ButtonEvent()
 }
 
+
 interface ButtonPressTracker {
     val buttonEvents: StateFlow<ButtonEvent>
     fun recordPress(competitor: Competitor)
@@ -46,7 +50,6 @@ class RealButtonPressTracker(
     private val coroutineScope: CoroutineScope,
     private val clock: Clock
 ) : ButtonPressTracker {
-    private var activeCompetitor: Competitor? = null
     private var tracking: Job? = null
         set(value) {
             if (field != null && value != null) {
@@ -72,9 +75,9 @@ class RealButtonPressTracker(
     }
 
     /*
-      1. SteadyState → Clears tracking, activeCompetitor, and emits the event
+      1. SteadyState → Clears tracking and emits the event
       2. Press →
-        - Valid (from SteadyState): Sets activeCompetitor, emits Press, launches ticker
+        - Valid (from SteadyState): Emits Press, launches ticker
         - Invalid (from Press/Holding):
             - Different competitor → Emit SteadyState(TwoButtonsPressed)
           - Same competitor → Ignored (UI flapping protection)
@@ -93,16 +96,16 @@ class RealButtonPressTracker(
             is ButtonEvent.SteadyState -> _state.update { // Clear everything and emit
                 tracking?.cancel()
                 tracking = null
-                activeCompetitor = null
-                incoming
+                incoming.also {
+                    println("SteadyState! ButtonPress State -> $it")
+                }
             }
 
             is ButtonEvent.Press -> when (previous) {
                 is ButtonEvent.SteadyState -> _state.update { // Valid transition
-                    activeCompetitor = incoming.competitor
+                    val competitor = incoming.competitor
                     tracking = coroutineScope.launch { // Launch ticker
                         ticker(OneSecond) {
-                            val competitor = activeCompetitor!!
                             updateState(ButtonEvent.Holding(competitor = competitor))
                         }
                     }
@@ -111,22 +114,19 @@ class RealButtonPressTracker(
 
                 is ButtonEvent.Press, is ButtonEvent.Holding -> {
                     // Check if same or different competitor
-                    val currentCompetitor = when (previous) {
-                        is ButtonEvent.Press -> previous.competitor
-                        is ButtonEvent.Holding -> previous.competitor
-                        else -> null
-                    }
+                    val currentCompetitor = previous.competitor
                     when (incoming.competitor) {
-                        currentCompetitor -> _state.update { // Different competitor - error
-                            tracking?.cancel()
-                            tracking = null
-                            activeCompetitor = null
-                            ButtonEvent.SteadyState(SteadyStateError.TwoButtonsPressed)
-                        }
-
-                        else -> {
+                        currentCompetitor -> {
                             // Same competitor - ignore (UI flapping)
                             System.err.println("Error - Press/Holding but same competitor")
+                        }
+
+                        else -> _state.update { // Different competitor - error
+                            tracking?.cancel()
+                            tracking = null
+                            ButtonEvent.SteadyState(SteadyStateError.TwoButtonsPressed).also {
+                                println("Pressing! ButtonPress State -> $it")
+                            }
                         }
                     }
                 }
@@ -136,14 +136,16 @@ class RealButtonPressTracker(
 
             is ButtonEvent.Holding -> {
                 // Validate competitor matches existing
-                if (activeCompetitor != incoming.competitor) {
-                    System.err.println("Error - Holding competitor mismatch: expected $activeCompetitor, got ${incoming.competitor}")
+                if (previous.competitor != incoming.competitor) {
+                    System.err.println("Error - Holding competitor mismatch: expected ${previous.competitor}, got ${incoming.competitor}")
                     return
                 }
 
                 when (previous) {
                     is ButtonEvent.Press, is ButtonEvent.Holding -> _state.update { // Valid transition - emit
-                        incoming
+                        incoming.also {
+                            println("Holding! ButtonPress State -> $it")
+                        }
                     }
 
                     else -> Unit /* Invalid transition - ignore */
@@ -152,7 +154,8 @@ class RealButtonPressTracker(
 
             is ButtonEvent.Release -> {
                 // Ignore release from wrong competitor (e.g., after TwoButtonsPressed error)
-                if (activeCompetitor != incoming.competitor) {
+                if (previous.competitor != incoming.competitor) {
+                    println("Error - Release competitor mismatch: expected ${previous.competitor}, got ${incoming.competitor}")
                     return
                 }
 
@@ -160,22 +163,25 @@ class RealButtonPressTracker(
                     is ButtonEvent.Press -> _state.update { // Too short
                         tracking?.cancel()
                         tracking = null
-                        activeCompetitor = null
-                        ButtonEvent.SteadyState(SteadyStateError.PressTooShort)
+                        ButtonEvent.SteadyState(SteadyStateError.PressTooShort).also {
+                            println("Releasing! ButtonPress State -> $it")
+                        }
                     }
 
                     is ButtonEvent.Holding -> _state.update { // Valid release
                         tracking?.cancel()
                         tracking = null
-                        activeCompetitor = null
-                        ButtonEvent.SteadyState(null)
+                        ButtonEvent.SteadyState(null).also {
+                            println("Releasing! ButtonPress State -> $it")
+                        }
                     }
 
                     is ButtonEvent.SteadyState -> _state.update { // Defensive - already in steady state
                         tracking?.cancel()
                         tracking = null
-                        activeCompetitor = null
-                        ButtonEvent.SteadyState(null)
+                        ButtonEvent.SteadyState(null).also {
+                            println("Releasing! ButtonPress State -> $it")
+                        }
                     }
 
                     is ButtonEvent.Release -> Unit // Invalid - ignore
@@ -206,13 +212,24 @@ class RealButtonPressTracker(
 fun Modifier.buttonHold(
     onPress: () -> Unit,
     onRelease: () -> Unit
-): Modifier =
-    pointerInput(onPress, onRelease) {
-        detectTapGestures(
-            onPress = {
-                onPress()
-                tryAwaitRelease()
-                onRelease()
-            }
-        )
+): Modifier = pointerInput(onPress, onRelease) {
+    awaitEachGesture {
+        awaitFirstDown(requireUnconsumed = false).also {
+            onPress()
+            it.consume()
+        }
+        waitForUpOrCancellation()?.also {
+            it.consume()
+            onRelease()
+        }
+    }
+}
+
+
+private val ButtonEvent.competitor: Competitor?
+    get() = when (this) {
+        is ButtonEvent.Press -> competitor
+        is ButtonEvent.Holding -> competitor
+        is ButtonEvent.Release -> competitor
+        else -> null
     }

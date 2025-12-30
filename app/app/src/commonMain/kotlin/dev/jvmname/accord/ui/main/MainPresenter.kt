@@ -13,8 +13,8 @@ import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.domain.MatCreator
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.create_mat.CreateMatScreen
-import dev.jvmname.accord.ui.ride_time.RideTimeScreen
-import dev.jvmname.accord.ui.ride_time.RideTimeType
+import dev.jvmname.accord.ui.control.ControlTimeScreen
+import dev.jvmname.accord.ui.control.ControlTimeType
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
@@ -47,7 +47,7 @@ class MainPresenter(
 
                 MainEvent.JoinMat -> TODO()
                 MainEvent.SoloRideTime -> {
-                    navigator.goTo(RideTimeScreen(RideTimeType.SOLO))
+                    navigator.goTo(ControlTimeScreen(ControlTimeType.SOLO))
                 }
             }
         }

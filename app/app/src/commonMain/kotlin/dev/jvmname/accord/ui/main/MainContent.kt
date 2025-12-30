@@ -15,8 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.slack.circuit.codegen.annotations.CircuitInject
-import dev.jvmname.accord.ui.IconTextButton
-import dev.jvmname.accord.ui.StandardScaffold
+import dev.jvmname.accord.ui.common.IconTextButton
+import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.main.MainEvent.CreateMat
 import dev.jvmname.accord.ui.main.MainEvent.JoinMat
 import dev.jvmname.accord.ui.main.MainEvent.SoloRideTime
@@ -51,7 +51,7 @@ fun MainContent(state: MainState, modifier: Modifier) {
             IconTextButton(
                 modifier = Modifier,
                 icon = Icons.Outlined.Timer,
-                text = "Track Ride Time (Solo)",
+                text = "Control Time (Solo)",
                 onClick = { state.eventSink(SoloRideTime) }
             )
         }

@@ -11,6 +11,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import top.ltfan.multihaptic.HapticEffect
+import top.ltfan.multihaptic.vibrator.Vibrator
 import java.util.Locale
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -57,4 +59,13 @@ inline fun <T, E> Result<T, E>.onEither(
         else -> failure(error)
     }
     return this
+}
+
+data object StubVibrator : Vibrator{
+    override fun vibrate(effect: HapticEffect) {
+    }
+
+    override fun cancel() {
+    }
+
 }

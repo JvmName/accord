@@ -54,6 +54,8 @@ kotlin {
 
                 implementation(libs.kotlin.result)
                 implementation(libs.kotlin.result.coroutines)
+
+                implementation(libs.multihaptic)
             }
         }
 
@@ -151,6 +153,10 @@ compose.desktop {
 }
 
 ksp { arg("circuit.codegen.mode", "metro") }
+metro {
+    contributesAsInject = true
+    enableFullBindingGraphValidation = true
+}
 
 dependencies {
     add("kspCommonMainMetadata", libs.circuit.codegen)

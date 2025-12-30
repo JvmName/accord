@@ -1,5 +1,6 @@
 package dev.jvmname.accord.domain.control
 
+import androidx.compose.runtime.Immutable
 import dev.jvmname.accord.domain.Competitor
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.DurationUnit
 
 
 interface ScoreKeeper {
@@ -93,12 +95,13 @@ class RealScoreKeeper(
     }
 
     private fun calculateTechnicalSuperiorityWinner(redPoints: Int, bluePoints: Int): Competitor? {
-        // TODO: May need to incorporate round time constraints later
-        return when {
-            redPoints >= TechnicalSuperiorityThreshold -> Competitor.RED
-            bluePoints >= TechnicalSuperiorityThreshold -> Competitor.BLUE
-            else -> null
-        }
+        return null
+        // TODO: need to incorporate round time constraints later
+//        return when {
+//            redPoints >= TechnicalSuperiorityThreshold -> Competitor.RED
+//            bluePoints >= TechnicalSuperiorityThreshold -> Competitor.BLUE
+//            else -> null
+//        }
     }
 
     // TODO: Hook this up to round end event when available
@@ -113,10 +116,21 @@ class RealScoreKeeper(
     }
 }
 
+@Immutable
 data class Score(
     val redPoints: Int,
     val bluePoints: Int,
     val activeControlTime: Duration?, // 0-2 seconds, null when no active control
     val activeCompetitor: Competitor?, // null when no one is controlling
     val techFallWin: Competitor? // null until threshold reached
-)
+) {
+    fun getPoints(competitor: Competitor) = when (competitor) {
+        Competitor.RED -> redPoints
+        Competitor.BLUE -> bluePoints
+    }.toString()
+
+    fun controlTimeHumanReadable(competitor: Competitor) = when (activeCompetitor) {
+        competitor -> activeControlTime!!.toString(DurationUnit.SECONDS, 2)
+        else -> null
+    }
+}
