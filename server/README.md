@@ -4,11 +4,11 @@ in the `x-api-token` header. This API token is returned via the user creation en
 
 ## Users
 
-### Create a user
+### Create a User
 `POST /users`
-##### Request Parameters
+##### request parameters
 `email`, `name`
-##### Response
+##### response
 ```
 {
   "user": USER_PAYLOAD,
@@ -19,65 +19,120 @@ in the `x-api-token` header. This API token is returned via the user creation en
 
 ## Mats
 
-### Create a mat ###
+### Create a Mat ###
 `POST /mats`
-##### Request Parameters
+##### request parameters
 `name`, `judge_count`
-#### Response
+#### response
 ```
 {
   "mat": MAT_PAYLOAD (includes `codes` and `judges`)
 }
 ```
 
-<br/>
-### Get a mat
-`GET /mat/:matId`
-`:matId` can be either the id of the mat or a mat code.
-##### Response
+### Get a Mat
+`GET /mat/:matId` (`:matId` can be either the id of the mat or a mat code.)
+##### response
 ```
 {
   "mat": MAT_PAYLOAD (includes `judges`, `current_match`, and `upcoming_matches`)
 }
 ```
 
-<br/>
-### Add a judge or viewer (judge or viewer is determined by the mat code)
+### Add a Judge or Viewer (judge or viewer is determined by the mat code)
 `POST /mat/:matCode/join`
-##### Response
+##### response
 ```
 {
   "mat": MAT_PAYLOAD (includes `judges`)
 }
 ```
 
-<br/>
-### Remove a judge or viewer (judge or viewer is determined by the mat code)
+### Remove a Judge or Viewer (judge or viewer is determined by the mat code)
 `DELETE /mat/:matCode/join`
-##### Response
+##### response
 ```
 {
   "mat": MAT_PAYLOAD (includes `judges`)
 }
 ```
 
-<br/>
-### List judges
+### List Judges
 `GET /mat/:matCode/judges`
-##### Response
+##### response
 ```
 {
   "judges": [USER_PAYLOAD]
 }
 ```
 
-<br/>
-### List viewers
+### List Viewers
 `GET /mat/:matCode/viewers`
-##### Response
+##### response
 ```
 {
   "viewers": [USER_PAYLOAD]
+}
+```
+
+
+## MATCHES
+
+### Create a Match
+`POST /mat/:matId/matches` (`:matId` can be either the id of the mat or a mat code.)
+##### request parameters
+`red_competitor_id`, `blue_competitor_id`
+##### response
+```
+{
+  "match": MATCH_PAYLOAD (includes `mat`)
+}
+```
+
+### Start a Match
+`POST /match/:matchId/start`
+##### response
+```
+{
+  "match": MATCH_PAYLOAD (includes `mat`, `judges` and `rounds`)
+}
+```
+
+### End a Round
+`POST /match/:matchId/rounds/end`
+##### response
+```
+{
+  "match": MATCH_PAYLOAD (includes `mat`, `judges` and `rounds`)
+}
+```
+
+### Start a Round
+`POST /match/:matchId/rounds`
+##### response
+```
+{
+  "match": MATCH_PAYLOAD (includes `mat`, `judges` and `rounds`)
+}
+```
+
+### End a Match
+`POST /match/:matchId/end`
+##### request parameters
+`submission` (string with submission name), `submitter` ("red" or "blue") // optional
+##### response
+```
+{
+  "match": MATCH_PAYLOAD (includes `mat`, `judges` and `rounds`)
+}
+```
+
+### Get a Match
+`GET /match/:matchId`
+##### response
+```
+{
+  "match": MATCH_PAYLOAD (includes `mat`, `judges` and `rounds`)
 }
 ```
 
@@ -113,5 +168,31 @@ in the `x-api-token` header. This API token is returned via the user creation en
             "role": "viewer"
         }
     ]
+}
+```
+
+## Match
+```
+{
+    "creator_id": "086d09e1-6909-464c-8518-ca8eccb3edf2",
+    "id": "33777df4-3d37-41a3-8b1e-41128fc269f2",
+    "mat_id": "1222e44d-5463-4932-9f95-795641c6010e",
+    "started_at": null,
+    "ended_at": null,
+    "red_competitor": USER_PAYLOAD,
+    "blue_competitor": USER_PAYLOAD,
+    "mat": MAT_PAYLOAD,       // only included in some requests
+    "judges": [USER_PAYLOAD], // only included in some requests
+    "rounds": [ROUND_PAYLOAD] // only included in some requests
+}
+```
+
+## Round
+```
+{
+  "started_at": 1767112975218,
+  "ended_at": null,
+  "submission": "RNC"       // only included in rounds with a submission
+  "submitter": USER_PAYLOAD // only included in rounds with a submission
 }
 ```
