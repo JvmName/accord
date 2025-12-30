@@ -11,7 +11,7 @@ class RoundsController extends ServerController {
     async postStartRound() {
         try {
             await this.currentMatch.startRound();
-            const options = {includeRounds: true, includeMat: true};
+            const options = {includeRounds: true, includeJudges: true, includeMat: true};
             await this.render({match: this.currentMatch}, options);
         } catch(err) {
             await this.renderErrors({matchId: [err.message]});
@@ -22,7 +22,7 @@ class RoundsController extends ServerController {
     async postEndRound() {
         try {
             await this.currentMatch.endRound();
-            const options = {includeRounds: true, includeMat: true};
+            const options = {includeRounds: true, includeJudges: true, includeMat: true};
             await this.render({match: this.currentMatch}, options);
         } catch(err) {
             await this.renderErrors({matchId: [err.message]});
