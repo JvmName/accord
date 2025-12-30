@@ -5,11 +5,9 @@ const { User }             = require('../models/user');
 
 
 class MatchesController extends ServerController {
-    #currentMatch;
-
-
     setupCallbacks() {
         this.beforeCallback('authenticateRequest');
+        this.beforeCallback('requireMatch', {except: ['postIndex']});
     }
 
 
@@ -38,55 +36,51 @@ class MatchesController extends ServerController {
 
 
     async postStartMatch() {
-        await this.authorize('manage', this.#currentMatch);
-        if (this.#currentMatch.started) {
+        await this.authorize('manage', this.currentMatch);
+        if (this.currentMatch.started) {
             return await this.renderErrors({matchId: ['match has already started']});
         }
 
-        this.#currentMatch.started_at = new Date();
-        await this.#currentMatch.save();
+        await this.currentMatch.start();
+        await this.render({match: this.currentMatch});
     }
 
 
-    async deleteEndMatch() {
-        await this.authorize('manage', this.#currentMatch);
-        if (!this.#currentMatch.started) {
+    async postEndMatch() {
+        await this.authorize('manage', this.currentMatch);
+        if (!await this.validateParameters(this.endMatchValidations)) return;
+
+        if (!this.currentMatch.started) {
             return await this.renderErrors({matchId: ['this match has not started']});
         }
-        if (this.#currentMatch.ended) {
+        if (this.currentMatch.ended) {
             return await this.renderErrors({matchId: ['this match has already ended']});
         }
 
-        this.#currentMatch.ended_at = new Date();
-        await this.#currentMatch.save();
+        await this.currentMatch.end(this.params);
+        await this.render({match: this.currentMatch}, {includeMat: true, includeRounds: true});
     }
 
 
     async getMatch() {
-        return {match: this.#currentMatch};
+        const options = {includeRounds: true, includeMat: true};
+        await this.render({match: this.currentMatch}, options);
     }
 
 
     static get routes() {
         return {
-            deleteEndMatch: '/match/:matchId/start',
             getMatch:       '/match/:matchId',
+            postEndMatch:   '/match/:matchId/end',
             postIndex:      '/mat/:matId/matches',
             postStartMatch: '/match/:matchId/start'
         };
     }
 
 
-    async setupRequestState() {
+    async requireMatch() {
         await super.setupRequestState();
-        if (this.params.matchId) {
-            this.#currentMatch = await Match.find(this.params.matchId);
-            if (!this.#currentMatch) {
-                await this.renderNotFoundResponse();
-            } else {
-                await this.authorize('view', this.#currentMatch);
-            }
-        }
+        if (!this.currentMatch) await this.renderNotFoundResponse();
     }
 
 
@@ -122,6 +116,22 @@ class MatchesController extends ServerController {
     async getUser(paramName) {
         const userId = this.params[paramName];
         if (userId) return await User.find(userId);
+    }
+
+
+    get endMatchValidations() {
+        const params              = this.params;
+        const submissionValidator = () => {
+            const { submission, submitter } = params;
+            if (submission  && !submitter) return 'Must include `submitter` when providing submission';
+            if (!submission && submitter)  return 'Must include `submission` when providing submitter';
+        };
+
+        return {
+            submitter: {function: submissionValidator, isEnum: {enums: [undefined, 'red', 'blue']}},
+            sumission: {function: submissionValidator} 
+            
+        }
     }
 }
 

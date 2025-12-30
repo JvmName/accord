@@ -50,6 +50,11 @@ class Authorizer {
         switch(action) {
             case 'create':
                 return true;
+            case 'judge':
+                const mat    = await scope.getMat();
+                const judges = await mat.getJudges();
+                return judges.some(judge => judge.id == this.#user.id);
+                return false;
             case 'manage':
                 return true;
             case 'view':

@@ -255,5 +255,93 @@ module.exports = {
             "primaryKey": false,
             "unique": false
         }
+    },
+    "riding_time_votes": {
+        "id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": true,
+            "unique": true
+        },
+        "round_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "judge_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "competitor_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "ended_at": {
+            "type": "DATETIME",
+            "allowNull": true,
+            "primaryKey": false,
+            "unique": false
+        },
+        "created_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "updated_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        }
+    },
+    "rounds": {
+        "id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": true,
+            "unique": true
+        },
+        "match_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "submission_by": {
+            "type": "UUID",
+            "allowNull": true,
+            "primaryKey": false,
+            "unique": false
+        },
+        "submission": {
+            "type": "VARCHAR(255)",
+            "allowNull": true,
+            "primaryKey": false,
+            "unique": false
+        },
+        "ended_at": {
+            "type": "DATETIME",
+            "allowNull": true,
+            "primaryKey": false,
+            "unique": false
+        },
+        "created_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "updated_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        }
     }
 };

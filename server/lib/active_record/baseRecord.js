@@ -153,6 +153,7 @@ class BaseRecord extends Model {
 
     get apiSafeKeys() {
         const keys = Object.keys(this.rawAttributes).filter(key => {
+            if (/[A-Z]/.test(key)) return false;
             return !['created_at', 'updated_at', 'mats_users'].includes(key);
         });
 

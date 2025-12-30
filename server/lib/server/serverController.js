@@ -2,6 +2,7 @@ const { Authorizer } = require('./authorizer');
 const { camelize }   = require('inflection');
 const { logger }     = require('../logger');
 const { Mat }        = require('../../models/mat');
+const { Match }      = require('../../models/match');
 const { MatCode }    = require('../../models/matCode');
 const { User }       = require('../../models/user');
 
@@ -11,6 +12,7 @@ class ServerController {
     #authorizer;
     #beforeCallbacks = [];
     #currentMat;
+    #currentMatch;
     #currentMatCode;
     #currentUser;
     #params;
@@ -245,7 +247,9 @@ class ServerController {
 
 
     validateIsEnum(value, options) {
-        if (!options.enums.includes(value)) return options.error || `must be one of [${options.enums.join(', ')}]`;
+        if (!options.enums.includes(value)) {
+            return options.error || `must be one of [${options.enums.filter(Boolean).join(', ')}]`;
+        }
     }
 
 
@@ -280,6 +284,7 @@ class ServerController {
     async setupRequestState() {
         await this.#initCurrentUser();
         await this.#initCurrentMat();
+        await this.#initCurrentMatch();
     }
 
 
@@ -307,6 +312,12 @@ class ServerController {
     }
 
 
+    async #initCurrentMatch() {
+        if (!this.params.matchId) return;
+        this.#currentMatch = await Match.find(this.params.matchId);
+    }
+
+
     async authenticateRequest() {
         if (!this.currentUser) {
             await this.renderUnauthorizedResponse();
@@ -315,6 +326,10 @@ class ServerController {
 
         if (this.currentMat) {
             await this.authorize('view', this.currentMat);
+        }
+
+        if (this.currentMatch) {
+            await this.authorize('view', this.currentMatch);
         }
     }
 
@@ -330,6 +345,7 @@ class ServerController {
     get apiToken()       { return this.requestHeaders['x-api-token']; }
     get currentUser()    { return this.#currentUser    || null; }
     get currentMat()     { return this.#currentMat     || null; }
+    get currentMatch()   { return this.#currentMatch   || null; }
     get currentMatCode() { return this.#currentMatCode || null; }
     get authorizer()  {
         if (!this.currentUser) return;
