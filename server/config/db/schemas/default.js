@@ -343,5 +343,57 @@ module.exports = {
             "primaryKey": false,
             "unique": false
         }
+    },
+    "judges_matchs": {
+        "match_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": true
+        },
+        "user_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": true
+        },
+        "created_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "updated_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        }
+    },
+    "judges_matches": {
+        "match_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": true
+        },
+        "user_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": true
+        },
+        "created_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "updated_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        }
     }
 };

@@ -14,6 +14,11 @@ class Match extends BaseRecord {
         await Match.transaction(async () => {
             this.started_at = new Date();
             await this.save();
+
+            const mat    = await this.getMat();
+            const judges = await mat.getJudges();
+            await this.setJudges(judges);
+
             await this.startRound();
         });
     }
@@ -87,7 +92,8 @@ class Match extends BaseRecord {
         response.red_competitor  = await this.getRedCompetitor();
         response.blue_competitor = await this.getBlueCompetitor();
 
-        if (options.includeMat) response.mat = await this.getMat();
+        if (options.includeMat)         response.mat    = await this.getMat();
+        if (options.includeMatchJudges) response.judges = await this.getJudges();
         if (options.includeRounds) {
             response.rounds = await this.getRounds();
             response.rounds.sort((r1,r2) => r1.created_at - r2.created_at);
@@ -127,6 +133,10 @@ Match.belongsTo(User, {
 Match.belongsTo(User, {
     foreignKey: 'blue_competitor_id',
     as:         'blueCompetitor'
+});
+Match.belongsToMany(User, {
+    as:      'judges',
+    through: 'judges_matches'
 });
 Match.belongsTo(Mat);
 Mat.hasMany(Match);

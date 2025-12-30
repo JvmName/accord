@@ -26,12 +26,18 @@ class UsersController extends ServerController {
 
 
     async postJoin() {
-        return await this.addUser(this.currentMatCode.role);
+        await this.addUser(this.currentMatCode.role);
+        if (!this.rendered) {
+            await this.render({ mat: this.currentMat }, {includeMatJudges: true});
+        }
     }
 
 
     async deleteJoin() {
-        return await this.removeUser(this.currentMatCode.role);
+        await this.removeUser(this.currentMatCode.role);
+        if (!this.rendered) {
+            await this.render({ mat: this.currentMat }, {includeMatJudges: true});
+        }
     }
 
 
@@ -54,8 +60,6 @@ class UsersController extends ServerController {
         } else {
             await this.addAsViewer();
         }
-
-        if (!this.rendered) return {mat: this.currentMat};
     }
 
 

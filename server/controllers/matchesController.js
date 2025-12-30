@@ -42,7 +42,8 @@ class MatchesController extends ServerController {
         }
 
         await this.currentMatch.start();
-        await this.render({match: this.currentMatch});
+        const renderOptions = {includeMat: true, includeMatchJudges: true, includeRounds: true};
+        await this.render({match: this.currentMatch}, renderOptions);
     }
 
 
@@ -58,13 +59,14 @@ class MatchesController extends ServerController {
         }
 
         await this.currentMatch.end(this.params);
-        await this.render({match: this.currentMatch}, {includeMat: true, includeRounds: true});
+        const renderOptions = {includeMat: true, includeMatchJudges: true, includeRounds: true};
+        await this.render({match: this.currentMatch}, renderOptions);
     }
 
 
     async getMatch() {
-        const options = {includeRounds: true, includeMat: true};
-        await this.render({match: this.currentMatch}, options);
+        const renderOptions = {includeMat: true, includeMatchJudges: true, includeRounds: true};
+        await this.render({match: this.currentMatch}, renderOptions);
     }
 
 
@@ -101,15 +103,6 @@ class MatchesController extends ServerController {
         }
 
         return { red, blue, errors };
-    }
-
-
-    async getMat() {
-        const matId = this.params.matId;
-        if (matId) return await Mat.find(matId);
-
-        const matCode = this.params.matCode;
-        if (matCode) return await Mat.findByCode(matCode);
     }
 
 

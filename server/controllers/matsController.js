@@ -22,13 +22,13 @@ class MatsController extends ServerController {
             mat = await this.createMat()
         });
 
-        await this.render({ mat }, {includeCodes: true});
+        await this.render({ mat }, {includeCodes: true, includeMatJudges: true});
     }
 
 
     async getMat() {
         await this.authorize("view", this.currentMat);
-        await this.render({ mat: this.currentMat }, {includeMatches: true});
+        await this.render({ mat: this.currentMat }, {includeMatches: true, includeMatJudges: true});
     }
 
 
