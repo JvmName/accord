@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
 
@@ -33,6 +34,7 @@ class RealScoreKeeper(
             bluePoints = 0,
             activeControlTime = null,
             activeCompetitor = null,
+            sessionBasePoints = null,
             techFallWin = null
         )
     )
@@ -50,32 +52,44 @@ class RealScoreKeeper(
                 when (event) {
                     is ButtonEvent.Holding -> {
                         _score.update { prev ->
-                            // Reset session if competitor changed (defensive, shouldn't happen)
-                            val sessionTime = if (prev.activeCompetitor != event.competitor) {
-                                OneSecond
-                            } else {
-                                (prev.activeControlTime ?: Duration.ZERO) + OneSecond
+                            // Determine if this is a new session or continuation
+                            val isNewSession = prev.activeCompetitor != event.competitor
+
+                            // Calculate total session time (now stored, not remainder!)
+                            val totalSessionTime = when {
+                                isNewSession -> OneSecond
+                                else -> (prev.activeControlTime ?: Duration.ZERO) + OneSecond
                             }
 
-                            // Convert accumulated time to points (every 3 seconds = 1 point)
-                            val newPoints = (sessionTime / PointThreshold).toInt()
-                            val remainingTime = sessionTime - (PointThreshold * newPoints)
+                            // Get base points for this session
+                            val basePoints = when {
+                                isNewSession -> when (event.competitor) {
+                                    Competitor.RED -> prev.redPoints
+                                    Competitor.BLUE -> prev.bluePoints
+                                }
 
+                                else -> prev.sessionBasePoints ?: 0
+                            }
+
+                            // Calculate points earned in this session
+                            val sessionPoints = (totalSessionTime / PointThreshold).toInt()
+
+                            // Calculate new total points
                             val (newRedPoints, newBluePoints) = when (event.competitor) {
-                                Competitor.RED -> (prev.redPoints + newPoints) to prev.bluePoints
-                                Competitor.BLUE -> prev.redPoints to (prev.bluePoints + newPoints)
+                                Competitor.RED -> (basePoints + sessionPoints) to prev.bluePoints
+                                Competitor.BLUE -> prev.redPoints to (basePoints + sessionPoints)
                             }
 
                             Score(
                                 redPoints = newRedPoints,
                                 bluePoints = newBluePoints,
-                                activeControlTime = remainingTime,
+                                activeControlTime = totalSessionTime,
                                 activeCompetitor = event.competitor,
-                                techFallWin = calculateTechnicalSuperiorityWinner(
-                                    newRedPoints,
-                                    newBluePoints
-                                )
-                            )
+                                sessionBasePoints = basePoints,
+                                techFallWin = hasTechFallWin(newRedPoints, newBluePoints)
+                            ).also {
+                                println("Score: \n$it")
+                            }
                         }
                     }
 
@@ -83,7 +97,8 @@ class RealScoreKeeper(
                         // Clear active control (points persist, sub-3s time is lost)
                         prev.copy(
                             activeControlTime = null,
-                            activeCompetitor = null
+                            activeCompetitor = null,
+                            sessionBasePoints = null
                         )
                     }
 
@@ -94,7 +109,7 @@ class RealScoreKeeper(
             .launchIn(scope)
     }
 
-    private fun calculateTechnicalSuperiorityWinner(redPoints: Int, bluePoints: Int): Competitor? {
+    private fun hasTechFallWin(redPoints: Int, bluePoints: Int): Competitor? {
         return null
         // TODO: need to incorporate round time constraints later
 //        return when {
@@ -111,6 +126,7 @@ class RealScoreKeeper(
             bluePoints = 0,
             activeControlTime = null,
             activeCompetitor = null,
+            sessionBasePoints = null,
             techFallWin = null
         )
     }
@@ -120,8 +136,9 @@ class RealScoreKeeper(
 data class Score(
     val redPoints: Int,
     val bluePoints: Int,
-    val activeControlTime: Duration?, // 0-2 seconds, null when no active control
+    val activeControlTime: Duration?, // Total session time, null when no active control
     val activeCompetitor: Competitor?, // null when no one is controlling
+    val sessionBasePoints: Int?, // Points when current session started (for calculating incremental points)
     val techFallWin: Competitor? // null until threshold reached
 ) {
     fun getPoints(competitor: Competitor) = when (competitor) {
@@ -130,7 +147,11 @@ data class Score(
     }.toString()
 
     fun controlTimeHumanReadable(competitor: Competitor) = when (activeCompetitor) {
-        competitor -> activeControlTime!!.toString(DurationUnit.SECONDS, 2)
+        competitor -> {
+            val remainder = (activeControlTime!!.inWholeMilliseconds % 3000).milliseconds
+            remainder.toString(DurationUnit.SECONDS, 0)
+        }
+
         else -> null
     }
 }

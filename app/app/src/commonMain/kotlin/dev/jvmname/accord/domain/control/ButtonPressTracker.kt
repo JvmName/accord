@@ -15,12 +15,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.concurrent.atomics.AtomicReference
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.nanoseconds
@@ -39,7 +39,7 @@ sealed class ButtonEvent {
 
 
 interface ButtonPressTracker {
-    val buttonEvents: StateFlow<ButtonEvent>
+    val buttonEvents: SharedFlow<ButtonEvent>
     fun recordPress(competitor: Competitor)
     fun recordRelease(competitor: Competitor)
 
@@ -57,8 +57,13 @@ class RealButtonPressTracker(
             }
             field = value
         }
-    private val _state = MutableStateFlow<ButtonEvent>(ButtonEvent.SteadyState(null))
-    override val buttonEvents: StateFlow<ButtonEvent> get() = _state.asStateFlow()
+
+    // Internal state for state machine logic
+    private val _state = AtomicReference<ButtonEvent>(ButtonEvent.SteadyState(null))
+
+    // External events (no deduplication)
+    private val _events = MutableSharedFlow<ButtonEvent>(replay = 0)
+    override val buttonEvents: SharedFlow<ButtonEvent> get() = _events.asSharedFlow()
 
     companion object {
         private val OneSecond = 1.seconds
@@ -90,26 +95,28 @@ class RealButtonPressTracker(
         - From SteadyState → Defensive handling, emit SteadyState(null)
     */
     private fun updateState(incoming: ButtonEvent) {
-        val previous = _state.value
+        val previous = _state.load()
 
         when (incoming) {
-            is ButtonEvent.SteadyState -> _state.update { // Clear everything and emit
+            is ButtonEvent.SteadyState -> {
                 tracking?.cancel()
                 tracking = null
-                incoming.also {
+                _state.store(incoming.also {
                     println("SteadyState! ButtonPress State -> $it")
-                }
+                })
+                coroutineScope.launch { _events.emit(incoming) }
             }
 
             is ButtonEvent.Press -> when (previous) {
-                is ButtonEvent.SteadyState -> _state.update { // Valid transition
+                is ButtonEvent.SteadyState -> {
                     val competitor = incoming.competitor
                     tracking = coroutineScope.launch { // Launch ticker
                         ticker(OneSecond) {
                             updateState(ButtonEvent.Holding(competitor = competitor))
                         }
                     }
-                    incoming
+                    _state.store(incoming)
+                    coroutineScope.launch { _events.emit(incoming) }
                 }
 
                 is ButtonEvent.Press, is ButtonEvent.Holding -> {
@@ -121,12 +128,14 @@ class RealButtonPressTracker(
                             System.err.println("Error - Press/Holding but same competitor")
                         }
 
-                        else -> _state.update { // Different competitor - error
+                        else -> {
+                            val errorState = ButtonEvent.SteadyState(SteadyStateError.TwoButtonsPressed)
                             tracking?.cancel()
                             tracking = null
-                            ButtonEvent.SteadyState(SteadyStateError.TwoButtonsPressed).also {
+                            _state.store(errorState.also {
                                 println("Pressing! ButtonPress State -> $it")
-                            }
+                            })
+                            coroutineScope.launch { _events.emit(errorState) }
                         }
                     }
                 }
@@ -142,10 +151,11 @@ class RealButtonPressTracker(
                 }
 
                 when (previous) {
-                    is ButtonEvent.Press, is ButtonEvent.Holding -> _state.update { // Valid transition - emit
-                        incoming.also {
+                    is ButtonEvent.Press, is ButtonEvent.Holding -> {
+                        _state.store(incoming.also {
                             println("Holding! ButtonPress State -> $it")
-                        }
+                        })
+                        coroutineScope.launch { _events.emit(incoming) }
                     }
 
                     else -> Unit /* Invalid transition - ignore */
@@ -160,28 +170,34 @@ class RealButtonPressTracker(
                 }
 
                 when (previous) {
-                    is ButtonEvent.Press -> _state.update { // Too short
+                    is ButtonEvent.Press -> {
+                        val errorState = ButtonEvent.SteadyState(SteadyStateError.PressTooShort)
                         tracking?.cancel()
                         tracking = null
-                        ButtonEvent.SteadyState(SteadyStateError.PressTooShort).also {
+                        _state.store(errorState.also {
                             println("Releasing! ButtonPress State -> $it")
-                        }
+                        })
+                        coroutineScope.launch { _events.emit(errorState) }
                     }
 
-                    is ButtonEvent.Holding -> _state.update { // Valid release
+                    is ButtonEvent.Holding -> {
+                        val steadyState = ButtonEvent.SteadyState(null)
                         tracking?.cancel()
                         tracking = null
-                        ButtonEvent.SteadyState(null).also {
+                        _state.store(steadyState.also {
                             println("Releasing! ButtonPress State -> $it")
-                        }
+                        })
+                        coroutineScope.launch { _events.emit(steadyState) }
                     }
 
-                    is ButtonEvent.SteadyState -> _state.update { // Defensive - already in steady state
+                    is ButtonEvent.SteadyState -> {
+                        val steadyState = ButtonEvent.SteadyState(null)
                         tracking?.cancel()
                         tracking = null
-                        ButtonEvent.SteadyState(null).also {
+                        _state.store(steadyState.also {
                             println("Releasing! ButtonPress State -> $it")
-                        }
+                        })
+                        coroutineScope.launch { _events.emit(steadyState) }
                     }
 
                     is ButtonEvent.Release -> Unit // Invalid - ignore

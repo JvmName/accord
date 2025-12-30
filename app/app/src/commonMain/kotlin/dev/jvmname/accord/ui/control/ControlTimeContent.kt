@@ -188,6 +188,7 @@ private fun ControlTimeContentPreview() {
                 bluePoints = 11,
                 activeControlTime = null,
                 activeCompetitor = null,
+                sessionBasePoints = null,
                 techFallWin = null
             ),
             haptic = null,
@@ -208,6 +209,7 @@ private fun ControlTimeContentPreview_Holding() {
                 bluePoints = 11,
                 activeControlTime = 1.5.seconds,
                 activeCompetitor = Competitor.BLUE,
+                sessionBasePoints = 22,
                 techFallWin = null
             ),
             haptic = null,

@@ -1,7 +1,9 @@
 package dev.jvmname.accord.domain.control
 
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import dev.drewhamilton.poko.Poko
+import dev.jvmname.accord.domain.control.ButtonEvent.SteadyState.SteadyStateError
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.runningFold
+import top.ltfan.multihaptic.HapticEffect
 
 @Inject
 class ScoreHapticFeedbackHelper(
@@ -31,16 +34,10 @@ class ScoreHapticFeedbackHelper(
                     is ButtonEvent.Press -> HapticTrigger.ButtonPress
                     is ButtonEvent.Release -> HapticTrigger.ButtonRelease
                     is ButtonEvent.Holding -> HapticTrigger.ButtonHolding
-                    is ButtonEvent.SteadyState -> {
-                        when (event.error) {
-                            ButtonEvent.SteadyState.SteadyStateError.TwoButtonsPressed ->
-                                HapticTrigger.ErrorTwoButtonsPressed
-
-                            ButtonEvent.SteadyState.SteadyStateError.PressTooShort ->
-                                HapticTrigger.ErrorPressTooShort
-
-                            null -> null
-                        }
+                    is ButtonEvent.SteadyState -> when (event.error) {
+                        SteadyStateError.TwoButtonsPressed -> HapticTrigger.ErrorTwoButtonsPressed
+                        SteadyStateError.PressTooShort -> HapticTrigger.ErrorPressTooShort
+                        null -> null
                     }
                 }
             }
@@ -60,33 +57,81 @@ class ScoreHapticFeedbackHelper(
             .mapNotNull { (_, trigger) -> trigger }
 
         merge(buttonHapticTriggers, scoreHapticTriggers)
-            .onEach { trigger -> _hapticEvents.emit(trigger.toHapticEvent()) }
+            .onEach { _hapticEvents.emit(HapticEvent(Consumable(it.effect))) }
             .launchIn(scope)
     }
 }
 
-/**
- * Represents the reason a haptic event should be triggered.
- */
-enum class HapticTrigger {
-    ButtonPress,
-    ButtonRelease,
-    ButtonHolding,
-    ErrorTwoButtonsPressed,
-    ErrorPressTooShort,
-    ScoreIncrement,
-    TechFallWin;
+@Immutable
+sealed interface HapticTrigger {
+    val effect: HapticEffect
 
-    fun toHapticEvent(): HapticEvent = when (this) {
-        ButtonPress -> HapticEvent(HapticFeedbackType.LongPress) // TODO: Use proper haptic type
-        ButtonRelease -> HapticEvent(HapticFeedbackType.LongPress) // TODO: Use proper haptic type
-        ButtonHolding -> HapticEvent(HapticFeedbackType.LongPress) // TODO: Use proper haptic type
-        ErrorTwoButtonsPressed -> HapticEvent(HapticFeedbackType.LongPress) // TODO: Use proper haptic type
-        ErrorPressTooShort -> HapticEvent(HapticFeedbackType.LongPress) // TODO: Use proper haptic type
-        ScoreIncrement -> HapticEvent(HapticFeedbackType.LongPress) // TODO: Use proper haptic type
-        TechFallWin -> HapticEvent(HapticFeedbackType.LongPress) // TODO: Use proper haptic type
+    data object ButtonPress : HapticTrigger {
+        override val effect = HapticEffect {
+            click {
+            }
+
+        }
+    }
+
+    data object ButtonRelease : HapticTrigger {
+        override val effect = HapticEffect {
+            click {
+            }
+        }
+    }
+
+    data object ButtonHolding : HapticTrigger {
+        override val effect = HapticEffect {
+            tick {
+                scale = 0.75f
+            }
+        }
+    }
+
+    data object ErrorTwoButtonsPressed : HapticTrigger {
+        override val effect = HapticEffect {
+            click {
+            }
+        }
+    }
+
+    data object ErrorPressTooShort : HapticTrigger {
+        override val effect = HapticEffect {
+            click {
+            }
+        }
+    }
+
+    data object ScoreIncrement : HapticTrigger {
+        override val effect = HapticEffect {
+            click {
+            }
+        }
+    }
+
+    data object TechFallWin : HapticTrigger {
+        override val effect = HapticEffect {
+            click {
+            }
+        }
     }
 }
 
-@Poko
-class HapticEvent(val event: HapticFeedbackType)
+@[Poko Stable]
+class HapticEvent(val effect: Consumable<HapticEffect>) {
+}
+
+//a la SingleLiveEvent
+@Stable
+class Consumable<T>(private val value: T) {
+    private var consumed = false
+
+    fun consume(): T? = when {
+        consumed -> null
+        else -> {
+            consumed = true
+            value
+        }
+    }
+}
