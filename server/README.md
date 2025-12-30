@@ -30,6 +30,7 @@ in the `x-api-token` header. This API token is returned via the user creation en
 }
 ```
 
+<br/>
 ### Get a mat
 `GET /mat/:matId`
 `:matId` can be either the id of the mat or a mat code.
@@ -40,6 +41,7 @@ in the `x-api-token` header. This API token is returned via the user creation en
 }
 ```
 
+<br/>
 ### Add a judge or viewer (judge or viewer is determined by the mat code)
 `POST /mat/:matCode/join`
 ##### Response
@@ -49,6 +51,7 @@ in the `x-api-token` header. This API token is returned via the user creation en
 }
 ```
 
+<br/>
 ### Remove a judge or viewer (judge or viewer is determined by the mat code)
 `DELETE /mat/:matCode/join`
 ##### Response
@@ -58,6 +61,7 @@ in the `x-api-token` header. This API token is returned via the user creation en
 }
 ```
 
+<br/>
 ### List judges
 `GET /mat/:matCode/judges`
 ##### Response
@@ -67,6 +71,7 @@ in the `x-api-token` header. This API token is returned via the user creation en
 }
 ```
 
+<br/>
 ### List viewers
 `GET /mat/:matCode/viewers`
 ##### Response
