@@ -100,6 +100,8 @@ in the `x-api-token` header. This API token is returned via the user creation en
 
 ### End a Round
 `POST /match/:matchId/rounds/end`
+##### request parameters
+`submission` (string with submission name), `submitter` ("red" or "blue") // optional
 ##### response
 ```
 {
@@ -192,7 +194,7 @@ in the `x-api-token` header. This API token is returned via the user creation en
 {
   "started_at": 1767112975218,
   "ended_at": null,
-  "submission": "RNC"       // only included in rounds with a submission
-  "submitter": USER_PAYLOAD // only included in rounds with a submission
+  "submission": "RNC",
+  "submitter": USER_PAYLOAD
 }
 ```
