@@ -1,7 +1,8 @@
-const { Mat }              = require('../models/mat');
-const { Match }            = require('../models/match');
-const { ServerController } = require('../lib/server');
-const { User }             = require('../models/user');
+const { endRoundValidations } = require('../lib/controllers/roundsControllerHelpers');
+const { Mat }                 = require('../models/mat');
+const { Match }               = require('../models/match');
+const { ServerController }    = require('../lib/server');
+const { User }                = require('../models/user');
 
 
 class MatchesController extends ServerController {
@@ -49,7 +50,9 @@ class MatchesController extends ServerController {
 
     async postEndMatch() {
         await this.authorize('manage', this.currentMatch);
-        if (!await this.validateParameters(this.endMatchValidations)) return;
+
+        const validations = endRoundValidations.call(this);
+        if (!await this.validateParameters(validations)) return;
 
         if (!this.currentMatch.started) {
             return await this.renderErrors({matchId: ['this match has not started']});
@@ -109,22 +112,6 @@ class MatchesController extends ServerController {
     async getUser(paramName) {
         const userId = this.params[paramName];
         if (userId) return await User.find(userId);
-    }
-
-
-    get endMatchValidations() {
-        const params              = this.params;
-        const submissionValidator = () => {
-            const { submission, submitter } = params;
-            if (submission  && !submitter) return 'Must include `submitter` when providing submission';
-            if (!submission && submitter)  return 'Must include `submission` when providing submitter';
-        };
-
-        return {
-            submitter: {function: submissionValidator, isEnum: {enums: [undefined, 'red', 'blue']}},
-            sumission: {function: submissionValidator} 
-            
-        }
     }
 }
 

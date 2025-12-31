@@ -1,5 +1,5 @@
-const { ServerController } = require('../../lib/server');
-
+const { endRoundValidations } = require('../../lib/controllers/roundsControllerHelpers');
+const { ServerController }    = require('../../lib/server');
 
 class RoundsController extends ServerController {
     setupCallbacks() {
@@ -20,8 +20,11 @@ class RoundsController extends ServerController {
 
 
     async postEndRound() {
+        const validations = endRoundValidations.call(this);
+        if (!await this.validateParameters(validations)) return;
+
         try {
-            await this.currentMatch.endRound();
+            await this.currentMatch.endRound(this.params);
             const options = {includeRounds: true, includeJudges: true, includeMat: true};
             await this.render({match: this.currentMatch}, options);
         } catch(err) {

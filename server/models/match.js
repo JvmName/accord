@@ -31,13 +31,7 @@ class Match extends BaseRecord {
         await Match.transaction(async () => {
             this.ended_at = new Date();
             await this.save();
-
-            let submissionBy;
-            if (submission) {
-                  const competitor = await this.competitorForColor(submitter);
-                        submissionBy = competitor?.id;
-            }
-           await this.endRound({ submission, submissionBy });
+            await this.endRound({ submission, submitter });
         });
     }
 
@@ -59,16 +53,13 @@ class Match extends BaseRecord {
     }
 
 
-    async endRound({ submission, submissionBy }={}) {
+    async endRound({ submission, submitter }={}) {
         const lastRound = await this.getLastRound();
         if (!lastRound || lastRound.ended) {
             throw new Error("No available round to end");
         }
 
-        lastRound.submission    = submission;
-        lastRound.submission_by = submissionBy;
-        lastRound.ended_at      = new Date();
-        await lastRound.save();
+        await lastRound.end({ submission, submitter });
     }
 
 
@@ -142,6 +133,7 @@ Match.belongsTo(Mat);
 Mat.hasMany(Match);
 
 Match.hasMany(Round);
+Round.belongsTo(Match);
 
 
 module.exports = {

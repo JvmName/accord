@@ -12,9 +12,25 @@ class Round extends BaseRecord {
         if (this.submission) {
             response.submission = this.submission;
             response.submitter  = await this.getSubmitter();
+        } else {
+            response.submission = null;
+            response.submitter  = null;
         }
 
         return response;
+    }
+
+
+    async end({submission, submitter}={}) {
+        const match = await this.getMatch();
+        if (submission) {
+            const competitor   = await match.competitorForColor(submitter);
+            this.submission    = submission;
+            this.submission_by = competitor?.id;
+        }
+
+        this.ended_at = new Date();
+        await this.save();
     }
 
 
