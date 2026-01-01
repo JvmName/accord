@@ -1,6 +1,7 @@
-const { BaseRecord }     = require('../lib/active_record');
-const { RidingTimeVote } = require('./ridingTimeVote');
-const { User }           = require('./user');
+const { BaseRecord }          = require('../lib/active_record');
+const { calculateRidingTime } = require('../lib/ridingTime');
+const { RidingTimeVote }      = require('./ridingTimeVote');
+const { User }                = require('./user');
 
 
 class Round extends BaseRecord {
@@ -54,21 +55,47 @@ class Round extends BaseRecord {
 
     async toApiResponse() {
         const response = {
+            id:         this.id,
             started_at: this.started_at,
             ended_at:   this.ended_at
         }
 
-        if (this.submission) {
-            response.submission = this.submission;
-            response.submitter  = await this.getSubmitter();
-        } else {
-            response.submission = null;
-            response.submitter  = null;
-        }
-
-        response.votes = await this.countRidingTimeVotes();
+        await this.addRoundResultToApiResponse(response);
 
         return response;
+    }
+
+
+    async addRoundResultToApiResponse(response) {
+        const match          = await this.getMatch();
+        const red            = await match.getRedCompetitor();
+        const blue           = await match.getBlueCompetitor();
+        const judges         = await match.getJudges();
+
+        const votes          = await this.getRidingTimeVotes();
+        const redVotes       = votes.filter(vote => vote.competitor_id == red.id);
+        const blueVotes      = votes.filter(vote => vote.competitor_id == blue.id);
+        const redRidingTime  = calculateRidingTime(redVotes,  judges, this.ended_at);
+        const blueRidingTime = calculateRidingTime(blueVotes, judges, this.ended_at);
+
+        response.ridingTime = {[red.id]:  redRidingTime, [blue.id]: blueRidingTime};
+        response.result     = {winner: null, method: {type: null, value: null}};
+
+        if (!this.ended) return;
+
+        if (this.submission) {
+            response.result.winner       = red.id == response.submitter_id ? red : blue;
+            response.result.method.type  = 'submission'
+            response.result.method.value = this.submission;
+
+        } else if (redRidingTime != blueRidingTime) {
+            response.result.winner       = redRidingTime > blueRidingTime ? red : blue;
+            response.result.method.type  = 'riding_time';
+            response.result.method.value = Math.max(redRidingTime, blueRidingTime);
+        } else {
+            response.result.method.type  = 'tie';
+        }
+
     }
 
 
