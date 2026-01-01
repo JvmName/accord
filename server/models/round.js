@@ -20,14 +20,13 @@ class Round extends BaseRecord {
     async endRidingTime(judge, riderColor) {
         const activeVote = await this.currentRidingTimeVoteForJudge(judge)
         if (!activeVote) throw new Error(`Riding time is not active`);
-        await activeVote.destroy();
+        await activeVote.end();
     }
 
 
     async currentRidingTimeVoteForJudge(judge) {
         const where = {
             judge_id: judge.id,
-            round_id: this.id,
             ended_at: null,
         };
         return (await this.getRidingTimeVotes({ where }))[0]
@@ -35,6 +34,12 @@ class Round extends BaseRecord {
 
 
     async end({submission, submitter}={}) {
+        const where = {ended_at: null};
+        const ridingTimeVotes = await this.getRidingTimeVotes({ where });
+        for (const vote of ridingTimeVotes) {
+            await vote.end();
+        }
+
         const match = await this.getMatch();
         if (submission) {
             const competitor   = await match.competitorForColor(submitter);
@@ -60,6 +65,8 @@ class Round extends BaseRecord {
             response.submission = null;
             response.submitter  = null;
         }
+
+        response.votes = await this.countRidingTimeVotes();
 
         return response;
     }
