@@ -1,8 +1,9 @@
-const { AuthorizationError }   = require('../../lib/server/serverController');
-const { BarController }        = require('./helpers/controllers/barController');
-const { FooController }        = require('./helpers/controllers/fooController');
-const { camelize }             = require('inflection');
-const   TestHelpers            = require('../helpers');
+const { AuthorizationError,
+        ValidationError } = require('../../lib/server/serverController');
+const { BarController }   = require('./helpers/controllers/barController');
+const { FooController }   = require('./helpers/controllers/fooController');
+const { camelize }        = require('inflection');
+const   TestHelpers       = require('../helpers');
 
 
 describe('ServerController', () => {
@@ -93,29 +94,20 @@ describe('ServerController', () => {
             expect(validator2).toBeCalledWith(value1, options2);
         });
 
-        it ('sets the error status when there\'s an error', () => {
+        it ('throws a `ValidationError` when there\'s an error', async () => {
             validator1.mockImplementation(() => error1);
-            controller.validateParameters(validations);
-            expect(controller.render).toHaveBeenCalledTimes(1);
-            const expected = {errors: {
-                [paramName1]: [error1],
-                [paramName2]: [error1]
-            }};
-            expect(controller.render).toHaveBeenCalledWith(expected);
-            expect(response.statusCode).toEqual(400);
+            await expect(async () => {
+                await controller.validateParameters(validations);
+            }).rejects.toThrow(ValidationError);
         });
 
-        it ('sets the error status when there are multiple errors', () => {
+        it ('throws a `ValidationError` when there are multiple errors', async () => {
             validator1.mockImplementation(() => error1);
             validator2.mockImplementation(() => error2);
-            controller.validateParameters(validations);
-            expect(controller.render).toHaveBeenCalledTimes(1);
-            const expected = {errors: {
-                [paramName1]: [error1, error2],
-                [paramName2]: [error1]
-            }};
-            expect(controller.render).toHaveBeenCalledWith(expected);
-            expect(response.statusCode).toEqual(400);
+
+            await expect(async () => {
+                await controller.validateParameters(validations);
+            }).rejects.toThrow(ValidationError);
         });
 
         it ('sets nothing when there is no error', () => {

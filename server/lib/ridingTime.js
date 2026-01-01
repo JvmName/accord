@@ -2,18 +2,16 @@ class RidingTimeCalculator {
     #activeVotes = {};
     #controlStartedAt;
     #endAt;
-    #judges;
     #ridingTime;
     #votes;
     #voteThreshold;
 
     constructor(votes, judges, endAt) {
         this.#endAt  = endAt || new Date();
-        this.#judges = judges;
         this.#votes  = votes;
-        this.#votes.sort((v1,v2) => v1.created_at - v2.created_at);
+        this.#votes.sort((v1,v2) => v1.started_at - v2.started_at);
 
-        if (judges.lenth == 1) {
+        if (judges.length == 1) {
             this.#voteThreshold = 1;
         } else {
             this.#voteThreshold = Math.max(Math.ceil(judges.length/2), 2);
@@ -41,10 +39,10 @@ class RidingTimeCalculator {
         let activeVotes  = this.activeVotes;
         let nextStepTime = activeVotes[0]?.ended_at;
 
-        while (nextStepTime && nextStepTime < newVote.created_at) {
+        while (nextStepTime && nextStepTime < newVote.started_at) {
             this.endVote(activeVotes[0]);
             activeVotes  = this.activeVotes;
-            nextStepTime = activeVotes[0]?.end_time;
+            nextStepTime = activeVotes[0]?.ended_at;
         }
 
         this.startVote(newVote);
@@ -83,6 +81,8 @@ class RidingTimeCalculator {
 
     endControlPeriod(endAt) {
         const time = endAt.getTime() - this.#controlStartedAt.getTime();
+      if (endAt < this.#controlStartedAt) {
+      }
         this.#ridingTime += time/1000;
         this.#controlStartedAt = null;
     }
