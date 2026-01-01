@@ -1,15 +1,17 @@
-const   CONSTANTS                              = require('../constants');
-const   express                                = require('express');
-const   fs                                     = require('fs');
-const   httpLogger                             = require('pino-http')
-const { logger }                               = require('../logger');
-const { pino }                                 = require('pino');
-const   responseTime                           = require('response-time');
-const   IoServer                               = require("socket.io")
-const { Server }                               = require('http');
-const { SystemController }                     = require('./systemController');
-const { ServerController, AuthorizationError } = require('./serverController');
-const { WebSocket }                            = require('./webSocket');
+const   CONSTANTS          = require('../constants');
+const   express            = require('express');
+const   fs                 = require('fs');
+const   httpLogger         = require('pino-http')
+const { logger }           = require('../logger');
+const { pino }             = require('pino');
+const   responseTime       = require('response-time');
+const   IoServer           = require("socket.io")
+const { Server }           = require('http');
+const { SystemController } = require('./systemController');
+const { AuthorizationError,
+        ServerController,
+        ValidationError }  = require('./serverController');
+const { WebSocket }        = require('./webSocket');
 
 
 class ApplicationServer {
@@ -270,6 +272,10 @@ class ApplicationServer {
 
         } else if (err.constructor == AuthorizationError) {
             await controllerInstance.renderUnauthorizedResponse();
+            return;
+
+        } else if (err.constructor == ValidationError) {
+            await controllerInstance.renderErrors(err.errors);
             return;
 
         } else {

@@ -14,8 +14,7 @@ class MatsController extends ServerController {
     ***********************************************************************************************/
     async postIndex() {
         await this.authorize("create", Mat);
-
-        if (!await this.validateParameters(this.creationValidations)) return;
+        await this.validateParameters(this.creationValidations)
 
         let mat;
         await Mat.transaction(async () => {

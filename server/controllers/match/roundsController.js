@@ -21,7 +21,7 @@ class RoundsController extends ServerController {
 
     async postEndRound() {
         const validations = endRoundValidations.call(this);
-        if (!await this.validateParameters(validations)) return;
+        await this.validateParameters(validations);
 
         try {
             await this.currentMatch.endRound(this.params);
@@ -49,9 +49,8 @@ class RoundsController extends ServerController {
             await this.renderNotFoundResponse();
             return false;
         }
-        if (await this.authorize('manage', this.currentMatch) === false) {
-            return false;
-        }
+
+        await this.authorize('manage', this.currentMatch);
     }
 }
 

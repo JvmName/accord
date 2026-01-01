@@ -1,6 +1,5 @@
 const { BaseRecord }     = require('../lib/active_record');
 const { Mat }            = require('./mat');
-const { RidingTimeVote } = require('./ridingTimeVote');
 const { Round }          = require('./round');
 const { User }           = require('./user');
 

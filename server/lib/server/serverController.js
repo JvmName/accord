@@ -155,8 +155,7 @@ class ServerController {
     /***********************************************************************************************
     * CALLBACKS
     ***********************************************************************************************/
-    async setupRequestState() {}
-    setupCallbacks()          {}
+    setupCallbacks() {}
 
 
     beforeCallback(callback, options={}) {
@@ -219,12 +218,7 @@ class ServerController {
             if (parameterErrors.length) errors[parameterName] = parameterErrors;
         }
 
-        if (Object.keys(errors).length) {
-            await this.renderErrors(errors);
-            return false;
-        }
-
-        return true;
+        if (Object.keys(errors).length) throw new ValidationError(errors);
     }
 
 
@@ -422,9 +416,18 @@ class ServerController {
 
 
 class AuthorizationError extends Error {}
+class ValidationError    extends Error {
+    #errors;
+    constructor(errors) {
+        super();
+        this.#errors = errors;
+    }
+    get errors() { return structuredClone(this.#errors) }; 
+}
 
 
 module.exports = { 
     AuthorizationError,
-    ServerController
+    ServerController,
+    ValidationError
 };

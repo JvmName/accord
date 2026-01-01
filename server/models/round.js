@@ -1,23 +1,36 @@
-const { BaseRecord } = require('../lib/active_record');
-const { User }       = require('./user');
+const { BaseRecord }     = require('../lib/active_record');
+const { RidingTimeVote } = require('./ridingTimeVote');
+const { User }           = require('./user');
 
 
 class Round extends BaseRecord {
-    async toApiResponse() {
-        const response = {
-            started_at: this.created_at,
-            ended_at:   this.ended_at
-        }
+    async startRidingTime(judge, riderColor) {
+        const activeVote = await this.currentRidingTimeVoteForJudge(judge)
+        if (activeVote) throw new Error(`Riding time is already active`);
 
-        if (this.submission) {
-            response.submission = this.submission;
-            response.submitter  = await this.getSubmitter();
-        } else {
-            response.submission = null;
-            response.submitter  = null;
-        }
+        const match      = await this.getMatch();
+        const competitor = await match.competitorForColor(riderColor);
+        const vote = new RidingTimeVote({competitor_id: competitor.id,
+                                         judge_id: judge.id,
+                                         round_id: this.id});
+        await vote.save();
+    }
 
-        return response;
+
+    async endRidingTime(judge, riderColor) {
+        const activeVote = await this.currentRidingTimeVoteForJudge(judge)
+        if (!activeVote) throw new Error(`Riding time is not active`);
+        await activeVote.destroy();
+    }
+
+
+    async currentRidingTimeVoteForJudge(judge) {
+        const where = {
+            judge_id: judge.id,
+            round_id: this.id,
+            ended_at: null,
+        };
+        return (await this.getRidingTimeVotes({ where }))[0]
     }
 
 
@@ -34,8 +47,27 @@ class Round extends BaseRecord {
     }
 
 
-    get started() { return Boolean(this.started_at) };
-    get ended()   { return Boolean(this.ended_at) };
+    async toApiResponse() {
+        const response = {
+            started_at: this.started_at,
+            ended_at:   this.ended_at
+        }
+
+        if (this.submission) {
+            response.submission = this.submission;
+            response.submitter  = await this.getSubmitter();
+        } else {
+            response.submission = null;
+            response.submitter  = null;
+        }
+
+        return response;
+    }
+
+
+    get started_at() { return this.created_at };
+    get started()    { return Boolean(this.started_at) };
+    get ended()      { return Boolean(this.ended_at) };
 }
 
 
@@ -43,8 +75,9 @@ Round.initialize();
 
 Round.belongsTo(User, {
     foreignKey: 'submission_by',
-    as: 'submitter'
+    as:         'submitter'
 });
+Round.hasMany(RidingTimeVote);
 
 
 module.exports = {

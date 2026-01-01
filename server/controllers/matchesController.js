@@ -52,7 +52,7 @@ class MatchesController extends ServerController {
         await this.authorize('manage', this.currentMatch);
 
         const validations = endRoundValidations.call(this);
-        if (!await this.validateParameters(validations)) return;
+        await this.validateParameters(validations);
 
         if (!this.currentMatch.started) {
             return await this.renderErrors({matchId: ['this match has not started']});
