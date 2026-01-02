@@ -16,14 +16,15 @@ class MatchesController extends ServerController {
     * ACTIONS
     ***********************************************************************************************/
     async postIndex() {
-        await this.authorize('create', Match);
+        await this.authorize('create a match', this.currentMat);
 
         const { red, blue, errors } = await this.getMatCreationVariables();
         if (Object.keys(errors).length) return await this.renderErrors(errors);
 
-        await this.authorize('assign', this.currentMat);
-        await this.authorize('assign', red);
-        await this.authorize('assign', blue);
+        await this.authorize('create a match', this.currentMat);
+        await this.authorize('assign',         this.currentMat);
+        await this.authorize('assign',         red);
+        await this.authorize('assign',         blue);
 
         const match = await Match.create({
             mat_id:             this.currentMat.id,
@@ -77,7 +78,7 @@ class MatchesController extends ServerController {
         return {
             getMatch:       '/match/:matchId',
             postEndMatch:   '/match/:matchId/end',
-            postIndex:      '/mat/:matId/matches',
+            postIndex:      '/mat/:matCode/matches',
             postStartMatch: '/match/:matchId/start'
         };
     }

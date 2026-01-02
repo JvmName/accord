@@ -6,7 +6,7 @@ const CODE_SIZE = 3;
 
 
 class MatCode extends BaseRecord {
-    static ROLES       = {JUDGE: 'judge', VIEWER: 'viewer'};
+    static ROLES       = {ADMIN: 'admin', VIEWER: 'viewer'};
     static CODE_REGEXP = /\w+\.\w+\.\w+/
 
 
@@ -18,6 +18,16 @@ class MatCode extends BaseRecord {
     static async generateCode() {
         const words = await new WordGenerator().getWords(CODE_SIZE);
         return words.join('.');
+    }
+
+
+    get isAdminCode() {
+        return this.role == MatCode.ROLES.ADMIN;
+    }
+
+
+    get isViewerCode() {
+        return this.role == MatCode.ROLES.VIEWER;
     }
 
 

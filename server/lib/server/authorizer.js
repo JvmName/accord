@@ -12,7 +12,7 @@ class Authorizer {
 
 
     async can(action, scope) {
-        const cls = scope.constructor == Function ? scope : scope.constructor;
+        const cls = this.classForScope(scope);
         switch(cls.name) {
             case 'String':
                 return await this.simpleScopePermission(action, scope);
@@ -26,6 +26,11 @@ class Authorizer {
     }
 
 
+    classForScope(scope) {
+        return scope.constructor == Function ? scope : scope.constructor;
+    }
+
+
     async simpleScopePermission(action, scope) {
         if (scope == 'test') return true;
         return false;
@@ -35,11 +40,14 @@ class Authorizer {
     async matPermission(action, scope) {
         switch(action) {
             case 'assign':
-              return true;
+            case 'create a match':
+                if (!this.#matCode)                   return false;
+                if (this.#matCode.mat_id != scope.id) return false;
+                return this.#matCode.isAdminCode;
             case 'create':
                 return true;
-            case 'judge':
-                return this.#matCode && this.#matCode.role == MatCode.ROLES.JUDGE;
+            case 'be assigned judge':
+                return true;
             case 'view':
                 return true;
         }
@@ -48,8 +56,6 @@ class Authorizer {
 
     async matchPermission(action, scope) {
         switch(action) {
-            case 'create':
-                return true;
             case 'judge':
                 const judges = await scope.getJudges();
                 return judges.some(judge => judge.id == this.#user.id);

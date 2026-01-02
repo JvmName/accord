@@ -84,7 +84,7 @@ class Round extends BaseRecord {
         if (!this.ended) return;
 
         if (this.submission) {
-            response.result.winner       = red.id == response.submitter_id ? red : blue;
+            response.result.winner       = red.id == this.submission_by ? red : blue;
             response.result.method.type  = 'submission'
             response.result.method.value = this.submission;
 

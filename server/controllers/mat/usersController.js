@@ -55,7 +55,7 @@ class UsersController extends ServerController {
     * HELPERS
     ***********************************************************************************************/
     async addUser(role) {
-        if (role == MatCode.ROLES.JUDGE) {
+        if (role == MatCode.ROLES.ADMIN) {
             await this.addAsJudge();
         } else {
             await this.addAsViewer();
@@ -64,7 +64,9 @@ class UsersController extends ServerController {
 
 
     async removeUser(role) {
-        if (role == MatCode.ROLES.JUDGE) {
+        if (role == MatCode.ROLES.ADMIN) {
+            await this.authorize("assign",            this.currentMat);
+            await this.authorize("be assigned judge", this.currentMat);
             await this.currentMat.removeJudge(this.currentUser);
         } else {
             await this.currentMat.removeViewer(this.currentUser);
@@ -73,7 +75,8 @@ class UsersController extends ServerController {
 
 
     async addAsJudge() {
-        await this.authorize("judge", this.currentMat);
+        await this.authorize("assign",            this.currentMat);
+        await this.authorize("be assigned judge", this.currentMat);
 
         const judges = await this.currentMat.getJudges()
         if (judges.some(judge => judge.id == this.currentUser.id)) {
