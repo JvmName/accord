@@ -11,11 +11,11 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.runningFold
+import kotlinx.coroutines.launch
 import top.ltfan.multihaptic.HapticEffect
 
 @Inject
@@ -24,8 +24,8 @@ class ScoreHapticFeedbackHelper(
     scoreKeeper: ScoreKeeper,
     scope: CoroutineScope
 ) {
-    private val _hapticEvents = MutableSharedFlow<HapticEvent>()
-    val hapticEvents: SharedFlow<HapticEvent> = _hapticEvents.asSharedFlow()
+    private val _hapticEvents = MutableSharedFlow<ConsumableHapticEvent>()
+    val hapticEvents: SharedFlow<ConsumableHapticEvent> = _hapticEvents.asSharedFlow()
 
     init {
         val buttonHapticTriggers: Flow<HapticTrigger> = buttonPressTracker.buttonEvents
@@ -56,9 +56,11 @@ class ScoreHapticFeedbackHelper(
             .drop(1) // Skip initial emission (same score, null trigger)
             .mapNotNull { (_, trigger) -> trigger }
 
-        merge(buttonHapticTriggers, scoreHapticTriggers)
-            .onEach { _hapticEvents.emit(HapticEvent(Consumable(it.effect))) }
-            .launchIn(scope)
+        scope.launch {
+            merge(buttonHapticTriggers, scoreHapticTriggers)
+                .map { ConsumableHapticEvent(it.effect) }
+                .collect(_hapticEvents)
+        }
     }
 }
 
@@ -68,66 +70,59 @@ sealed interface HapticTrigger {
 
     data object ButtonPress : HapticTrigger {
         override val effect = HapticEffect {
-            click {
-            }
-
+            slowRise
         }
     }
 
     data object ButtonRelease : HapticTrigger {
         override val effect = HapticEffect {
-            click {
-            }
+            quickFall
         }
     }
 
     data object ButtonHolding : HapticTrigger {
         override val effect = HapticEffect {
-            tick {
-                scale = 0.75f
-            }
+            click
         }
     }
 
     data object ErrorTwoButtonsPressed : HapticTrigger {
         override val effect = HapticEffect {
-            click {
-            }
+            click
+            click
+            click
         }
     }
 
     data object ErrorPressTooShort : HapticTrigger {
         override val effect = HapticEffect {
-            click {
-            }
+            spin
         }
     }
 
     data object ScoreIncrement : HapticTrigger {
         override val effect = HapticEffect {
-            click {
-            }
+            click
+            click
         }
     }
 
     data object TechFallWin : HapticTrigger {
         override val effect = HapticEffect {
-            click {
-            }
+            click
+            click
+            click
+            click
+            click
         }
     }
 }
 
-@[Poko Stable]
-class HapticEvent(val effect: Consumable<HapticEffect>) {
-}
-
-//a la SingleLiveEvent
-@Stable
-class Consumable<T>(private val value: T) {
+@[Poko Stable] //a la SingleLiveEvent
+class ConsumableHapticEvent(private val value: HapticEffect) {
     private var consumed = false
 
-    fun consume(): T? = when {
+    fun consume(): HapticEffect? = when {
         consumed -> null
         else -> {
             consumed = true

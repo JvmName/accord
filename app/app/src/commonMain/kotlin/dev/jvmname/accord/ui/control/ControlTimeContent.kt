@@ -11,34 +11,25 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoveUp
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.accord.domain.Competitor
-import dev.jvmname.accord.domain.control.buttonHold
 import dev.jvmname.accord.domain.color
 import dev.jvmname.accord.domain.control.Score
+import dev.jvmname.accord.domain.control.buttonHold
 import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.StubVibrator
 import dev.jvmname.accord.ui.common.IconTextButton
@@ -54,15 +45,12 @@ private typealias EventSink = (ControlTimeEvent) -> Unit
 
 @[Composable CircuitInject(ControlTimeScreen::class, AppScope::class)]
 fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
-    val vibrator = if (LocalInspectionMode.current) {
-        remember { StubVibrator }
-    } else {
-        rememberVibrator()
+    val vibrator = when {
+        LocalInspectionMode.current -> remember { StubVibrator }
+        else -> rememberVibrator()
     }
 
-    state.haptic?.effect?.consume()?.let {
-        vibrator.vibrate(it)
-    }
+    state.haptic?.consume()?.let { vibrator.vibrate(it) }
 
     StandardScaffold(
         modifier = modifier.background(MaterialTheme.colorScheme.background),
@@ -174,8 +162,6 @@ private fun PlayerTime(
         )
     }
 }
-
-
 
 @Preview
 @Composable

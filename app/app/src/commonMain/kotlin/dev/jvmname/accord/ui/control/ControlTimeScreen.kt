@@ -5,7 +5,7 @@ import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.screen.Screen
 import dev.jvmname.accord.domain.Competitor
-import dev.jvmname.accord.domain.control.HapticEvent
+import dev.jvmname.accord.domain.control.ConsumableHapticEvent
 import dev.jvmname.accord.domain.control.Score
 import dev.jvmname.accord.parcel.CommonParcelize
 
@@ -19,7 +19,7 @@ data class ControlTimeScreen(val type: ControlTimeType) : Screen
 data class ControlTimeState(
     val matName: String,
     val score: Score,
-    val haptic: HapticEvent?,
+    val haptic: ConsumableHapticEvent?,
     val eventSink: (ControlTimeEvent) -> Unit
 ) : CircuitUiState
 
