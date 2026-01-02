@@ -1,4 +1,4 @@
-const { Match } = require('../../../models/match');
+const { Match }      = require('../../../models/match');
 
 
 const MATCH_UPDATER_TIMEOUTS = {};
@@ -14,7 +14,10 @@ function addMatchEventHandlers(webSocket, webSocketServer) {
 }
 
 
-function handleMatchJoined(matchId) {
+async function handleMatchJoined(matchId) {
+    const match = await Match.find(matchId)
+    if (!await this.authorizer.can('view', match)) return;
+
     this.join(roomForMatch(matchId));
     queueMatchUpdate(matchId);
 }

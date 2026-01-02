@@ -1,9 +1,11 @@
+const { addMatchEventHandlers } = require('./webSocketEventHandlers/matchEventHandlers');
+const { Authorizer }            = require('./authorizer');
 const { logger }                = require('../logger');
 const { User }                  = require('../../models/user');
-const { addMatchEventHandlers } = require('./webSocketEventHandlers/matchEventHandlers');
 
 
 class WebSocket {
+    #authorizer;
     #currentUser;
     #ioSocket;
     #server;
@@ -20,7 +22,8 @@ class WebSocket {
 
         await this.#initCurrentUser();
         if (!this.currentUser) {
-            throw new Error("unauthorized");
+            this.#ioSocket.close();
+            return;
         }
 
         this.on('disconnect', ()     => { logger.info(`Web socket disconnected (${this.id})`) });
@@ -93,6 +96,12 @@ class WebSocket {
     get id()          { return this.#ioSocket.id }
     get apiToken()    { return this.#ioSocket.handshake.auth?.apiToken; }
     get currentUser() { return this.#currentUser || null; }
+
+
+    get authorizer() {
+        if (!this.#authorizer) this.#authorizer = new Authorizer(this.currentUser);
+        return this.#authorizer;
+    }
 }
 
 
