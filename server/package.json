@@ -13,7 +13,8 @@
     "jest": {
         "collectCoverage": true,
         "coveragePathIgnorePatterns": [
-            "/helpers/"
+            "/helpers/",
+            "/models/"
         ],
         "setupFilesAfterEnv": ["jest-extended/all"]
     },
