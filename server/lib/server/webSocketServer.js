@@ -24,8 +24,8 @@ class WebSocketServer {
     }
 
 
-    emit(channel, eventName, eventData) {
-        this.#ioServer.to(channel).emit(eventName, eventData);
+    emit(room, eventName, eventData) {
+        this.#ioServer.to(room).emit(eventName, eventData);
     }
 
 
@@ -45,18 +45,24 @@ class WebSocketServer {
             cors: { origin: this.#corsOrigin, credentials: true }
         });
 
-        this.#_ioServer.use(this._initWebSocket);
+        this.#_ioServer.use(this._initWebSocket.bind(this));
     }
 
 
     async _initWebSocket(ioSocket, next) {
-        const socket = new WebSocket(ioSocket);
+        const socket = new WebSocket(ioSocket, this);
         try {
             await socket.init();
             next();
         } catch(err) {
             return next(err);
         }
+    }
+
+
+    numClientsInRoom(room) {
+        const clients = this.#ioServer.sockets.adapter.rooms.get(room);
+        return clients ? clients.size : 0;
     }
 }
 
