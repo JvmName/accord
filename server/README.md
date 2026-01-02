@@ -139,6 +139,24 @@ in the `x-api-token` header. This API token is returned via the user creation en
 ```
 
 
+# Web Sockets
+## Connecting to the Web Socket Server
+Here is a JavaScript example of for connection to and authenticating with the web socket server
+```
+const { io } = require('socket.io-client');
+const socket = io(apiRoot, {
+    auth: {apiToken: myToken},
+    transports: ["websocket"]
+}); 
+```
+
+## Joining a Match
+Once connected to the web socket server, emit the event `match.join` with the `matchId` as the only argument.
+
+## Listening for Match Updates
+Listen to the event `match.update` to receive updates every second for a match. The event payload will be the `MATCH_PAYLOAD` with `mat`, `judges`, and `rounds`.
+
+
 # Response Payloads
 
 ## User
