@@ -192,9 +192,23 @@ in the `x-api-token` header. This API token is returned via the user creation en
 ## Round
 ```
 {
-  "started_at": 1767112975218,
-  "ended_at": null,
-  "submission": "RNC",
-  "submitter": USER_PAYLOAD
+    "id": "c7b62fb7-9a67-4926-a23f-17dcd58a3f75",
+    "started_at": 1767246227927,
+    "ended_at": 1767251747838,
+    "ridingTime": {
+        "086d09e1-6909-464c-8518-ca8eccb3edf2": 384.867,
+        "c160ec24-895f-4f70-9563-2a17c046d400": 0
+    },
+    "result": {
+        "winner": {
+            "id": "086d09e1-6909-464c-8518-ca8eccb3edf2",
+            "name": "Mark",
+            "email": "mark@marklilien.com"
+        },
+        "method": {
+            "type": "riding_time",
+            "value": 384.867
+        }
+    }
 }
 ```
