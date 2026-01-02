@@ -5,7 +5,10 @@ const { WebSocket } = require('../../lib/server/webSocket');
 
 const apiToken = TestHelpers.Faker.Text.randomString();
 const socketId = TestHelpers.Faker.Text.randomString();
-const ioSocket = {id: socketId, handshake: {auth: { apiToken }}, on: jest.fn()};
+const ioSocket = {adapter:   {on: jest.fn()},
+                  id:        socketId,
+                  handshake: {auth: { apiToken }},
+                  on:        jest.fn()};
 const user     = new User();
 
 
@@ -49,12 +52,13 @@ describe('WebSocket', () => {
 
             await socket.init();
 
-            expect(onSpy).toHaveBeenCalledTimes(1);
+            expect(onSpy).toHaveBeenCalledTimes(3);
             expect(onSpy).toHaveBeenCalledWith('disconnect', expect.any(Function));
+            expect(onSpy).toHaveBeenCalledWith('room.join',  expect.any(Function));
+            expect(onSpy).toHaveBeenCalledWith('room.leave', expect.any(Function));
 
             onSpy.mockRestore();
         });
-        
     });
 
 

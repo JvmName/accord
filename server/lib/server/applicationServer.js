@@ -5,13 +5,12 @@ const   httpLogger         = require('pino-http')
 const { logger }           = require('../logger');
 const { pino }             = require('pino');
 const   responseTime       = require('response-time');
-const   IoServer           = require("socket.io")
 const { Server }           = require('http');
 const { SystemController } = require('./systemController');
 const { AuthorizationError,
         ServerController,
         ValidationError }  = require('./serverController');
-const { WebSocket }        = require('./webSocket');
+const { WebSocketServer }  = require('./webSocketServer');
 
 
 class ApplicationServer {
@@ -19,7 +18,6 @@ class ApplicationServer {
     #_expressServer;
     #host;
     #_httpServer;
-    #_ioServer;
     #port;
 
 
@@ -71,48 +69,8 @@ class ApplicationServer {
     * WEB SOCKETS
     ***********************************************************************************************/
     startWebSocketServer() {
-        this.addWebSocketEventHandler('connection', this.#handleWebSocketConnection);
-    }
-
-
-    #handleWebSocketConnection(ioSocket) {
-        logger.info(`Web socket connected (${ioSocket.id})`);
-    }
-
-
-    get #ioServer() {
-        if (!this.#_ioServer) this.#initializeIoServer();
-        return this.#_ioServer;
-    }
-
-
-    #initializeIoServer() {
-        this.#_ioServer = IoServer(this.#httpServer, {
-            cors: { origin: this.corsOrigins, credentials: true }
-        });
-
-        this.#_ioServer.use(this._initWebSocket);
-    }
-
-
-    async _initWebSocket(ioSocket, next) {
-        const socket = new WebSocket(ioSocket);
-        try {
-            await socket.init();
-            next();
-        } catch(err) {
-            return next(err);
-        }
-    }
-
-
-    emitWebSocketEvent(channel, eventName, eventData) {
-        this.#ioServer.to(channel).emit(eventName, eventData);
-    }
-
-
-    addWebSocketEventHandler(eventName, eventHandler) {
-        this.#ioServer.on(eventName, eventHandler.bind(this));
+        const server = new WebSocketServer(this.#httpServer, this.corsOrigin);
+        server.listen();
     }
 
 
@@ -180,7 +138,7 @@ class ApplicationServer {
     /***********************************************************************************************
     * SETTINGS
     ***********************************************************************************************/
-    get corsOrigins() {
+    get corsOrigin() {
         return [];
     }
     
