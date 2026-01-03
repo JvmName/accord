@@ -24,7 +24,7 @@ interface ScoreKeeper {
 @[ContributesBinding(AppScope::class)]
 class RealScoreKeeper(
     tracker: ButtonPressTracker,
-    scope: CoroutineScope
+    scope: CoroutineScope,
 ) : ScoreKeeper {
 
     private val _score = MutableStateFlow(
@@ -115,7 +115,7 @@ data class Score(
     val bluePoints: Int,
     val activeControlTime: Duration?, // Total session time, null when no active control
     val activeCompetitor: Competitor?, // null when no one is controlling
-    val techFallWin: Competitor? // null until threshold reached
+    val techFallWin: Competitor?, // null until threshold reached
 ) {
     fun getPoints(competitor: Competitor) = when (competitor) {
         Competitor.RED -> redPoints
@@ -123,11 +123,7 @@ data class Score(
     }.toString()
 
     fun controlTimeHumanReadable(competitor: Competitor) = when (activeCompetitor) {
-        competitor -> {
-            val remainder = (activeControlTime!!.inWholeMilliseconds % 3000).milliseconds
-            remainder.toString(DurationUnit.SECONDS, 0)
-        }
-
+        competitor -> ((activeControlTime!!.inWholeSeconds % 3) + 1).toString()
         else -> null
     }
 }

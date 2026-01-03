@@ -3,17 +3,28 @@ package dev.jvmname.accord.ui.control
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.NextPlan
+import androidx.compose.material.icons.filled.HeartBroken
 import androidx.compose.material.icons.filled.MoveUp
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.outlined.PauseCircle
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,9 +36,12 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.color
+import dev.jvmname.accord.domain.control.RoundEvent
 import dev.jvmname.accord.domain.control.Score
 import dev.jvmname.accord.domain.control.buttonHold
 import dev.jvmname.accord.domain.nameStr
@@ -36,8 +50,10 @@ import dev.jvmname.accord.ui.common.IconTextButton
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.control.ControlTimeEvent.ButtonPress
 import dev.jvmname.accord.ui.control.ControlTimeEvent.ButtonRelease
+import dev.jvmname.accord.ui.theme.AccordTheme
 import dev.zacsweers.metro.AppScope
 import top.ltfan.multihaptic.compose.rememberVibrator
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 private typealias EventSink = (ControlTimeEvent) -> Unit
@@ -50,10 +66,12 @@ fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
         else -> rememberVibrator()
     }
 
-    state.haptic?.consume()?.let { vibrator.vibrate(it) }
+    state.matchState.haptic?.effect?.consume()?.let { vibrator.vibrate(it) }
 
     StandardScaffold(
-        modifier = modifier.background(MaterialTheme.colorScheme.background),
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
         title = "Control Time: ${state.matName}",
         onBackClick = { state.eventSink(ControlTimeEvent.Back) },
         topBarActions = {
@@ -74,19 +92,29 @@ fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
         ) {
             Spacer(modifier = Modifier.height(32.dp))
 
-            //TODO figure out if we need "vote status" text
-//            Text("Placeholder Text", style = MaterialTheme.typography.bodyMedium)
-//            Spacer(modifier = Modifier.height(32.dp))
+            state.matchState
+                .roundInfo
+                ?.remainingHumanTime()
+                ?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.displayLargeEmphasized,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+            Spacer(modifier = Modifier.height(32.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = spacedBy(8.dp)
             ) {
                 Competitor.entries.forEach { competitor ->
-                    PlayerTime(
+                    PlayerControl(
                         modifier = Modifier.weight(1f),
-                        points = state.score.getPoints(competitor),
-                        controlDuration = state.score.controlTimeHumanReadable(competitor),
+                        points = state.matchState.score.getPoints(competitor),
+                        controlDuration = state.matchState.score.controlTimeHumanReadable(competitor),
                         color = competitor.color,
                         playerName = competitor.nameStr,
                         eventSink = state.eventSink,
@@ -94,12 +122,57 @@ fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            RoundControlsSheet(state = state.rememberControlActions())
+        }
+    }
+}
+
+
+@Composable
+fun RoundControlsSheet(modifier: Modifier = Modifier, state: RoundControlActions) {
+    Card(
+        modifier = modifier.fillMaxSize(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        FlowRow(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = spacedBy(8.dp),
+
+            ) {
+            state.beginNextRound?.let { beginNextRound ->
+                FilledTonalIconButton(onClick = beginNextRound) {
+                    Icon(Icons.AutoMirrored.Filled.NextPlan, "")
+                }
+            }
+            state.resume?.let { resume ->
+                FilledTonalIconButton(onClick = resume) {
+                    Icon(Icons.Outlined.PlayArrow, "")
+                }
+            }
+            state.pause?.let { pause ->
+                FilledTonalIconButton(onClick = pause) {
+                    Icon(Icons.Outlined.PauseCircle, "")
+                }
+            }
+            state.submission?.let { submission ->
+                FilledTonalIconButton(onClick = submission) {
+                    Icon(Icons.Default.HeartBroken, "")
+                }
+            }
+            state.reset?.let { reset ->
+                FilledTonalIconButton(onClick = reset) {
+                    Icon(Icons.Default.Replay, "")
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun PlayerTime(
+private fun PlayerControl(
     points: String,
     controlDuration: String?,
     color: Color,
@@ -115,7 +188,7 @@ private fun PlayerTime(
         Text(
             text = points,
             color = color,
-            style = MaterialTheme.typography.displayLarge,
+            style = MaterialTheme.typography.displayLarge.copy(fontSize = 50.sp),
             fontWeight = FontWeight.Medium
         )
 
@@ -132,22 +205,22 @@ private fun PlayerTime(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         IconTextButton(
             modifier = Modifier
-                .fillMaxHeight(0.95f)
+                .fillMaxHeight(0.80f)
                 .clickable(false) {
-                    println("Clicked not pressed")
+                    Logger.d { "Clicked not pressed" }
                     eventSink(ButtonPress(player))
                     eventSink(ButtonRelease(player))
                 }
                 .buttonHold(
                     onPress = {
-                        println("UI press $player")
+                        Logger.d { "UI press $player" }
                         eventSink(ButtonPress(player))
                     },
                     onRelease = {
-                        println("UI press $player")
+                        Logger.d { "UI press $player" }
                         eventSink(ButtonRelease(player))
                     }
                 ),
@@ -155,7 +228,7 @@ private fun PlayerTime(
             text = "$playerName controlling",
             colors = ButtonDefaults.buttonColors(containerColor = color),
             onClick = {
-                println("Clicked not pressed")
+                Logger.d { "Clicked not pressed" }
                 eventSink(ButtonPress(player))
                 eventSink(ButtonRelease(player))
             }
@@ -166,40 +239,77 @@ private fun PlayerTime(
 @Preview
 @Composable
 private fun ControlTimeContentPreview() {
-    ControlTimeContent(
-        state = ControlTimeState(
-            matName = "Bay JJ",
-            score = Score(
-                redPoints = 22,
-                bluePoints = 11,
-                activeControlTime = null,
-                activeCompetitor = null,
-                techFallWin = null
+    AccordTheme {
+        ControlTimeContent(
+            state = ControlTimeState(
+                matName = "Bay JJ",
+                matchState = MatchState(
+                    score = Score(
+                        redPoints = 22,
+                        bluePoints = 11,
+                        activeControlTime = null,
+                        activeCompetitor = null,
+                        techFallWin = null
+                    ),
+                    haptic = null,
+                    roundInfo = RoundEvent(
+                        remaining = 2.minutes + 30.seconds,
+                        roundNumber = 1,
+                        totalRounds = 3,
+                        state = RoundEvent.RoundState.STARTED
+                    )
+                ),
+                eventSink = { },
             ),
-            haptic = null,
-            eventSink = { },
-        ),
-        modifier = Modifier
-    )
+            modifier = Modifier
+        )
+    }
 }
 
 @Preview
 @Composable
 private fun ControlTimeContentPreview_Holding() {
-    ControlTimeContent(
-        state = ControlTimeState(
-            matName = "Bay JJ",
-            score = Score(
-                redPoints = 22,
-                bluePoints = 11,
-                activeControlTime = 1.5.seconds,
-                activeCompetitor = Competitor.BLUE,
-                techFallWin = null
+    AccordTheme {
+        ControlTimeContent(
+            state = ControlTimeState(
+                matName = "Bay JJ",
+                matchState = MatchState(
+                    score = Score(
+                        redPoints = 22,
+                        bluePoints = 11,
+                        activeControlTime = 1.5.seconds,
+                        activeCompetitor = Competitor.BLUE,
+                        techFallWin = null
+                    ),
+                    haptic = null,
+                    roundInfo = RoundEvent(
+                        remaining = 2.minutes + 30.seconds,
+                        roundNumber = 1,
+                        totalRounds = 3,
+                        state = RoundEvent.RoundState.STARTED
+                    ),
+                ),
+                eventSink = { },
             ),
-            haptic = null,
-            eventSink = { },
-        ),
-        modifier = Modifier
-    )
+            modifier = Modifier
+        )
+    }
 }
 
+@Preview
+@Composable
+private fun RoundControlsSheetPreview() {
+    AccordTheme {
+
+        RoundControlsSheet(
+            modifier = Modifier,
+            state = RoundControlActions(
+                beginNextRound = {},
+                resume = {},
+                pause = {},
+                submission = {},
+                reset = {},
+            )
+        )
+    }
+}

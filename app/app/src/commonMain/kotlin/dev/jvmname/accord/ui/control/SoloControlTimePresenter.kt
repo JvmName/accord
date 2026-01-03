@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.first
 class DelegatingControlTimePresenter(
     @Assisted private val screen: ControlTimeScreen,
     @Assisted private val navigator: Navigator,
-    private val soloFactory: SoloControlTimePresenter.Factory
+    private val soloFactory: SoloControlTimePresenter.Factory,
 ) : Presenter<ControlTimeState> {
     @Composable
     override fun present(): ControlTimeState {
@@ -58,25 +58,30 @@ class SoloControlTimePresenter(
     private val buttonTracker: ButtonPressTracker,
     private val scoreKeeper: ScoreKeeper,
     private val hapticFeedbackHelper: ScoreHapticFeedbackHelper,
+    private val roundTrackerFactory: RoundTracker.Factory,
 ) : Presenter<ControlTimeState> {
 
     @Composable
     override fun present(): ControlTimeState {
+        val roundTracker = remember { roundTrackerFactory(RoundConfig.RdojoKombat) }
 
         val matName by produceState("") {
             value = prefs.observeMatInfo().filterNotNull().first().name
         }
 
-        val score by remember { scoreKeeper.score }
-            .collectAsState()
-        val hapticEvent by remember { hapticFeedbackHelper.hapticEvents }
-            .collectAsState(null)
+        val score by remember { scoreKeeper.score }.collectAsState()
+        val hapticEvent by remember { hapticFeedbackHelper.hapticEvents }.collectAsState(null)
+        val roundEvent by remember { roundTracker.roundEvent }.collectAsState()
 
+        val matchState = MatchState(
+            score = score,
+            haptic = hapticEvent,
+            roundInfo = roundEvent,
+        )
 
         return ControlTimeState(
             matName = matName,
-            score = score,
-            haptic = hapticEvent,
+            matchState = matchState,
             eventSink = {
                 Logger.d { "Received event: $it" }
                 when (it) {
@@ -89,6 +94,27 @@ class SoloControlTimePresenter(
                     is ControlTimeEvent.ButtonRelease -> {
                         Logger.d { "Presenter release ${it.competitor}" }
                         buttonTracker.recordRelease(it.competitor)
+                    }
+
+                    ControlTimeEvent.BeginNextRound -> {
+                        roundTracker.startRound()
+                    }
+
+                    ControlTimeEvent.Pause -> {
+                        roundTracker.pause()
+                    }
+
+                    ControlTimeEvent.Reset -> {
+                        TODO()
+                    }
+
+                    ControlTimeEvent.Resume -> {
+                        roundTracker.resume()
+                    }
+
+                    ControlTimeEvent.Submission -> {
+                        roundTracker.endRound()
+                        TODO()
                     }
                 }
             }

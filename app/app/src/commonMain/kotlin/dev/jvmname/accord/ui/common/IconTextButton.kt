@@ -17,11 +17,11 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun IconTextButton(
-    modifier: Modifier,
-    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    icon: ImageVector?,
     text: String,
     colors: ButtonColors = ButtonDefaults.filledTonalButtonColors(),
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     FilledTonalButton(
         modifier = modifier.size(250.dp, ButtonDefaults.MinHeight + 15.dp),
@@ -29,8 +29,10 @@ fun IconTextButton(
         colors = colors,
         shape = RoundedCornerShape(10.dp)
     ) {
-        Icon(icon, contentDescription = "")
-        Spacer(modifier.width(6.dp))
+        icon?.let {
+            Icon(it, contentDescription = "")
+            Spacer(modifier.width(6.dp))
+        }
         Text(text, style = MaterialTheme.typography.bodyLarge)
     }
 }

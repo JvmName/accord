@@ -48,7 +48,7 @@ interface ButtonPressTracker {
 @[ContributesBinding(AppScope::class) SingleIn(AppScope::class)]
 class RealButtonPressTracker(
     private val coroutineScope: CoroutineScope,
-    private val clock: Clock
+    private val clock: Clock,
 ) : ButtonPressTracker {
     private var tracking: Job? = null
         set(value) {
@@ -129,7 +129,8 @@ class RealButtonPressTracker(
                         }
 
                         else -> {
-                            val errorState = ButtonEvent.SteadyState(SteadyStateError.TwoButtonsPressed)
+                            val errorState =
+                                ButtonEvent.SteadyState(SteadyStateError.TwoButtonsPressed)
                             tracking?.cancel()
                             tracking = null
                             _state.store(errorState.also {
@@ -210,16 +211,12 @@ class RealButtonPressTracker(
         //borrowed from https://androidstudygroup.slack.com/archives/CJH03QASH/p1755194498759219?thread_ts=1755118236.503209&cid=CJH03QASH
         while (currentCoroutineContext().isActive) {
             val currentTime = clock.now()
-            val rightOnTheDot = currentTime - currentTime.nanosecondsOfSecond.nanoseconds
-            val delayTime = (rightOnTheDot + updateFrequency) - currentTime
+            val targetTime =
+                currentTime - currentTime.nanosecondsOfSecond.nanoseconds + updateFrequency
 
-            println("---")
-            println("Current: $currentTime")
-            println("Delay duration: $delayTime")
-            println("---")
+            delay((targetTime - clock.now()).coerceAtLeast(Duration.ZERO))
 
             block()
-            delay(delayTime)
         }
     }
 
@@ -227,7 +224,7 @@ class RealButtonPressTracker(
 
 fun Modifier.buttonHold(
     onPress: () -> Unit,
-    onRelease: () -> Unit
+    onRelease: () -> Unit,
 ): Modifier = pointerInput(onPress, onRelease) {
     awaitEachGesture {
         awaitFirstDown(requireUnconsumed = false).also {

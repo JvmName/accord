@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import dev.drewhamilton.poko.Poko
 import dev.jvmname.accord.domain.control.ButtonEvent.SteadyState.SteadyStateError
+import dev.jvmname.accord.ui.common.Consumable
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -22,10 +23,10 @@ import top.ltfan.multihaptic.HapticEffect
 class ScoreHapticFeedbackHelper(
     buttonPressTracker: ButtonPressTracker,
     scoreKeeper: ScoreKeeper,
-    scope: CoroutineScope
+    scope: CoroutineScope,
 ) {
-    private val _hapticEvents = MutableSharedFlow<ConsumableHapticEvent>()
-    val hapticEvents: SharedFlow<ConsumableHapticEvent> = _hapticEvents.asSharedFlow()
+    private val _hapticEvents = MutableSharedFlow<HapticEvent>()
+    val hapticEvents: SharedFlow<HapticEvent> = _hapticEvents.asSharedFlow()
 
     init {
         val buttonHapticTriggers: Flow<HapticTrigger> = buttonPressTracker.buttonEvents
@@ -58,7 +59,7 @@ class ScoreHapticFeedbackHelper(
 
         scope.launch {
             merge(buttonHapticTriggers, scoreHapticTriggers)
-                .map { ConsumableHapticEvent(it.effect) }
+                .map { HapticEvent(Consumable(it.effect)) }
                 .collect(_hapticEvents)
         }
     }
@@ -118,15 +119,5 @@ sealed interface HapticTrigger {
     }
 }
 
-@[Poko Stable] //a la SingleLiveEvent
-class ConsumableHapticEvent(private val value: HapticEffect) {
-    private var consumed = false
-
-    fun consume(): HapticEffect? = when {
-        consumed -> null
-        else -> {
-            consumed = true
-            value
-        }
-    }
-}
+@[Poko Stable]
+class HapticEvent(val effect: Consumable<HapticEffect>)
