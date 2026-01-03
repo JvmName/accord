@@ -2,10 +2,10 @@ package dev.jvmname.accord.domain.control
 
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import co.touchlab.kermit.Logger
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.ButtonEvent.SteadyState.SteadyStateError
 import dev.zacsweers.metro.AppScope
@@ -53,7 +53,7 @@ class RealButtonPressTracker(
     private var tracking: Job? = null
         set(value) {
             if (field != null && value != null) {
-                System.err.println("Error - already running job")
+                Logger.w { "Error - already running job" }
             }
             field = value
         }
@@ -70,12 +70,12 @@ class RealButtonPressTracker(
     }
 
     override fun recordPress(competitor: Competitor) {
-        println("BPT press $competitor")
+        Logger.d { "BPT press $competitor" }
         updateState(ButtonEvent.Press(competitor))
     }
 
     override fun recordRelease(competitor: Competitor) {
-        println("BPT release $competitor")
+        Logger.d { "BPT release $competitor" }
         updateState(ButtonEvent.Release(competitor))
     }
 
@@ -102,7 +102,7 @@ class RealButtonPressTracker(
                 tracking?.cancel()
                 tracking = null
                 _state.store(incoming.also {
-                    println("SteadyState! ButtonPress State -> $it")
+                    Logger.d { "SteadyState! ButtonPress State -> $it" }
                 })
                 coroutineScope.launch { _events.emit(incoming) }
             }
@@ -125,7 +125,7 @@ class RealButtonPressTracker(
                     when (incoming.competitor) {
                         currentCompetitor -> {
                             // Same competitor - ignore (UI flapping)
-                            System.err.println("Error - Press/Holding but same competitor")
+                            Logger.w { "Error - Press/Holding but same competitor" }
                         }
 
                         else -> {
@@ -133,7 +133,7 @@ class RealButtonPressTracker(
                             tracking?.cancel()
                             tracking = null
                             _state.store(errorState.also {
-                                println("Pressing! ButtonPress State -> $it")
+                                Logger.d { "Pressing! ButtonPress State -> $it" }
                             })
                             coroutineScope.launch { _events.emit(errorState) }
                         }
@@ -146,14 +146,14 @@ class RealButtonPressTracker(
             is ButtonEvent.Holding -> {
                 // Validate competitor matches existing
                 if (previous.competitor != incoming.competitor) {
-                    System.err.println("Error - Holding competitor mismatch: expected ${previous.competitor}, got ${incoming.competitor}")
+                    Logger.w { "Error - Holding competitor mismatch: expected ${previous.competitor}, got ${incoming.competitor}" }
                     return
                 }
 
                 when (previous) {
                     is ButtonEvent.Press, is ButtonEvent.Holding -> {
                         _state.store(incoming.also {
-                            println("Holding! ButtonPress State -> $it")
+                            Logger.d { "Holding! ButtonPress State -> $it" }
                         })
                         coroutineScope.launch { _events.emit(incoming) }
                     }
@@ -165,7 +165,7 @@ class RealButtonPressTracker(
             is ButtonEvent.Release -> {
                 // Ignore release from wrong competitor (e.g., after TwoButtonsPressed error)
                 if (previous.competitor != incoming.competitor) {
-                    println("Error - Release competitor mismatch: expected ${previous.competitor}, got ${incoming.competitor}")
+                    Logger.d { "Error - Release competitor mismatch: expected ${previous.competitor}, got ${incoming.competitor}" }
                     return
                 }
 
@@ -175,7 +175,7 @@ class RealButtonPressTracker(
                         tracking?.cancel()
                         tracking = null
                         _state.store(errorState.also {
-                            println("Releasing! ButtonPress State -> $it")
+                            Logger.d { "Releasing! ButtonPress State -> $it" }
                         })
                         coroutineScope.launch { _events.emit(errorState) }
                     }
@@ -185,7 +185,7 @@ class RealButtonPressTracker(
                         tracking?.cancel()
                         tracking = null
                         _state.store(steadyState.also {
-                            println("Releasing! ButtonPress State -> $it")
+                            Logger.d { "Releasing! ButtonPress State -> $it" }
                         })
                         coroutineScope.launch { _events.emit(steadyState) }
                     }
@@ -195,7 +195,7 @@ class RealButtonPressTracker(
                         tracking?.cancel()
                         tracking = null
                         _state.store(steadyState.also {
-                            println("Releasing! ButtonPress State -> $it")
+                            Logger.d { "Releasing! ButtonPress State -> $it" }
                         })
                         coroutineScope.launch { _events.emit(steadyState) }
                     }

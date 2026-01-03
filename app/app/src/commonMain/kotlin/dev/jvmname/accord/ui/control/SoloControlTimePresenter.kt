@@ -5,10 +5,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.domain.control.ButtonPressTracker
+import dev.jvmname.accord.domain.control.RoundConfig
+import dev.jvmname.accord.domain.control.RoundTracker
 import dev.jvmname.accord.domain.control.ScoreHapticFeedbackHelper
 import dev.jvmname.accord.domain.control.ScoreKeeper
 import dev.jvmname.accord.prefs.Prefs
@@ -75,15 +78,16 @@ class SoloControlTimePresenter(
             score = score,
             haptic = hapticEvent,
             eventSink = {
+                Logger.d { "Received event: $it" }
                 when (it) {
                     ControlTimeEvent.Back -> navigator.pop()
                     is ControlTimeEvent.ButtonPress -> {
-                        println("Presenter press ${it.competitor}")
+                        Logger.d { "Presenter press ${it.competitor}" }
                         buttonTracker.recordPress(it.competitor)
                     }
 
                     is ControlTimeEvent.ButtonRelease -> {
-                        println("Presenter release ${it.competitor}")
+                        Logger.d { "Presenter release ${it.competitor}" }
                         buttonTracker.recordRelease(it.competitor)
                     }
                 }

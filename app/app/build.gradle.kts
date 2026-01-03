@@ -56,6 +56,7 @@ kotlin {
                 implementation(libs.kotlin.result.coroutines)
 
                 implementation(libs.multihaptic)
+                implementation(libs.kermit)
             }
         }
 
@@ -84,6 +85,7 @@ kotlin {
                     "androidx.compose.ui.ExperimentalComposeUiApi",
                     "kotlinx.serialization.ExperimentalSerializationApi",
                     "kotlin.concurrent.atomics.ExperimentalAtomicApi",
+                    "androidx.compose.material3.ExperimentalMaterial3ExpressiveApi",
                 )
                 freeCompilerArgs.addAll(
                     "-Xexpect-actual-classes",

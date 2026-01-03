@@ -9,10 +9,11 @@ composeHotReload = "1.1.0-alpha03"
 composeMultiplatform = "1.10.0-rc02"
 coroutines = "1.10.2"
 datastore = "1.2.0"
+kermit = "2.0.8"
 kotlin = "2.3.0"
 kotlinResult = "2.1.0"
 ktor = "3.3.3"
-material3 = "1.9.0"
+material3 = "1.10.0-alpha05"
 materialIconsExtended = "1.7.3"
 serialization = "1.10.0-RC"
 multihaptic = "0.2.2"
@@ -51,9 +52,10 @@ ktor-websockets = { module = "io.ktor:ktor-client-websockets", version.ref = "kt
 serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 
 multihaptic = { module = "top.ltfan.multihaptic:multihaptic-compose", version.ref = "multihaptic" }
-
+kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 kotlin-result = { module = "com.michael-bull.kotlin-result:kotlin-result", version.ref = "kotlinResult" }
 kotlin-result-coroutines = { module = "com.michael-bull.kotlin-result:kotlin-result-coroutines", version.ref = "kotlinResult" }
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }

@@ -1,6 +1,7 @@
 package dev.jvmname.accord.domain.control
 
 import androidx.compose.runtime.Immutable
+import co.touchlab.kermit.Logger
 import dev.jvmname.accord.domain.Competitor
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
@@ -12,9 +13,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.DurationUnit
 
 
 interface ScoreKeeper {
@@ -69,7 +68,7 @@ class RealScoreKeeper(
                             activeCompetitor = event.competitor,
                             techFallWin = hasTechFallWin(newRedPoints, newBluePoints)
                         ).also {
-                            println("Score: \n$it")
+                            Logger.d { "Score: \n$it" }
                         }
                     }
 
