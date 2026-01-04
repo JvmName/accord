@@ -1,6 +1,7 @@
 package dev.jvmname.accord
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
@@ -12,6 +13,7 @@ import com.slack.circuit.foundation.rememberCircuitNavigator
 import com.slack.circuit.runtime.Navigator
 import dev.jvmname.accord.di.AccordGraph
 import dev.jvmname.accord.di.EmptyPlatformContext
+import dev.jvmname.accord.di.LocalGraph
 import dev.zacsweers.metro.createGraphFactory
 import kotlin.time.Clock
 
@@ -30,7 +32,11 @@ fun main() = application {
         onCloseRequest = ::exitApplication,
         state = windowState,
     ) {
-        App(graph.circuit, ::exitApplication)
+        CompositionLocalProvider(
+            LocalGraph provides graph
+        ) {
+            App(graph.circuit, ::exitApplication)
+        }
     }
 }
 

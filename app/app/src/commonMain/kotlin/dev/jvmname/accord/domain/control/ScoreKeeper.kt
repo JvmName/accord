@@ -2,9 +2,10 @@ package dev.jvmname.accord.domain.control
 
 import androidx.compose.runtime.Immutable
 import co.touchlab.kermit.Logger
+import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
-import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,10 +22,12 @@ interface ScoreKeeper {
     fun resetScores()
 }
 
-@[ContributesBinding(AppScope::class)]
+@[ContributesBinding(MatchScope::class) SingleIn(MatchScope::class)]
 class RealScoreKeeper(
     tracker: ButtonPressTracker,
+    roundTracker: RoundTracker,
     scope: CoroutineScope,
+    private val config: RoundConfig,
 ) : ScoreKeeper {
 
     private val _score = MutableStateFlow(
@@ -41,7 +44,6 @@ class RealScoreKeeper(
     companion object {
         private val OneSecond = 1.seconds
         private val PointThreshold = 3.seconds
-        private const val TechnicalSuperiorityThreshold = 10
     }
 
     init {
@@ -85,6 +87,16 @@ class RealScoreKeeper(
                 }
             }
             .launchIn(scope)
+
+        // Auto-reset scores on round end
+        roundTracker.roundEvent
+            .onEach { event ->
+                if (event?.state == RoundEvent.RoundState.ENDED) {
+                    Logger.d { "Round ended, resetting scores" }
+                    resetScores()
+                }
+            }
+            .launchIn(scope)
     }
 
     private fun hasTechFallWin(redPoints: Int, bluePoints: Int): Competitor? {
@@ -97,7 +109,6 @@ class RealScoreKeeper(
 //        }
     }
 
-    // TODO: Hook this up to round end event when available
     override fun resetScores() {
         _score.value = Score(
             redPoints = 0,

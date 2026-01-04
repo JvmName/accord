@@ -3,9 +3,11 @@ package dev.jvmname.accord.domain.control
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import dev.drewhamilton.poko.Poko
+import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.control.ButtonEvent.SteadyState.SteadyStateError
 import dev.jvmname.accord.ui.common.Consumable
 import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -19,7 +21,7 @@ import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.launch
 import top.ltfan.multihaptic.HapticEffect
 
-@Inject
+@[Inject SingleIn(MatchScope::class)]
 class ScoreHapticFeedbackHelper(
     buttonPressTracker: ButtonPressTracker,
     scoreKeeper: ScoreKeeper,

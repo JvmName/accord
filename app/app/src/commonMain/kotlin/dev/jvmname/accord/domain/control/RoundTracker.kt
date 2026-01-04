@@ -1,13 +1,11 @@
 package dev.jvmname.accord.domain.control
 
 import dev.drewhamilton.poko.Poko
+import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.control.BaseRound.Break
 import dev.jvmname.accord.domain.control.BaseRound.Round
 import dev.jvmname.accord.domain.control.RoundEvent.RoundState
-import dev.zacsweers.metro.AppScope
-import dev.zacsweers.metro.Assisted
-import dev.zacsweers.metro.AssistedFactory
-import dev.zacsweers.metro.AssistedInject
+import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -23,11 +21,10 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
-@[AssistedInject]
+@[Inject SingleIn(MatchScope::class)]
 class RoundTracker(
     private val scope: CoroutineScope,
-    @Assisted
-    val config: RoundConfig,
+    private val config: RoundConfig,
 ) {
     private var roundNumber: Int = 1
     private var overallIndex: Int = 0
@@ -156,13 +153,6 @@ class RoundTracker(
             block(remainingTime)
         }
     }
-
-
-    @[AssistedFactory SingleIn(AppScope::class)]
-    fun interface Factory {
-        operator fun invoke(config: RoundConfig): RoundTracker
-    }
-
 }
 
 data class RoundConfig(val rounds: List<BaseRound>) {

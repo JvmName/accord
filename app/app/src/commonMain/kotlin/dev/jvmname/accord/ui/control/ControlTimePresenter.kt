@@ -9,6 +9,7 @@ import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
+import dev.jvmname.accord.di.LocalGraph
 import dev.jvmname.accord.domain.control.ButtonPressTracker
 import dev.jvmname.accord.domain.control.RoundConfig
 import dev.jvmname.accord.domain.control.RoundTracker
@@ -22,18 +23,21 @@ import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 
-
 @AssistedInject
 class DelegatingControlTimePresenter(
     @Assisted private val screen: ControlTimeScreen,
     @Assisted private val navigator: Navigator,
-    private val soloFactory: SoloControlTimePresenter.Factory,
 ) : Presenter<ControlTimeState> {
     @Composable
     override fun present(): ControlTimeState {
-        val delegate: Presenter<ControlTimeState> = remember(screen, navigator) {
+        val accordGraph = LocalGraph.current
+        val matchGraph = remember(screen) {
+            accordGraph.matchGraphFactory(RoundConfig.RdojoKombat)
+        }
+
+        val delegate: Presenter<ControlTimeState> = remember(screen, navigator, matchGraph) {
             when (screen.type) {
-                ControlTimeType.SOLO -> soloFactory.create(screen, navigator)
+                ControlTimeType.SOLO -> matchGraph.soloFactory.create(screen, navigator)
                 ControlTimeType.CONSENSUS -> TODO()
             }
         }
@@ -44,7 +48,7 @@ class DelegatingControlTimePresenter(
 
     @[AssistedFactory CircuitInject(ControlTimeScreen::class, AppScope::class)]
     fun interface Factory {
-        fun create(screen: ControlTimeScreen, navigator: Navigator): SoloControlTimePresenter
+        fun create(screen: ControlTimeScreen, navigator: Navigator): DelegatingControlTimePresenter
     }
 }
 
@@ -58,12 +62,11 @@ class SoloControlTimePresenter(
     private val buttonTracker: ButtonPressTracker,
     private val scoreKeeper: ScoreKeeper,
     private val hapticFeedbackHelper: ScoreHapticFeedbackHelper,
-    private val roundTrackerFactory: RoundTracker.Factory,
+    private val roundTracker: RoundTracker,
 ) : Presenter<ControlTimeState> {
 
     @Composable
     override fun present(): ControlTimeState {
-        val roundTracker = remember { roundTrackerFactory(RoundConfig.RdojoKombat) }
 
         val matName by produceState("") {
             value = prefs.observeMatInfo().filterNotNull().first().name
@@ -123,6 +126,6 @@ class SoloControlTimePresenter(
 
     @AssistedFactory
     fun interface Factory {
-        fun create(screen: ControlTimeScreen, navigator: Navigator): SoloControlTimePresenter
+        fun create( screen: ControlTimeScreen, navigator: Navigator, ): SoloControlTimePresenter
     }
 }

@@ -66,6 +66,6 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 kotlinParcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
 serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
-metro = "dev.zacsweers.metro:0.9.2"
+metro = "dev.zacsweers.metro:0.9.3"
 poko = "dev.drewhamilton.poko:0.21.0"
 ksp = { id = "com.google.devtools.ksp", version = "2.3.3" }

@@ -6,9 +6,9 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import co.touchlab.kermit.Logger
+import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.ButtonEvent.SteadyState.SteadyStateError
-import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
@@ -45,7 +45,7 @@ interface ButtonPressTracker {
 
 }
 
-@[ContributesBinding(AppScope::class) SingleIn(AppScope::class)]
+@[ContributesBinding(MatchScope::class) SingleIn(MatchScope::class)]
 class RealButtonPressTracker(
     private val coroutineScope: CoroutineScope,
     private val clock: Clock,
