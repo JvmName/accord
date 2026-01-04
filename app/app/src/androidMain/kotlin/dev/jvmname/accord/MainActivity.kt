@@ -11,20 +11,15 @@ import com.slack.circuit.backstack.SaveableBackStack
 import com.slack.circuit.foundation.rememberCircuitNavigator
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuitx.android.rememberAndroidScreenAwareNavigator
-import dev.jvmname.accord.di.AccordGraph
 import dev.jvmname.accord.di.LocalGraph
-import dev.zacsweers.metro.createGraphFactory
-import kotlin.time.Clock
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        val graph = createGraphFactory<AccordGraph.Factory>().create(this, Clock.System)
         setContent {
-            CompositionLocalProvider(
-                LocalGraph provides graph
-            ) {
+            val graph = (application as AccordApplication).graph
+            CompositionLocalProvider(LocalGraph provides graph) {
                 App(graph.circuit, ::finish)
             }
         }

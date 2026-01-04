@@ -32,9 +32,7 @@ fun main() = application {
         onCloseRequest = ::exitApplication,
         state = windowState,
     ) {
-        CompositionLocalProvider(
-            LocalGraph provides graph
-        ) {
+        CompositionLocalProvider(LocalGraph provides graph) {
             App(graph.circuit, ::exitApplication)
         }
     }

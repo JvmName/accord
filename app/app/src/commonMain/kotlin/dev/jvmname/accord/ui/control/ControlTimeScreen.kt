@@ -58,16 +58,14 @@ class RoundControlActions(
 fun ControlTimeState.rememberControlActions(): RoundControlActions {
     val round = matchState.roundInfo
     val state = round?.state
-    return remember(round?.roundNumber, round?.totalRounds, state) {
+    return remember(round?.roundNumber, round?.totalRounds, state, round?.type) {
 
         val isNotStartedOrEnded = round == null || state == RoundEvent.RoundState.ENDED
         val isPaused = state == RoundEvent.RoundState.PAUSED
-        val isActive = state == RoundEvent.RoundState.STARTED
+        val isActive = state == RoundEvent.RoundState.STARTED && round.type == RoundEvent.RoundType.Round
 
         RoundControlActions(
-            beginNextRound = if (isNotStartedOrEnded) {
-                { eventSink(ControlTimeEvent.BeginNextRound) }
-            } else null,
+            beginNextRound = { eventSink(ControlTimeEvent.BeginNextRound) },
             resume = if (isPaused) {
                 { eventSink(ControlTimeEvent.Resume) }
             } else null,

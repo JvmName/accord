@@ -21,8 +21,7 @@ interface AccordGraph {
 
     @Provides
     @SingleIn(AppScope::class)
-    val scope: CoroutineScope
-        get() = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    fun scope(): CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     @Provides
     @SingleIn(AppScope::class)

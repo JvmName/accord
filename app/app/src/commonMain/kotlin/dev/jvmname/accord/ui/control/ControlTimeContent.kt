@@ -16,10 +16,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.NextPlan
+import androidx.compose.material.icons.automirrored.outlined.NextPlan
 import androidx.compose.material.icons.filled.HeartBroken
 import androidx.compose.material.icons.filled.MoveUp
-import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.ButtonDefaults
@@ -94,17 +93,34 @@ fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
         ) {
             Spacer(modifier = Modifier.height(32.dp))
 
-            state.matchState
-                .roundInfo
-                ?.remainingHumanTime()
-                ?.let {
-                    Text(
-                        it,
-                        style = MaterialTheme.typography.displayLargeEmphasized,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+            val remainingTime = remember(state.matchState.roundInfo) {
+                state.matchState
+                    .roundInfo
+                    ?.remainingHumanTime()
+                    ?: "0:00"
+            }
+            Text(
+                remainingTime,
+                style = MaterialTheme.typography.displayLargeEmphasized,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            val roundNumber = remember(state.matchState.roundInfo) {
+                val round = state.matchState.roundInfo
+                when  {
+                    round == null -> null
+                    round.type == RoundEvent.RoundType.Break -> "Break"
+                    else -> "Round ${round.roundNumber} of ${round.totalRounds}"
                 }
+            }
+            roundNumber?.let {
+                Text(
+                    text = it,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -211,11 +227,11 @@ fun RoundControlsSheet(modifier: Modifier = Modifier, actions: RoundControlActio
 
             val actionsList = remember(actions) {
                 listOf(
-                    actions.beginNextRound to Icons.AutoMirrored.Filled.NextPlan,
+                    actions.beginNextRound to Icons.AutoMirrored.Outlined.NextPlan,
                     actions.resume to Icons.Outlined.PlayArrow,
                     actions.pause to Icons.Outlined.PauseCircle,
                     actions.submission to Icons.Default.HeartBroken,
-                    actions.reset to Icons.Default.Replay,
+//                    actions.reset to Icons.Default.Replay,
                 )
             }
 
@@ -224,7 +240,8 @@ fun RoundControlsSheet(modifier: Modifier = Modifier, actions: RoundControlActio
                     //TODO tooltip?
                     FilledTonalIconButton(onClick = {
                         Logger.d { "clicked action" }
-                        action?.invoke() }) {
+                        action?.invoke()
+                    }) {
                         Icon(icon, "")
                     }
                 }
@@ -253,6 +270,7 @@ private fun ControlTimeContentPreview() {
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
                         totalRounds = 3,
+                        type = RoundEvent.RoundType.Round,
                         state = RoundEvent.RoundState.STARTED
                     )
                 ),
@@ -283,6 +301,7 @@ private fun ControlTimeContentPreview_Holding() {
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
                         totalRounds = 3,
+                        type = RoundEvent.RoundType.Round,
                         state = RoundEvent.RoundState.STARTED
                     ),
                 ),

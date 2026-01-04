@@ -107,17 +107,13 @@ class SoloControlTimePresenter(
                         roundTracker.pause()
                     }
 
-                    ControlTimeEvent.Reset -> {
-                        TODO()
-                    }
-
+                    ControlTimeEvent.Reset -> TODO()
                     ControlTimeEvent.Resume -> {
                         roundTracker.resume()
                     }
 
                     ControlTimeEvent.Submission -> {
                         roundTracker.endRound()
-                        TODO()
                     }
                 }
             }
