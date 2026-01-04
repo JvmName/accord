@@ -1,10 +1,17 @@
-const { camelize }  = require('inflection');
-const { logger }    = require('../logger');
+const { Authorizer } = require('./authorizer');
+const { camelize }   = require('inflection');
+const { logger }     = require('../logger');
+const { MatCode }    = require('../../models/matCode');
+const { User }       = require('../../models/user');
 
 
 class ServerController {
     #afterCallbacks  = [];
+    #authorizer;
     #beforeCallbacks = [];
+    #currentMat;
+    #currentMatCode;
+    #currentUser;
     #params;
     #rendered        = false;
     #request;
@@ -69,45 +76,50 @@ class ServerController {
     }
 
 
-    render(body) {
-        body = this.formatJSONBody(body);
+    async render(body, options={}) {
+        body = await this.formatJSONBody(body, options);
         this._response.json(body);
         this.#rendered = true;
     }
 
 
-    renderErrors(errors) {
+    async renderErrors(errors) {
         this.statusCode = 400;
-        this.render({ errors });
+        await this.render({ errors });
+    }
+
+
+    renderNotFoundResponse() {
+        this.statusCode = 404;
     }
 
 
     renderUnauthorizedResponse() {
         this.statusCode = 401;
-        this.render({error: 'unauthorized'});
     }
 
 
-    formatJSONBody(body) {
-        body = this._formatJSONBody(body);
+    async formatJSONBody(body, options) {
+        body = await this._formatJSONBody(body, options);
         return {data: body, status: this.statusText};
     }
 
 
-    _formatJSONBody(body,depth=0) {
+    async _formatJSONBody(body, options) {
         if (!body || typeof body != 'object') return body;
 
         if (body.toApiResponse) {
-            return this._formatJSONBody(body.toApiResponse());
+            const formattedBody = await body.toApiResponse(options);
+            return await this._formatJSONBody(formattedBody, options);
 
         } else if (Array.isArray(body)) {
             for (const idx in body) {
-                body[idx] = this._formatJSONBody(body[idx], depth+1);
+                body[idx] = await this._formatJSONBody(body[idx], options);
             }
 
         } else {
             for (let [key, val] of Object.entries(body)) {
-                body[key] = this._formatJSONBody(val, depth+1);
+                body[key] = await this._formatJSONBody(val, options);
             }
         }
 
@@ -123,6 +135,8 @@ class ServerController {
                 return 'bad request'
             case 401:
                 return 'unauthorized';
+            case 404:
+                return 'not found';
             case 500:
                 return 'server error';
         }
@@ -189,7 +203,7 @@ class ServerController {
     /***********************************************************************************************
     * VALIDATIONS
     ***********************************************************************************************/
-    validateParameters(validations) {
+    async validateParameters(validations) {
         const errors = {};
         for (const [parameterName, parameterValidations] of Object.entries(validations)) {
             const parameterErrors = this.validateParameter(this.params[parameterName], parameterValidations);
@@ -197,7 +211,7 @@ class ServerController {
         }
 
         if (Object.keys(errors).length) {
-            this.renderErrors(errors);
+            await this.renderErrors(errors);
             return false;
         }
 
@@ -239,14 +253,59 @@ class ServerController {
     }
 
 
-    validateIsInteger(value) {
+    validateIsInteger(value, options) {
         const num = parseFloat(value);
-        if (isNaN(num) || !Number.isInteger(num)) return 'must be an integer';
+        if (/\D/.test(value) || isNaN(num) || !Number.isInteger(num)) return 'must be an integer';
+        if (options && options.gte !== undefined) {
+            if (num < options.gte) return `must be greater than or equal to ${options.gte}`;
+        }
     }
 
 
     validatePresence(value) {
         if (!value) return 'required';
+    }
+
+
+    /***********************************************************************************************
+    * AUTHENTICATION
+    ***********************************************************************************************/
+    async setupRequestState() {
+        await this.#initCurrentUser();
+    }
+
+
+    async #initCurrentUser() {
+        if (this.apiToken)        this.#currentUser    = await User.findByApiToken(this.apiToken);
+        if (this.params.matCode)  this.#currentMatCode = await MatCode.findByCode(this.params.matCode);
+        if (this.#currentMatCode) this.#currentMat     = await this.#currentMatCode.getMat();
+    }
+
+
+    async authenticateRequest() {
+        if (!this.currentUser) {
+            await this.renderUnauthorizedResponse();
+            return false;
+        }
+    }
+
+
+    async authorize(action, scope) {
+        if (!this.authorizer) throw new AuthorizationError();
+
+        const authorized = await this.authorizer.can(action, scope)
+        if (!authorized) throw new AuthorizationError();
+    }
+
+
+    get apiToken()       { return this.requestHeaders['x-api-token']; }
+    get currentUser()    { return this.#currentUser    || null; }
+    get currentMat()     { return this.#currentMat     || null; }
+    get currentMatCode() { return this.#currentMatCode || null; }
+    get authorizer()  {
+        if (!this.currentUser) return;
+        if (!this.#authorizer) this.#authorizer = new Authorizer(this.currentUser, this.currentMatCode);
+        return this.#authorizer;
     }
 
 
@@ -317,4 +376,10 @@ class ServerController {
 }
 
 
-module.exports = { ServerController };
+class AuthorizationError extends Error {}
+
+
+module.exports = { 
+    AuthorizationError,
+    ServerController
+};

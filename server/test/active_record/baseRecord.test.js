@@ -182,7 +182,7 @@ describe('ActiveRecord', () => {
         class Person extends BaseRecord {}
         it ('does not return created_at or updated_at by default', () => {
             const person = new Person();
-            person.dataValues = {key1: 'foo', key2: 'bar', created_at: 'baz', updated_at: 'ban'};
+            person.rawAttributes = {key1: 'foo', key2: 'bar', created_at: 'baz', updated_at: 'ban'};
             expect(person.apiSafeKeys).toEqual(['key1', 'key2']);
         });
     });
@@ -190,12 +190,13 @@ describe('ActiveRecord', () => {
 
     describe('ActiveRecord#toApiResponse', () => {
         class Person extends BaseRecord {}
-        it ('only returns keys specified by `apiSafeKeys`', () => {
+        it ('only returns keys specified by `apiSafeKeys`', async () => {
             const person = new Person();
             const spy    = jest.spyOn(person, 'apiSafeKeys', 'get');
             spy.mockImplementation(() => ['key1', 'created_at']);
-            person.dataValues = {key1: 'foo', key2: 'bar', created_at: 'baz', updated_at: 'ban'};
-            expect(person.toApiResponse()).toEqual({key1: 'foo', created_at: 'baz'});
+            Object.assign(person, {key1: 'foo', key2: 'bar', created_at: 'baz', updated_at: 'ban'});
+            const response = await person.toApiResponse();
+            expect(response).toEqual({key1: 'foo', created_at: 'baz'});
         });
     });
 });

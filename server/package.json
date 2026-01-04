@@ -7,7 +7,8 @@
         "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules node_modules/jest/bin/jest.js",
         "db:create_migration": "./bin/migrate create_migration",
         "db:migrate": "./bin/migrate migrate",
-        "db:rollback": "./bin/migrate rollback"
+        "db:rollback": "./bin/migrate rollback",
+        "apiTest": "./bin/apiTest"
     },
     "jest": {
         "collectCoverage": true,
@@ -34,6 +35,7 @@
         "nodemon": "^3.1.11",
         "jest": "^29.0.0",
         "jest-express": "^1.0.0",
-        "jest-extended": "^7.0.0"
+        "jest-extended": "^7.0.0",
+        "socket.io-client": "^4.0.0"
     }
 }

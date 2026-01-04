@@ -1,10 +1,9 @@
-const { ApplicationController } = require('../applicationController');
-const { Mat }                   = require('../../models/mat');
-const { User }                  = require('../../models/user');
+const { Mat }              = require('../../models/mat');
+const { MatCode }          = require('../../models/matCode');
+const { ServerController } = require('../../lib/server');
 
 
-class UsersController extends ApplicationController {
-    #currentMat;
+class UsersController extends ServerController {
 
     setupCallbacks() {
         this.beforeCallback('authenticateRequest');
@@ -14,22 +13,34 @@ class UsersController extends ApplicationController {
     /***********************************************************************************************
     * ACTIONS
     ***********************************************************************************************/
-    async getJudges()     { return await this.listUsers(User.ROLES.JUDGE); }
-    async getViewers()    { return await this.listUsers(User.ROLES.VIEWER); }
-    async postJudges()    { return await this.addUser(User.ROLES.JUDGE); }
-    async postViewers()   { return await this.addUser(User.ROLES.VIEWER); }
-    async deleteJudges()  { return await this.removeUser(User.ROLES.JUDGE); }
-    async deleteViewers() { return await this.removeUser(User.ROLES.VIEWER); }
+    async getViewers() {
+        const viewers = await this.currentMat.getViewers();
+        return { viewers };
+    }
+
+
+    async getJudges() {
+        const judges = await this.currentMat.getJudges();
+        return { judges };
+    }
+
+
+    async postJoin() {
+        return await this.addUser(this.currentMatCode.role);
+    }
+
+
+    async deleteJoin() {
+        return await this.removeUser(this.currentMatCode.role);
+    }
 
 
     static get routes() {
         return {
-            getJudges:     '/mat/:matCode/judges',
-            postJudges:    '/mat/:matCode/judges',
-            deleteJudges:  '/mat/:matCode/judges',
-            getViewers:    '/mat/:matCode/viewers',
-            postViewers:   '/mat/:matCode/viewers',
-            deleteViewers: '/mat/:matCode/viewers',
+            deleteJoin: '/mat/:matCode/join',
+            getJudges:  '/mat/:matCode/judges',
+            getViewers: '/mat/:matCode/viewers',
+            postJoin:   '/mat/:matCode/join',
         }
     }
 
@@ -38,7 +49,7 @@ class UsersController extends ApplicationController {
     * HELPERS
     ***********************************************************************************************/
     async addUser(role) {
-        if (role == User.ROLES.JUDGE) {
+        if (role == MatCode.ROLES.JUDGE) {
             await this.addAsJudge();
         } else {
             await this.addAsViewer();
@@ -48,20 +59,8 @@ class UsersController extends ApplicationController {
     }
 
 
-    async listUsers(role) {
-        let users;
-        if (role == User.ROLES.JUDGE) {
-            users = await this.currentMat.getJudges();
-        } else {
-            users = await this.currentMat.getViewers();
-        }
-
-        return { users };
-    }
-
-
     async removeUser(role) {
-        if (role == User.ROLES.JUDGE) {
+        if (role == MatCode.ROLES.JUDGE) {
             await this.currentMat.removeJudge(this.currentUser);
         } else {
             await this.currentMat.removeViewer(this.currentUser);
@@ -70,14 +69,16 @@ class UsersController extends ApplicationController {
 
 
     async addAsJudge() {
+        await this.authorize("judge", this.currentMat);
+
         const judges = await this.currentMat.getJudges()
         if (judges.some(judge => judge.id == this.currentUser.id)) {
-            this.renderErrors({matCode: ['user is already a judge']});
+            await this.renderErrors({matCode: ['user is already a judge']});
             return;
         }
 
         if (judges.length >= this.currentMat.judge_count) {
-            this.renderErrors({matCode: ['maximum judge count reached']});
+            await this.renderErrors({matCode: ['maximum judge count reached']});
             return;
         }
         await this.currentMat.addJudge(this.currentUser);
@@ -87,7 +88,7 @@ class UsersController extends ApplicationController {
     async addAsViewer() {
         const viewers = await this.currentMat.getViewers({where: {id: this.currentUser.id}});
         if (viewers.length) {
-            this.renderErrors({matCode: ['user is already a viewer']});
+            await this.renderErrors({matCode: ['user is already a viewer']});
             return;
         }
         await this.currentMat.addViewer(this.currentUser);
@@ -97,26 +98,17 @@ class UsersController extends ApplicationController {
     /***********************************************************************************************
     * AUTHENTICATION
     ***********************************************************************************************/
-    authenticateRequest() {
+    async authenticateRequest() {
         const authenticated = super.authenticateRequest();
         if (authenticated === false) return false;
 
-      console.log(this.params);
         if (!this.currentMat) {
-            this.renderErrors({matCode: ['invalid mat code']});
+            await this.renderNotFoundResponse();
             return false;
         }
+
+        await this.authorize('view', this.currentMat);
     }
-
-
-    async setupRequestState() {
-        await super.setupRequestState();
-        if (this.matCode) this.#currentMat = await Mat.findByCode(this.matCode);
-    }
-
-
-    get currentMat() { return this.#currentMat || null; }
-    get matCode()    { return this.params.matCode; }
 }
 
 

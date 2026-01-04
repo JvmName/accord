@@ -1,3 +1,4 @@
+const { AuthorizationError }   = require('../../lib/server/serverController');
 const { BarController }        = require('./helpers/controllers/barController');
 const { FooController }        = require('./helpers/controllers/fooController');
 const { camelize }             = require('inflection');
@@ -69,7 +70,7 @@ describe('ServerController', () => {
         let validator2;
         beforeEach(() => {
             response                                           = {json: jest.fn(), statusCode: 200};
-            controller                                         = new FooController({}, response);
+            controller                                         = new FooController({params}, response);
             controller.render                                  = jest.fn();
             validator1                                         = jest.fn();
             validator2                                         = jest.fn();
@@ -83,7 +84,7 @@ describe('ServerController', () => {
         };
 
         it ('runs validation checkers based on inputs', () => {
-            controller.validateParameters(params, validations);
+            controller.validateParameters(validations);
             expect(validator1).toBeCalledTimes(2);
             expect(validator1).toBeCalledWith(value1, options1);
             expect(validator1).toBeCalledWith(value2, options2);
@@ -94,7 +95,7 @@ describe('ServerController', () => {
 
         it ('sets the error status when there\'s an error', () => {
             validator1.mockImplementation(() => error1);
-            controller.validateParameters(params, validations);
+            controller.validateParameters(validations);
             expect(controller.render).toHaveBeenCalledTimes(1);
             const expected = {errors: {
                 [paramName1]: [error1],
@@ -107,7 +108,7 @@ describe('ServerController', () => {
         it ('sets the error status when there are multiple errors', () => {
             validator1.mockImplementation(() => error1);
             validator2.mockImplementation(() => error2);
-            controller.validateParameters(params, validations);
+            controller.validateParameters(validations);
             expect(controller.render).toHaveBeenCalledTimes(1);
             const expected = {errors: {
                 [paramName1]: [error1, error2],
@@ -118,7 +119,7 @@ describe('ServerController', () => {
         });
 
         it ('sets nothing when there is no error', () => {
-            controller.validateParameters(params, validations);
+            controller.validateParameters(validations);
             expect(controller.render).toHaveBeenCalledTimes(0);
             expect(response.statusCode).toEqual(200);
         });
@@ -160,9 +161,25 @@ describe('ServerController', () => {
         });
 
         it ('returns an error when there is a non integer string', () => {
-            const val    = TestHelpers.Faker.Text.randomString(10) + 'a';
+            // starts with a number because parseFloat converts a string to a float if it starts with a number
+            const val    = '1' + TestHelpers.Faker.Text.randomString(10);
             const result = controller.validateIsInteger(val)
             expect(result).toEqual('must be an integer');
+        });
+
+        it ('returns an error when the number is less than the gte option', () => {
+            const result = controller.validateIsInteger(1, {gte: 2});
+            expect(result).toEqual('must be greater than or equal to 2');
+        });
+
+        it ('returns undefined when the number is greater than the gte option', () => {
+            const result = controller.validateIsInteger(3, {gte: 2});
+            expect(result).toEqual(undefined);
+        });
+
+        it ('returns undefined when the number is equal to the gte option', () => {
+            const result = controller.validateIsInteger(2, {gte: 2});
+            expect(result).toEqual(undefined);
         });
     });
 
@@ -258,6 +275,32 @@ describe('ServerController', () => {
         it ('returns undefiend when passed a valid value', () => {
             const result = controller.validateFunction(Math.random(), validator);
             expect(result).toBe(error);
+        });
+    });
+
+
+    describe('ServerController.authorize', () => {
+        const user               = {};
+        const controllerWithUser = new FooController({}, {});
+        const currentUserSpy     = jest.spyOn(controllerWithUser, 'currentUser', 'get');
+        currentUserSpy.mockImplementation(() => user);
+
+        it ('throws an error when there is no `currentUser`', async () => {
+            const controller = new FooController({}, {});
+            await expect(async () => {
+                await controller.authorize('view', 'test')
+            }).rejects.toThrow(AuthorizationError);
+        });
+
+        it ('does not throw an error when the `currentUser` is authorized', async () => {
+            await controllerWithUser.authorize('view', 'test');
+        });
+
+        it ('throws an error when the `currentUser` is not authorized', async () => {
+            const controller = new FooController({}, {});
+            await expect(async () => {
+                await controller.authorize('view', 'foo')
+            }).rejects.toThrow(AuthorizationError);
         });
     });
 });

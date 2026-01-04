@@ -1,17 +1,17 @@
-const { ApplicationController } = require('./applicationController');
-const { User }                  = require('../models/user');
+const { ServerController } = require('../lib/server');
+const { User }             = require('../models/user');
 
 
-class UsersController extends ApplicationController {
+class UsersController extends ServerController {
     setupCallbacks() {
         this.beforeCallback('authenticateRequest', {except: 'postIndex'});
     }
 
 
     async postIndex() {
-        if (!this.validateParameters(this.creationValidations)) return;
+        if (!await this.validateParameters(this.creationValidations)) return;
         const user = await User.create({name: this.params.name, email: this.params.email});
-        return { user }; 
+        return { user, api_token: user.api_token }; 
     }
 
 
