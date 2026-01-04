@@ -18,8 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
@@ -28,11 +27,11 @@ import kotlin.time.Duration.Companion.minutes
 class RoundTracker(
     private val scope: CoroutineScope,
     @Assisted
-    private val config: RoundConfig,
+    val config: RoundConfig,
 ) {
     private var roundNumber: Int = 1
     private var overallIndex: Int = 0
-    private var pauseMutex = Mutex(false)
+    private var isPaused = AtomicBoolean(false)
     private var timerJob: Job? = null
 
     private val totalRounds: Int = config.rounds.count { it is Round }
@@ -60,6 +59,7 @@ class RoundTracker(
     }
 
     fun pause() {
+        isPaused.exchange(true)
         val currentEvent = _roundEvent.value
         if (currentEvent != null) {
             _roundEvent.value = RoundEvent(
@@ -69,15 +69,10 @@ class RoundTracker(
                 state = RoundState.PAUSED
             )
         }
-        scope.launch {
-            pauseMutex.lock(this@RoundTracker)
-        }
     }
 
     fun resume() {
-        if (pauseMutex.isLocked) {
-            pauseMutex.unlock(this)
-        }
+        isPaused.store(false)
     }
 
     fun endRound() {
@@ -149,13 +144,16 @@ class RoundTracker(
         var remainingTime = timeLimit
 
         while (currentCoroutineContext().isActive && remainingTime.isPositive()) {
-            pauseMutex.withLock(this@RoundTracker) {
-                val delay = minOf(remainingTime, updateFreq)
-                delay(delay)
-
-                remainingTime -= delay
-                block(remainingTime)
+            // Wait while paused
+            while (isPaused.load()) {
+                delay(100.milliseconds)
             }
+
+            val delayDuration = minOf(remainingTime, updateFreq)
+            delay(delayDuration)
+
+            remainingTime -= delayDuration
+            block(remainingTime)
         }
     }
 

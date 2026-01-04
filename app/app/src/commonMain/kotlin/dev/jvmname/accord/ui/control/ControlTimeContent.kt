@@ -1,6 +1,7 @@
 package dev.jvmname.accord.ui.control
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement.spacedBy
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.NextPlan
 import androidx.compose.material.icons.filled.HeartBroken
@@ -107,7 +109,7 @@ fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
             Spacer(modifier = Modifier.height(32.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().weight(3f),
                 horizontalArrangement = spacedBy(8.dp)
             ) {
                 Competitor.entries.forEach { competitor ->
@@ -123,53 +125,12 @@ fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            RoundControlsSheet(state = state.rememberControlActions())
+            Spacer(modifier.weight(0.15f))
+            RoundControlsSheet(actions = state.rememberControlActions())
         }
     }
 }
 
-
-@Composable
-fun RoundControlsSheet(modifier: Modifier = Modifier, state: RoundControlActions) {
-    Card(
-        modifier = modifier.fillMaxSize(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        FlowRow(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = spacedBy(8.dp),
-
-            ) {
-            state.beginNextRound?.let { beginNextRound ->
-                FilledTonalIconButton(onClick = beginNextRound) {
-                    Icon(Icons.AutoMirrored.Filled.NextPlan, "")
-                }
-            }
-            state.resume?.let { resume ->
-                FilledTonalIconButton(onClick = resume) {
-                    Icon(Icons.Outlined.PlayArrow, "")
-                }
-            }
-            state.pause?.let { pause ->
-                FilledTonalIconButton(onClick = pause) {
-                    Icon(Icons.Outlined.PauseCircle, "")
-                }
-            }
-            state.submission?.let { submission ->
-                FilledTonalIconButton(onClick = submission) {
-                    Icon(Icons.Default.HeartBroken, "")
-                }
-            }
-            state.reset?.let { reset ->
-                FilledTonalIconButton(onClick = reset) {
-                    Icon(Icons.Default.Replay, "")
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun PlayerControl(
@@ -182,7 +143,7 @@ private fun PlayerControl(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier,
+        modifier = modifier.fillMaxHeight().fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
@@ -208,7 +169,8 @@ private fun PlayerControl(
         Spacer(modifier = Modifier.height(16.dp))
         IconTextButton(
             modifier = Modifier
-                .fillMaxHeight(0.80f)
+                .weight(1f)
+                .fillMaxWidth()
                 .clickable(false) {
                     Logger.d { "Clicked not pressed" }
                     eventSink(ButtonPress(player))
@@ -233,6 +195,39 @@ private fun PlayerControl(
                 eventSink(ButtonRelease(player))
             }
         )
+    }
+}
+
+@Composable
+fun RoundControlsSheet(modifier: Modifier = Modifier, actions: RoundControlActions) {
+    Card(
+        modifier = modifier.fillMaxWidth().wrapContentHeight(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        FlowRow(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            horizontalArrangement = spacedBy(8.dp, Alignment.CenterHorizontally),
+        ) {
+
+            val actionsList = remember(actions) {
+                listOf(
+                    actions.beginNextRound to Icons.AutoMirrored.Filled.NextPlan,
+                    actions.resume to Icons.Outlined.PlayArrow,
+                    actions.pause to Icons.Outlined.PauseCircle,
+                    actions.submission to Icons.Default.HeartBroken,
+                    actions.reset to Icons.Default.Replay,
+                )
+            }
+
+            for ((action, icon) in actionsList) {
+                AnimatedVisibility(action != null) {
+                    //TODO tooltip?
+                    FilledTonalIconButton(onClick = { action?.invoke() }) {
+                        Icon(icon, "")
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -303,7 +298,7 @@ private fun RoundControlsSheetPreview() {
 
         RoundControlsSheet(
             modifier = Modifier,
-            state = RoundControlActions(
+            actions = RoundControlActions(
                 beginNextRound = {},
                 resume = {},
                 pause = {},
