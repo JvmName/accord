@@ -1,6 +1,7 @@
 package dev.jvmname.accord.ui.control
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -82,6 +83,13 @@ class SoloControlTimePresenter(
             roundInfo = roundEvent,
         )
 
+        if (score.techFallWin != null) {
+            LaunchedEffect(score.techFallWin) {
+                roundTracker.endRound()
+            }
+        }
+
+
         return ControlTimeState(
             matName = matName,
             matchState = matchState,
@@ -122,6 +130,6 @@ class SoloControlTimePresenter(
 
     @AssistedFactory
     fun interface Factory {
-        fun create( screen: ControlTimeScreen, navigator: Navigator, ): SoloControlTimePresenter
+        fun create(screen: ControlTimeScreen, navigator: Navigator): SoloControlTimePresenter
     }
 }

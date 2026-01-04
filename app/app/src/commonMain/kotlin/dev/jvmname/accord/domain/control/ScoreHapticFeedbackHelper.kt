@@ -19,7 +19,9 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.launch
+import top.ltfan.multihaptic.DelayType
 import top.ltfan.multihaptic.HapticEffect
+import kotlin.time.Duration.Companion.milliseconds
 
 @[Inject SingleIn(MatchScope::class)]
 class ScoreHapticFeedbackHelper(
@@ -106,17 +108,37 @@ sealed interface HapticTrigger {
     data object ScoreIncrement : HapticTrigger {
         override val effect = HapticEffect {
             click
-            click
+            click{
+                delay = 50.milliseconds
+                delayType = DelayType.Pause
+            }
         }
     }
 
     data object TechFallWin : HapticTrigger {
         override val effect = HapticEffect {
             click
-            click
-            click
-            click
-            click
+            val ms = 50.milliseconds
+            thud {
+                delay = ms
+                delayType = DelayType.Pause
+            }
+            spin {
+                delay = ms
+                delayType = DelayType.Pause
+            }
+            click {
+                delay = ms
+                delayType = DelayType.Pause
+            }
+            thud {
+                delay = ms
+                delayType = DelayType.Pause
+            }
+            spin {
+                delay = ms
+                delayType = DelayType.Pause
+            }
         }
     }
 }

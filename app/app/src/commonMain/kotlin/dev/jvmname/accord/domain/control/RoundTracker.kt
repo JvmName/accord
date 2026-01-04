@@ -147,6 +147,9 @@ class RoundTracker(
 
 data class RoundConfig(val rounds: List<BaseRound>) {
     operator fun get(index: Int): BaseRound = rounds[index]
+    fun getRound(roundIndex: Int): Round? = rounds.firstNotNullOfOrNull { br ->
+        (br as? Round)?.takeIf { it.index == roundIndex }
+    }
 
     companion object {
         val RdojoKombat = RoundConfig(
@@ -192,7 +195,7 @@ sealed interface BaseRound {
 }
 
 private val BaseRound.type: RoundType
-    get() = when(this){
+    get() = when (this) {
         is Break -> RoundType.Break
         is Round -> RoundType.Round
     }

@@ -92,7 +92,9 @@ class RealScoreKeeper(
 
         // Auto-reset scores on round end
         roundTracker.roundEvent
-            .onEach { latestRoundEvent.exchange(it) }
+            .onEach {
+                latestRoundEvent.exchange(it)
+            }
             .onEach { event ->
                 if (event?.state == RoundEvent.RoundState.ENDED) {
                     Logger.d { "Round ended, resetting scores" }
@@ -104,8 +106,7 @@ class RealScoreKeeper(
 
     private fun hasTechFallWin(redPoints: Int, bluePoints: Int): Competitor? {
         val event = latestRoundEvent.load() ?: return null
-        val round = config[event.roundNumber] as? BaseRound.Round ?: return null
-        val threshold = round.maxPoints
+        val threshold = config.getRound(event.roundNumber)?.maxPoints ?: return null
         return when {
             redPoints >= threshold -> Competitor.RED
             bluePoints >= threshold -> Competitor.BLUE
