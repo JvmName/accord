@@ -8,8 +8,7 @@ import androidx.compose.runtime.setValue
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
-import dev.jvmname.accord.network.AccordClient
-import dev.jvmname.accord.prefs.Prefs
+import dev.jvmname.accord.domain.MatCreator
 import dev.jvmname.accord.ui.onEither
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
@@ -21,9 +20,8 @@ import kotlinx.coroutines.launch
 @AssistedInject
 class CreateMatPresenter(
     @Assisted private val navigator: Navigator,
-    private val prefs: Prefs,
-    private val client: AccordClient,
     private val scope: CoroutineScope,
+    private val matCreator: MatCreator
 ) : Presenter<CreateMatState> {
     @Composable
     override fun present(): CreateMatState {
@@ -39,11 +37,13 @@ class CreateMatPresenter(
                     scope.launch {
                         loading = true
                         error = null
-                        client.createMat(event.name, event.count)
+
+                        matCreator.createMat(event.name, event.count)
                             .onEither(
                                 success = {
-                                    prefs.updateMatInfo(it)
-                                    navigator.pop(result = CreateMatScreen.CreateMatResult(it))
+                                    navigator.pop(
+                                        result = CreateMatScreen.CreateMatResult(it)
+                                    )
                                 },
                                 failure = { error = "Error creating mat: ${it.localizedMessage}" }
                             )

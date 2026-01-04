@@ -38,9 +38,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.slack.circuit.codegen.annotations.CircuitInject
-import dev.jvmname.accord.ui.LocalCoroutineScope
-import dev.jvmname.accord.ui.LocalSnackbarHostState
-import dev.jvmname.accord.ui.StandardScaffold
+import dev.jvmname.accord.ui.common.LocalCoroutineScope
+import dev.jvmname.accord.ui.common.LocalSnackbarHostState
+import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.create_mat.CreateMatEvent.Back
 import dev.jvmname.accord.ui.theme.AccordTheme
 import dev.jvmname.accord.ui.theme.AccordTypography
