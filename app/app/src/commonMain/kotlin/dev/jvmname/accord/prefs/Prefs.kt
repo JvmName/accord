@@ -30,7 +30,7 @@ class Prefs(
             corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
             migrations = emptyList(),
             scope = scope + Dispatchers.IO,
-            produceFile = { dirs.getDataStorePath(FILENAME).toPath() },
+            produceFile = { dirs.getDataStorePath(FILENAME) },
         )
     }
 

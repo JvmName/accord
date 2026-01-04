@@ -1,4 +1,5 @@
 const { ConnectionConfiguration } = require('../../../lib/active_record/db/connectionConfiguration');
+const   CONSTANTS                 = require('../../../lib/constants');
 const   TestHelpers               = require('../../helpers');
 
 
@@ -17,20 +18,26 @@ const production = {
     username: TestHelpers.Faker.Text.randomString(10)
 }
 
+const sqliteConfig = {
+    dialect: 'sqlite'
+};
+
 const databaseId1 = TestHelpers.Faker.Text.randomString(10);
 const databaseId2 = TestHelpers.Faker.Text.randomString(10);
 
 const origEnvDBPoolMin = process.env.DB_POOL_MIN;
 const origEnvDBPoolMax = process.env.DB_POOL_MAX;
 
-const spy = jest.spyOn(ConnectionConfiguration, '_fetchAllConfigs');
+const defaultEnv = CONSTANTS.ENV;
+const spy        = jest.spyOn(ConnectionConfiguration, '_fetchAllConfigs');
 afterEach(() => {
     spy.mockReset();
+    CONSTANTS.ENV = defaultEnv;
 });
 
 
 describe('ConnectionConfiguration', () => {
-    it ('throws an error when there is no configuration for the database', () => {
+    it ('throws an error when there is no configuration for the database id', () => {
         spy.mockImplementation(() => ({ test }));
         expect(() => new ConnectionConfiguration(databaseId1)).toThrow();
     });
@@ -40,9 +47,14 @@ describe('ConnectionConfiguration', () => {
         expect(() => new ConnectionConfiguration(databaseId1)).toThrow();
     });
 
-    it ('throws an error when there is missing information', () => {
+    it ('throws an error when there is missing information for postgres', () => {
         spy.mockImplementation(() => ({[databaseId1]: {test: {port: Math.random()}}}));
         expect(() => new ConnectionConfiguration(databaseId1)).toThrow();
+    });
+
+    it ('does not require database details for sqlite', () => {
+        spy.mockImplementation(() => ({[databaseId1]: {test: sqliteConfig}}));
+        expect(() => new ConnectionConfiguration(databaseId1)).not.toThrow();
     });
 
     it ('returns the correct configuration values', () => {
@@ -73,27 +85,19 @@ describe('ConnectionConfiguration', () => {
 
     describe('ConnectionConfiguration#loggingEnabled', () => {
         it ('enables logging in development', () => {
-            const origEnv = process.env.NODE_ENV;
-            process.env.NODE_ENV = 'development';
-
+            CONSTANTS.ENV = 'development';
             spy.mockImplementation(() => ({[databaseId1]: {development: test}}));
 
             const config = new ConnectionConfiguration(databaseId1);
             expect(config.loggingEnabled).toBeTruthy();
-
-            process.env.NODE_ENV = origEnv;
         });
 
         it ('does not enable logging in production', () => {
-            const origEnv = process.env.NODE_ENV;
-            process.env.NODE_ENV = 'production';
-
+            CONSTANTS.ENV = 'production';
             spy.mockImplementation(() => ({[databaseId1]: { production }}));
 
             const config = new ConnectionConfiguration(databaseId1);
             expect(config.loggingEnabled).toBeFalsy();
-
-            process.env.NODE_ENV = origEnv;
         });
     });
 
@@ -145,6 +149,31 @@ describe('ConnectionConfiguration', () => {
 
             spy.mockImplementation(() => configs);
             expect(ConnectionConfiguration.configuredDatabaseIds()).toEqual([databaseId2]);
+        });
+    });
+
+
+    describe('ConnectionConfiguration#dialect', () => {
+        it ('defaults to postgres', () => {
+            spy.mockImplementation(() => ({[databaseId1]: { test }}));
+            const config = new ConnectionConfiguration(databaseId1);
+            expect(config.dialect).toEqual('postgres');
+        });
+
+        it ('returns sqlite when configured to do so', () => {
+            spy.mockImplementation(() => ({[databaseId1]: {test: sqliteConfig}}));
+            const config = new ConnectionConfiguration(databaseId1);
+            expect(config.dialect).toEqual('sqlite');
+        });
+    });
+
+
+    describe('ConnectionConfiguration#storage', () => {
+        it ('returns the correct path for sqlite database file', () => {
+            spy.mockImplementation(() => ({[databaseId1]: {test: sqliteConfig}}));
+            const config   = new ConnectionConfiguration(databaseId1);
+            const expected = `${process.cwd()}/config/db/database.test.sqlite`;
+            expect(config.storage).toEqual(expected);
         });
     });
 });

@@ -68,10 +68,8 @@ class Migrator {
     * MIGRATION ACTIONS
     ***********************************************************************************************/
     async createTable(tableName, details, options={}) {
-        details = {...this.defaultIdColumn, ...details};
-        if (options.timestamps !== false) {
-            details = {...details, ...this.defaultTimestampColumns};
-        }
+        if (options.id         !== false) details = {...this.defaultIdColumn, ...details};
+        if (options.timestamps !== false) details = {...details, ...this.defaultTimestampColumns};
 
         details = this.normalizeTableDetails(details);
         await this.#sequelizeQueryInterface.createTable(tableName, details);
@@ -94,9 +92,8 @@ class Migrator {
         return {
           id: {
             allowNull:     false,
-            autoIncrement: true,
             primaryKey:    true,
-            type:          this.DataTypes.INTEGER, }
+            type:          this.DataTypes.UUID, }
         };
     }
 
@@ -128,7 +125,7 @@ class Migrator {
     }
 
 
-    async addIndex(tableName, fields, { concurrently, unique, name, where }) {
+    async addIndex(tableName, fields, { concurrently, unique, name, where }={}) {
         const options = {fields: fields};
         if (concurrently) options.concurrently = true;
         if (unique)       options.unique       = true;
