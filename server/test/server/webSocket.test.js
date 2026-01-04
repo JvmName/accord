@@ -5,21 +5,15 @@ const { WebSocket } = require('../../lib/server/webSocket');
 
 const apiToken = TestHelpers.Faker.Text.randomString();
 const socketId = TestHelpers.Faker.Text.randomString();
-const ioSocket = {adapter:   {on: jest.fn()},
-                  id:        socketId,
-                  handshake: {auth: { apiToken }},
-                  on:        jest.fn()};
+const ioSocket = {adapter:    {on: jest.fn(), eventNames: jest.fn(() => [])},
+                  eventNames: jest.fn(() => []),
+                  id:         socketId,
+                  handshake:  {auth: { apiToken }},
+                  on:         jest.fn()};
 const user     = new User();
 
 
-jest.mock('../../models/user', () => {
-    class User {
-        static findByApiToken = jest.fn();
-    }
-    return { User };
-});
-
-
+User.findByApiToken = jest.fn();
 afterEach(() => {
     ioSocket.on.mockReset();
     User.findByApiToken.mockReset();
@@ -52,10 +46,12 @@ describe('WebSocket', () => {
 
             await socket.init();
 
-            expect(onSpy).toHaveBeenCalledTimes(3);
+            expect(onSpy).toHaveBeenCalledTimes(5);
             expect(onSpy).toHaveBeenCalledWith('disconnect', expect.any(Function));
             expect(onSpy).toHaveBeenCalledWith('room.join',  expect.any(Function));
             expect(onSpy).toHaveBeenCalledWith('room.leave', expect.any(Function));
+            expect(onSpy).toHaveBeenCalledWith('match.join', expect.any(Function));
+            expect(onSpy).toHaveBeenCalledWith('match.leave', expect.any(Function));
 
             onSpy.mockRestore();
         });

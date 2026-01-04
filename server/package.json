@@ -7,8 +7,7 @@
         "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules node_modules/jest/bin/jest.js",
         "db:create_migration": "./bin/migrate create_migration",
         "db:migrate": "./bin/migrate migrate",
-        "db:rollback": "./bin/migrate rollback",
-        "apiTest": "./bin/apiTest"
+        "db:rollback": "./bin/migrate rollback"
     },
     "jest": {
         "collectCoverage": true,

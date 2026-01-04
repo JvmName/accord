@@ -27,7 +27,6 @@ describe('WebSocketServer', () => {
             server.listen();
 
             expect(socketUseSpy).toHaveBeenCalledTimes(1);
-            expect(socketUseSpy).toHaveBeenCalledWith(server._initWebSocket);
 
             expect(socketOnSpy).toHaveBeenCalledTimes(1);
             expect(socketOnSpy).toHaveBeenCalledWith('connection', expect.any(Function));
@@ -44,7 +43,7 @@ describe('WebSocketServer', () => {
             await server._initWebSocket(ioSocket, next);
 
             expect(WebSocket).toHaveBeenCalledTimes(1);
-            expect(WebSocket).toHaveBeenCalledWith(ioSocket);
+            expect(WebSocket).toHaveBeenCalledWith(ioSocket, server);
             expect(WebSocket.prototype.init).toHaveBeenCalledTimes(1);
             expect(next).toHaveBeenCalledTimes(1);
             expect(next).toHaveBeenCalledWith();

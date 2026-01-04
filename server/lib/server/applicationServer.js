@@ -187,7 +187,7 @@ class ApplicationServer {
 
     requestHandler(action, controllerCls) {
         return async function(request, response) {
-            this.logger.info(`${controllerCls.name}#${action}`);
+            if (CONSTANTS.ENV != 'test') this.logger.info(`${controllerCls.name}#${action}`);
             const controllerInstance = this.buildController(controllerCls, request, response);
             await controllerInstance.setupRequestState();
 
