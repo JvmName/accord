@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlin.concurrent.atomics.AtomicReference
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -30,6 +31,7 @@ class RealScoreKeeper(
     private val config: RoundConfig,
 ) : ScoreKeeper {
 
+    private var latestRoundEvent = AtomicReference<RoundEvent?>(null)
     private val _score = MutableStateFlow(
         Score(
             redPoints = 0,
@@ -90,6 +92,7 @@ class RealScoreKeeper(
 
         // Auto-reset scores on round end
         roundTracker.roundEvent
+            .onEach { latestRoundEvent.exchange(it) }
             .onEach { event ->
                 if (event?.state == RoundEvent.RoundState.ENDED) {
                     Logger.d { "Round ended, resetting scores" }
@@ -100,13 +103,14 @@ class RealScoreKeeper(
     }
 
     private fun hasTechFallWin(redPoints: Int, bluePoints: Int): Competitor? {
-        return null
-        // TODO: need to incorporate round time constraints later
-//        return when {
-//            redPoints >= TechnicalSuperiorityThreshold -> Competitor.RED
-//            bluePoints >= TechnicalSuperiorityThreshold -> Competitor.BLUE
-//            else -> null
-//        }
+        val event = latestRoundEvent.load() ?: return null
+        val round = config[event.roundNumber] as? BaseRound.Round ?: return null
+        val threshold = round.maxPoints
+        return when {
+            redPoints >= threshold -> Competitor.RED
+            bluePoints >= threshold -> Competitor.BLUE
+            else -> null
+        }
     }
 
     override fun resetScores() {

@@ -14,6 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicBoolean
@@ -57,12 +58,11 @@ class RoundTracker(
 
     fun pause() {
         isPaused.exchange(true)
-        val currentEvent = _roundEvent.value
-        if (currentEvent != null) {
-            _roundEvent.value = RoundEvent(
-                remaining = currentEvent.remaining,
-                roundNumber = currentEvent.roundNumber,
-                totalRounds = currentEvent.totalRounds,
+        _roundEvent.update {
+            RoundEvent(
+                remaining = it!!.remaining,
+                roundNumber = it.roundNumber,
+                totalRounds = it.totalRounds,
                 state = RoundState.PAUSED
             )
         }
@@ -142,16 +142,19 @@ class RoundTracker(
 
         while (currentCoroutineContext().isActive && remainingTime.isPositive()) {
             // Wait while paused
-            while (isPaused.load()) {
-                delay(100.milliseconds)
-            }
+            maybePauseTicker()
 
             val delayDuration = minOf(remainingTime, updateFreq)
             delay(delayDuration)
 
+            maybePauseTicker()
             remainingTime -= delayDuration
             block(remainingTime)
         }
+    }
+
+    private suspend fun maybePauseTicker() {
+        while (isPaused.load()) delay(100.milliseconds)
     }
 }
 
@@ -209,7 +212,7 @@ data class RoundEvent(
     val state: RoundState,
 ) {
     enum class RoundState {
-        STARTED, PAUSED, ENDED
+        STARTED, PAUSED, ENDED, MATCH_ENDED
     }
 
     fun remainingHumanTime(): String {

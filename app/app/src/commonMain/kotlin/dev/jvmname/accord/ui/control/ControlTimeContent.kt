@@ -222,7 +222,9 @@ fun RoundControlsSheet(modifier: Modifier = Modifier, actions: RoundControlActio
             for ((action, icon) in actionsList) {
                 AnimatedVisibility(action != null) {
                     //TODO tooltip?
-                    FilledTonalIconButton(onClick = { action?.invoke() }) {
+                    FilledTonalIconButton(onClick = {
+                        Logger.d { "clicked action" }
+                        action?.invoke() }) {
                         Icon(icon, "")
                     }
                 }
