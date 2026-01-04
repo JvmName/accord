@@ -117,21 +117,26 @@ android {
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "dev.jvmname.accord"
+        applicationId = "com.rdojo.kombat"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
-        versionName = "1.0"
+        versionName = "0.0.1"
+    }
+    signingConfigs {
+        create("release") {
+        }
     }
     buildTypes {
-        getByName("debug"){
+        getByName("debug") {
             isMinifyEnabled = false
             isShrinkResources = false
 
         }
-        getByName("release") {
+        release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

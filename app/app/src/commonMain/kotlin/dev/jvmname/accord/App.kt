@@ -10,12 +10,14 @@ import com.slack.circuit.foundation.NavigableCircuitContent
 import com.slack.circuit.overlay.ContentWithOverlays
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuitx.gesturenavigation.GestureNavigationDecorationFactory
-import dev.jvmname.accord.ui.main.MainScreen
+import dev.jvmname.accord.ui.control.ControlTimeScreen
+import dev.jvmname.accord.ui.control.ControlTimeType
 import dev.jvmname.accord.ui.theme.AccordTheme
 
 @Composable
 fun App(circuit: Circuit, onRootPop: () -> Unit) {
-    val backstack = rememberSaveableBackStack(root = MainScreen())
+    //TODO change this
+    val backstack = rememberSaveableBackStack(root = ControlTimeScreen(ControlTimeType.SOLO))
     val navigator = platformNavigator(backstack, onRootPop)
     AccordTheme {
         CircuitCompositionLocals(circuit) {
