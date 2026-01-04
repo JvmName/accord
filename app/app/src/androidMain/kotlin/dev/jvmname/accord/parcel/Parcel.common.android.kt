@@ -1,3 +1,5 @@
 package dev.jvmname.accord.parcel
 
-actual interface CommonParcelable
+import android.os.Parcelable
+
+actual typealias CommonParcelable = Parcelable

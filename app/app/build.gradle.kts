@@ -47,6 +47,16 @@ kotlin {
 
                 implementation(libs.ktor.core)
                 implementation(libs.ktor.negotiation)
+                implementation(libs.ktor.json)
+                implementation(libs.ktor.websockets)
+                implementation(libs.serialization.json)
+                implementation(libs.androidx.datastore)
+
+                implementation(libs.kotlin.result)
+                implementation(libs.kotlin.result.coroutines)
+
+                implementation(libs.multihaptic)
+                implementation(libs.kermit)
             }
         }
 
@@ -69,10 +79,14 @@ kotlin {
             compilerOptions {
                 progressiveMode = true
                 optIn.addAll(
+                    "kotlin.contracts.ExperimentalContracts",
                     "androidx.compose.material.ExperimentalMaterialApi",
                     "androidx.compose.material3.ExperimentalMaterial3Api",
                     "androidx.compose.ui.ExperimentalComposeUiApi",
                     "kotlinx.serialization.ExperimentalSerializationApi",
+                    "kotlin.concurrent.atomics.ExperimentalAtomicApi",
+                    "androidx.compose.material.ExperimentalMaterial3ExpressiveApi",
+                    "androidx.compose.material3.ExperimentalMaterial3ExpressiveApi",
                 )
                 freeCompilerArgs.addAll(
                     "-Xexpect-actual-classes",
@@ -103,15 +117,30 @@ android {
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "dev.jvmname.accord"
+        applicationId = "com.rdojo.kombat"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
-        versionName = "1.0"
+        versionName = "0.0.1"
+    }
+    signingConfigs {
+        create("release") {
+        }
     }
     buildTypes {
-        getByName("release") {
+        getByName("debug") {
             isMinifyEnabled = false
+            isShrinkResources = false
+
+        }
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
     compileOptions {
@@ -142,6 +171,10 @@ compose.desktop {
 }
 
 ksp { arg("circuit.codegen.mode", "metro") }
+metro {
+    contributesAsInject = true
+    enableFullBindingGraphValidation = true
+}
 
 dependencies {
     add("kspCommonMainMetadata", libs.circuit.codegen)

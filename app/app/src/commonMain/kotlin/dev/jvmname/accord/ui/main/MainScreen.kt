@@ -8,16 +8,17 @@ import dev.jvmname.accord.network.model.MatInfo
 import dev.jvmname.accord.parcel.CommonParcelize
 
 @CommonParcelize
-data object MainScreen : Screen
+data class MainScreen(val mat: MatInfo? = null) : Screen
 
 @Immutable
 data class MainState(
-    val mat: MatInfo,
+    val mat: MatInfo?,
     val eventSink: (MainEvent) -> Unit
 ) : CircuitUiState
 
 sealed interface MainEvent : CircuitUiEvent {
-    data object RideTimeClick : MainEvent
-    data object ConsensusClick : MainEvent
-    data object ViewerModeClick : MainEvent
+    data object CreateMat : MainEvent
+    data object JoinMat : MainEvent
+
+    data object SoloRideTime : MainEvent
 }

@@ -1,13 +1,28 @@
 package dev.jvmname.accord.network.model
 
 import dev.drewhamilton.poko.Poko
+import dev.jvmname.accord.parcel.CommonParcelable
+import dev.jvmname.accord.parcel.CommonParcelize
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 
-@JvmInline
-value class MatId(val id: String)
+@[JvmInline Serializable CommonParcelize]
+value class MatId(val id: String) : CommonParcelable
 
-@Poko
- class MatInfo(
+@[Poko Serializable CommonParcelize]
+class MatInfo(
     val id: MatId,
-    val name: String
+    val name: String,
+    @SerialName("judge_count")
+    val judgeCount: Int,
+    @SerialName("code")
+    val joinCode: String,
+) : CommonParcelable
+
+@[Poko Serializable]
+class CreateMatRequest(
+    val name: String,
+    @SerialName("judge_count")
+    val judgeCount: Int
 )
