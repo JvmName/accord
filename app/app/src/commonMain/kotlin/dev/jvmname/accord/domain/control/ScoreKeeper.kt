@@ -52,27 +52,40 @@ class RealScoreKeeper(
         tracker.buttonEvents
             .onEach { event ->
                 when (event) {
-                    is ButtonEvent.Holding -> _score.update { prev ->
-                        val previousTime = prev.activeControlTime ?: Duration.ZERO
-                        val totalSessionTime = previousTime + OneSecond
-
-                        val previousSessionPoints = (previousTime / PointThreshold).toInt()
-                        val currentSessionPoints = (totalSessionTime / PointThreshold).toInt()
-                        val newPointsThisTick = currentSessionPoints - previousSessionPoints
-
-                        val (newRedPoints, newBluePoints) = when (event.competitor) {
-                            Competitor.RED -> (prev.redPoints + newPointsThisTick) to prev.bluePoints
-                            Competitor.BLUE -> prev.redPoints to (prev.bluePoints + newPointsThisTick)
+                    is ButtonEvent.Holding -> {
+                        val roundEvent = latestRoundEvent.load()
+                        if (roundEvent?.round is BaseRound.Break) {
+                            Logger.d("received button hold during break - ignoring")
+                            return@onEach
+                        }
+                        if (roundEvent?.state == RoundEvent.RoundState.PAUSED) {
+                            Logger.d("received button hold during pause - ignoring")
+                            return@onEach
                         }
 
-                        Score(
-                            redPoints = newRedPoints,
-                            bluePoints = newBluePoints,
-                            activeControlTime = totalSessionTime,
-                            activeCompetitor = event.competitor,
-                            techFallWin = hasTechFallWin(newRedPoints, newBluePoints)
-                        ).also {
-                            Logger.d { "Score: \n$it" }
+                        _score.update { prev ->
+                            val previousTime = prev.activeControlTime ?: Duration.ZERO
+                            val totalSessionTime = previousTime + OneSecond
+
+                            val previousSessionPoints = (previousTime / PointThreshold).toInt()
+                            val currentSessionPoints =
+                                (totalSessionTime / PointThreshold).toInt()
+                            val newPointsThisTick = currentSessionPoints - previousSessionPoints
+
+                            val (newRedPoints, newBluePoints) = when (event.competitor) {
+                                Competitor.RED -> (prev.redPoints + newPointsThisTick) to prev.bluePoints
+                                Competitor.BLUE -> prev.redPoints to (prev.bluePoints + newPointsThisTick)
+                            }
+
+                            Score(
+                                redPoints = newRedPoints,
+                                bluePoints = newBluePoints,
+                                activeControlTime = totalSessionTime,
+                                activeCompetitor = event.competitor,
+                                techFallWin = hasTechFallWin(newRedPoints, newBluePoints)
+                            ).also {
+                                Logger.d { "Score: \n$it" }
+                            }
                         }
                     }
 
