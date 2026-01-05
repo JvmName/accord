@@ -42,6 +42,8 @@ import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.color
+import dev.jvmname.accord.domain.control.BaseRound
+import dev.jvmname.accord.domain.control.RoundConfig
 import dev.jvmname.accord.domain.control.RoundEvent
 import dev.jvmname.accord.domain.control.Score
 import dev.jvmname.accord.domain.control.buttonHold
@@ -107,11 +109,11 @@ fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
             )
 
             val roundNumber = remember(state.matchState.roundInfo) {
-                val round = state.matchState.roundInfo
-                when  {
-                    round == null -> null
-                    round.type == RoundEvent.RoundType.Break -> "Break"
-                    else -> "Round ${round.roundNumber} of ${round.totalRounds}"
+                val roundInfo = state.matchState.roundInfo
+                when (val round = roundInfo?.round) {
+                    null -> null
+                    is BaseRound.Break -> "Break"
+                    is BaseRound.Round -> "Round ${round.index} of ${roundInfo.totalRounds}"
                 }
             }
             roundNumber?.let {
@@ -270,7 +272,7 @@ private fun ControlTimeContentPreview() {
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
                         totalRounds = 3,
-                        type = RoundEvent.RoundType.Round,
+                        round = RoundConfig.RdojoKombat.rounds[0],
                         state = RoundEvent.RoundState.STARTED
                     )
                 ),
@@ -301,7 +303,7 @@ private fun ControlTimeContentPreview_Holding() {
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
                         totalRounds = 3,
-                        type = RoundEvent.RoundType.Round,
+                        round = RoundConfig.RdojoKombat.rounds[0],
                         state = RoundEvent.RoundState.STARTED
                     ),
                 ),

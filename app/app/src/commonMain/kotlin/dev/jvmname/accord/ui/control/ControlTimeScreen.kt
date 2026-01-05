@@ -8,8 +8,10 @@ import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.screen.Screen
 import dev.drewhamilton.poko.Poko
 import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.domain.control.BaseRound
 import dev.jvmname.accord.domain.control.HapticEvent
 import dev.jvmname.accord.domain.control.RoundEvent
+import dev.jvmname.accord.domain.control.RoundEvent.RoundState
 import dev.jvmname.accord.domain.control.Score
 import dev.jvmname.accord.parcel.CommonParcelize
 
@@ -56,28 +58,19 @@ class RoundControlActions(
 
 @Composable
 fun ControlTimeState.rememberControlActions(): RoundControlActions {
-    val round = matchState.roundInfo
-    val state = round?.state
-    return remember(round?.roundNumber, round?.totalRounds, state, round?.type) {
+    val event = matchState.roundInfo
+    val state = event?.state
+    return remember(event?.roundNumber, event?.totalRounds, state, event?.round) {
 
-        val isNotStartedOrEnded = round == null || state == RoundEvent.RoundState.ENDED
-        val isPaused = state == RoundEvent.RoundState.PAUSED
-        val isActive = state == RoundEvent.RoundState.STARTED && round.type == RoundEvent.RoundType.Round
+        val isPaused = state == RoundState.PAUSED
+        val isActive = state == RoundState.STARTED && event.round is BaseRound.Round
 
         RoundControlActions(
             beginNextRound = { eventSink(ControlTimeEvent.BeginNextRound) },
-            resume = if (isPaused) {
-                { eventSink(ControlTimeEvent.Resume) }
-            } else null,
-            pause = if (isActive) {
-                { eventSink(ControlTimeEvent.Pause) }
-            } else null,
-            submission = if (isActive) {
-                { eventSink(ControlTimeEvent.Submission) }
-            } else null,
-            reset = if (round != null) {
-                { eventSink(ControlTimeEvent.Reset) }
-            } else null
+            resume = { eventSink(ControlTimeEvent.Resume) }.takeIf { isPaused },
+            pause = { eventSink(ControlTimeEvent.Pause) }.takeIf { isActive },
+            submission = { eventSink(ControlTimeEvent.Submission) }.takeIf { isActive },
+            reset = { eventSink(ControlTimeEvent.Reset) }.takeIf { event != null }
         )
     }
 }
