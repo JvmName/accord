@@ -105,13 +105,15 @@ class RealScoreKeeper(
 
         // Auto-reset scores on round end
         roundTracker.roundEvent
-            .onEach {
-                latestRoundEvent.exchange(it)
-            }
+            .onEach { latestRoundEvent.exchange(it) }
             .onEach { event ->
-                if (event?.state == RoundEvent.RoundState.ENDED) {
-                    Logger.d { "Round ended, resetting scores" }
-                    resetScores()
+                when (event?.state) {
+                    RoundEvent.RoundState.ENDED, RoundEvent.RoundState.MATCH_ENDED -> {
+                        Logger.d { "Round ended, resetting scores" }
+                        resetScores()
+                    }
+
+                    else -> Unit //ignore
                 }
             }
             .launchIn(scope)
