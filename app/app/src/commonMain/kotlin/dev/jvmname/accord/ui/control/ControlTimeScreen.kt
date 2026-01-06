@@ -40,6 +40,10 @@ sealed interface ControlTimeEvent : CircuitUiEvent {
     data class ButtonPress(val competitor: Competitor) : ControlTimeEvent
     data class ButtonRelease(val competitor: Competitor) : ControlTimeEvent
 
+    data class ManualPointEdit(val competitor: Competitor, val action: Action) : ControlTimeEvent {
+        enum class Action { INCREMENT, DECREMENT }
+    }
+
     data object BeginNextRound : ControlTimeEvent
     data object Resume : ControlTimeEvent
     data object Pause : ControlTimeEvent

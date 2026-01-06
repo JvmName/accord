@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.snapping.SnapPosition
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -17,24 +19,35 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.NextPlan
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.HeartBroken
 import androidx.compose.material.icons.filled.MoveUp
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonColors
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter.Companion.tint
+import androidx.compose.ui.input.key.Key.Companion.L
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,9 +66,11 @@ import dev.jvmname.accord.ui.common.IconTextButton
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.control.ControlTimeEvent.ButtonPress
 import dev.jvmname.accord.ui.control.ControlTimeEvent.ButtonRelease
+import dev.jvmname.accord.ui.control.ControlTimeEvent.ManualPointEdit
 import dev.jvmname.accord.ui.theme.AccordTheme
 import dev.zacsweers.metro.AppScope
 import top.ltfan.multihaptic.compose.rememberVibrator
+import java.awt.SystemColor.text
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -137,6 +152,8 @@ fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
                         controlDuration = state.matchState.score.controlTimeHumanReadable(competitor),
                         color = competitor.color,
                         playerName = competitor.nameStr,
+                        shouldShowPointControls = state.matchState.roundInfo?.state == RoundEvent.RoundState.PAUSED
+                                && state.matchState.score.techFallWin == null,
                         eventSink = state.eventSink,
                         player = competitor
                     )
@@ -152,11 +169,12 @@ fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
 
 @Composable
 private fun PlayerControl(
-    points: String,
+    points: Int,
     controlDuration: String?,
     color: Color,
     playerName: String,
     player: Competitor,
+    shouldShowPointControls: Boolean,
     eventSink: EventSink,
     modifier: Modifier = Modifier,
 ) {
@@ -164,12 +182,52 @@ private fun PlayerControl(
         modifier = modifier.fillMaxHeight().fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = points,
-            color = color,
-            style = MaterialTheme.typography.displayLarge.copy(fontSize = 50.sp),
-            fontWeight = FontWeight.Medium
-        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            AnimatedVisibility(shouldShowPointControls) {
+                CompositionLocalProvider(LocalContentColor provides color) {
+                    OutlinedIconButton(
+                        onClick = {
+                            if (points > 0) eventSink(
+                                ManualPointEdit(player, ManualPointEdit.Action.DECREMENT)
+                            )
+                        },
+                        enabled = points > 0
+                    ) {
+                        Icon(
+                            Icons.Default.Remove,
+                            contentDescription = "Decrease score"
+                        )
+                    }
+                }
+            }
+            Text(
+                modifier = Modifier.weight(1f),
+                text = points.toString(),
+                color = color,
+                style = MaterialTheme.typography.displayLarge.copy(fontSize = 50.sp),
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Medium
+            )
+            CompositionLocalProvider(LocalContentColor provides color) {
+                AnimatedVisibility(shouldShowPointControls) {
+                    OutlinedIconButton(
+                        onClick = {
+                            eventSink(ManualPointEdit(player, ManualPointEdit.Action.INCREMENT))
+                        },
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Increase score"
+                        )
+                    }
+                }
+            }
+        }
 
         AnimatedContent(controlDuration) {
             if (it == null) {
@@ -282,6 +340,39 @@ private fun ControlTimeContentPreview() {
         )
     }
 }
+
+
+@Preview
+@Composable
+private fun ControlTimeContentPreview_Paused() {
+    AccordTheme {
+        ControlTimeContent(
+            state = ControlTimeState(
+                matName = "Bay JJ",
+                matchState = MatchState(
+                    score = Score(
+                        redPoints = 22,
+                        bluePoints = 11,
+                        activeControlTime = null,
+                        activeCompetitor = null,
+                        techFallWin = null
+                    ),
+                    haptic = null,
+                    roundInfo = RoundEvent(
+                        remaining = 2.minutes + 30.seconds,
+                        roundNumber = 1,
+                        totalRounds = 3,
+                        round = RoundConfig.RdojoKombat.rounds[0],
+                        state = RoundEvent.RoundState.PAUSED
+                    )
+                ),
+                eventSink = { },
+            ),
+            modifier = Modifier
+        )
+    }
+}
+
 
 @Preview
 @Composable
