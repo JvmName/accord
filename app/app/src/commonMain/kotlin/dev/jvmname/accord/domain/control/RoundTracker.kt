@@ -21,6 +21,7 @@ import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 @[Inject SingleIn(MatchScope::class)]
 class RoundTracker(
@@ -159,19 +160,19 @@ data class RoundConfig(val rounds: List<BaseRound>) {
             listOf(
                 Round(
                     index = 1,
-                    maxPoints = 30,
                     duration = 3.minutes,
+                    maxPoints = 24,
                 ),
                 Break(1.minutes),
                 Round(
                     index = 2,
-                    maxPoints = 20,
+                    maxPoints = 16,
                     duration = 2.minutes
                 ),
                 Break(1.minutes),
                 Round(
                     index = 3,
-                    maxPoints = 10,
+                    maxPoints = 8,
                     duration = 1.minutes,
                     optional = true
                 ),
