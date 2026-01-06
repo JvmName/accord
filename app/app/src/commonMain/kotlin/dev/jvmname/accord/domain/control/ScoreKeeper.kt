@@ -4,6 +4,8 @@ import androidx.compose.runtime.Immutable
 import co.touchlab.kermit.Logger
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.ui.control.ControlTimeEvent
+import dev.jvmname.accord.ui.control.ControlTimeEvent.ManualPointEdit
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +23,7 @@ import kotlin.time.Duration.Companion.seconds
 interface ScoreKeeper {
     val score: StateFlow<Score>
     fun resetScores()
+    fun manualEdit(competitor: Competitor, action: ManualPointEdit.Action)
 }
 
 @[ContributesBinding(MatchScope::class) SingleIn(MatchScope::class)]
@@ -52,27 +55,44 @@ class RealScoreKeeper(
         tracker.buttonEvents
             .onEach { event ->
                 when (event) {
-                    is ButtonEvent.Holding -> _score.update { prev ->
-                        val previousTime = prev.activeControlTime ?: Duration.ZERO
-                        val totalSessionTime = previousTime + OneSecond
-
-                        val previousSessionPoints = (previousTime / PointThreshold).toInt()
-                        val currentSessionPoints = (totalSessionTime / PointThreshold).toInt()
-                        val newPointsThisTick = currentSessionPoints - previousSessionPoints
-
-                        val (newRedPoints, newBluePoints) = when (event.competitor) {
-                            Competitor.RED -> (prev.redPoints + newPointsThisTick) to prev.bluePoints
-                            Competitor.BLUE -> prev.redPoints to (prev.bluePoints + newPointsThisTick)
+                    is ButtonEvent.Holding -> {
+                        val roundEvent = latestRoundEvent.load()
+                        if (roundEvent == null) {
+                            Logger.d("received button hold before beginning - ignoring")
+                            return@onEach
+                        }
+                        if (roundEvent.round is BaseRound.Break) {
+                            Logger.d("received button hold during break - ignoring")
+                            return@onEach
+                        }
+                        if (roundEvent.state == RoundEvent.RoundState.PAUSED) {
+                            Logger.d("received button hold during pause - ignoring")
+                            return@onEach
                         }
 
-                        Score(
-                            redPoints = newRedPoints,
-                            bluePoints = newBluePoints,
-                            activeControlTime = totalSessionTime,
-                            activeCompetitor = event.competitor,
-                            techFallWin = hasTechFallWin(newRedPoints, newBluePoints)
-                        ).also {
-                            Logger.d { "Score: \n$it" }
+                        _score.update { prev ->
+                            val previousTime = prev.activeControlTime ?: Duration.ZERO
+                            val totalSessionTime = previousTime + OneSecond
+
+                            val previousSessionPoints = (previousTime / PointThreshold).toInt()
+                            val currentSessionPoints =
+                                (totalSessionTime / PointThreshold).toInt()
+                            val newPointsThisTick = currentSessionPoints - previousSessionPoints
+
+                            val (newRedPoints, newBluePoints) = when (event.competitor) {
+                                Competitor.RED -> (prev.redPoints + newPointsThisTick) to prev.bluePoints
+                                Competitor.BLUE -> prev.redPoints to (prev.bluePoints + newPointsThisTick)
+                            }
+
+                            Score(
+                                redPoints = newRedPoints,
+                                bluePoints = newBluePoints,
+                                activeControlTime = totalSessionTime,
+                                activeCompetitor = event.competitor,
+                                techFallWin = hasTechFallWin(newRedPoints, newBluePoints)
+                            ).also {
+                                Logger.d { "Score: \n$it" }
+                            }
                         }
                     }
 
@@ -92,25 +112,40 @@ class RealScoreKeeper(
 
         // Auto-reset scores on round end
         roundTracker.roundEvent
-            .onEach {
-                latestRoundEvent.exchange(it)
-            }
+            .onEach { latestRoundEvent.exchange(it) }
             .onEach { event ->
-                if (event?.state == RoundEvent.RoundState.ENDED) {
-                    Logger.d { "Round ended, resetting scores" }
-                    resetScores()
+                when (event?.state) {
+                    RoundEvent.RoundState.ENDED, RoundEvent.RoundState.MATCH_ENDED -> {
+                        Logger.d { "Round ended, resetting scores" }
+                        resetScores()
+                    }
+
+                    else -> Unit //ignore
                 }
             }
             .launchIn(scope)
     }
 
-    private fun hasTechFallWin(redPoints: Int, bluePoints: Int): Competitor? {
-        val event = latestRoundEvent.load() ?: return null
-        val threshold = config.getRound(event.roundNumber)?.maxPoints ?: return null
-        return when {
-            redPoints >= threshold -> Competitor.RED
-            bluePoints >= threshold -> Competitor.BLUE
-            else -> null
+    override fun manualEdit(
+        competitor: Competitor,
+        action: ManualPointEdit.Action
+    ) {
+        //double-check we're paused
+        if (latestRoundEvent.load()?.state != RoundEvent.RoundState.PAUSED) {
+            Logger.d { "ignoring $action because state is not paused, it's ${latestRoundEvent.load()?.state}" }
+            return
+        }
+
+        val actionFun = when (action) {
+            ManualPointEdit.Action.INCREMENT -> { p: Int -> p + 1 }
+            ManualPointEdit.Action.DECREMENT -> { p: Int -> p - 1 }
+        }
+
+        _score.update {
+            when (competitor) {
+                Competitor.RED -> it.copy(redPoints = actionFun(it.redPoints))
+                Competitor.BLUE -> it.copy(bluePoints = actionFun(it.bluePoints))
+            }
         }
     }
 
@@ -122,6 +157,16 @@ class RealScoreKeeper(
             activeCompetitor = null,
             techFallWin = null
         )
+    }
+
+    private fun hasTechFallWin(redPoints: Int, bluePoints: Int): Competitor? {
+        val event = latestRoundEvent.load() ?: return null
+        val threshold = config.getRound(event.roundNumber)?.maxPoints ?: return null
+        return when {
+            redPoints >= threshold -> Competitor.RED
+            bluePoints >= threshold -> Competitor.BLUE
+            else -> null
+        }
     }
 }
 
@@ -136,7 +181,7 @@ data class Score(
     fun getPoints(competitor: Competitor) = when (competitor) {
         Competitor.RED -> redPoints
         Competitor.BLUE -> bluePoints
-    }.toString()
+    }
 
     fun controlTimeHumanReadable(competitor: Competitor) = when (activeCompetitor) {
         competitor -> ((activeControlTime!!.inWholeSeconds % 3) + 1).toString()

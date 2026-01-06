@@ -107,6 +107,11 @@ class SoloControlTimePresenter(
                         buttonTracker.recordRelease(it.competitor)
                     }
 
+                    is ControlTimeEvent.ManualPointEdit -> {
+                        scoreKeeper.manualEdit(it.competitor, it.action)
+                    }
+
+
                     ControlTimeEvent.BeginNextRound -> {
                         roundTracker.startRound()
                     }
@@ -123,6 +128,7 @@ class SoloControlTimePresenter(
                     ControlTimeEvent.Submission -> {
                         roundTracker.endRound()
                     }
+
                 }
             }
         )

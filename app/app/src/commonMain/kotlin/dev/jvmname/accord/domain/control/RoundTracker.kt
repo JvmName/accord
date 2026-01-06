@@ -5,7 +5,6 @@ import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.control.BaseRound.Break
 import dev.jvmname.accord.domain.control.BaseRound.Round
 import dev.jvmname.accord.domain.control.RoundEvent.RoundState
-import dev.jvmname.accord.domain.control.RoundEvent.RoundType
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
@@ -22,6 +21,7 @@ import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 @[Inject SingleIn(MatchScope::class)]
 class RoundTracker(
@@ -52,7 +52,7 @@ class RoundTracker(
             remaining = round.duration,
             roundNumber = roundNumber,
             totalRounds = totalRounds,
-            type = round.type,
+            round = round,
             state = RoundState.STARTED
         )
         runTimer(round)
@@ -78,7 +78,7 @@ class RoundTracker(
                 remaining = it.remaining,
                 roundNumber = it.roundNumber,
                 totalRounds = totalRounds,
-                type = it.type,
+                round = it.round,
                 state = RoundState.ENDED
             )
         }
@@ -94,13 +94,15 @@ class RoundTracker(
 
         if (overallIndex >= config.rounds.size) {
             // No more rounds - emit final End event
-            _roundEvent.value = RoundEvent(
-                remaining = Duration.ZERO,
-                roundNumber = roundNumber,
-                totalRounds = totalRounds,
-                type = RoundType.Round,
-                state = RoundState.ENDED
-            )
+            _roundEvent.update {
+                RoundEvent(
+                    remaining = Duration.ZERO,
+                    roundNumber = roundNumber,
+                    totalRounds = totalRounds,
+                    round = it!!.round,
+                    state = RoundState.MATCH_ENDED
+                )
+            }
         }
     }
 
@@ -108,13 +110,15 @@ class RoundTracker(
         timerJob?.cancel()
         timerJob = scope.launch {
             ticker(500.milliseconds, baseRound.duration) { remaining ->
-                _roundEvent.value = RoundEvent(
-                    remaining = remaining,
-                    roundNumber = roundNumber,
-                    totalRounds = totalRounds,
-                    type = baseRound.type,
-                    state = RoundState.STARTED
-                )
+                _roundEvent.update {
+                    RoundEvent(
+                        remaining = remaining,
+                        roundNumber = roundNumber,
+                        totalRounds = totalRounds,
+                        round = config[overallIndex],
+                        state = RoundState.STARTED
+                    )
+                }
             }
             endRound()
         }
@@ -156,19 +160,19 @@ data class RoundConfig(val rounds: List<BaseRound>) {
             listOf(
                 Round(
                     index = 1,
-                    maxPoints = 30,
-                    duration = 3.minutes
+                    duration = 3.minutes,
+                    maxPoints = 24,
                 ),
                 Break(1.minutes),
                 Round(
                     index = 2,
-                    maxPoints = 20,
+                    maxPoints = 16,
                     duration = 2.minutes
                 ),
                 Break(1.minutes),
                 Round(
                     index = 3,
-                    maxPoints = 10,
+                    maxPoints = 8,
                     duration = 1.minutes,
                     optional = true
                 ),
@@ -194,26 +198,15 @@ sealed interface BaseRound {
     class Break(override val duration: Duration) : BaseRound
 }
 
-private val BaseRound.type: RoundType
-    get() = when (this) {
-        is Break -> RoundType.Break
-        is Round -> RoundType.Round
-    }
-
-
 data class RoundEvent(
     val remaining: Duration,
     val roundNumber: Int,
     val totalRounds: Int,
-    val type: RoundType,
+    val round: BaseRound,
     val state: RoundState,
 ) {
     enum class RoundState {
         STARTED, PAUSED, ENDED, MATCH_ENDED
-    }
-
-    enum class RoundType {
-        Round, Break
     }
 
     fun remainingHumanTime(): String {
