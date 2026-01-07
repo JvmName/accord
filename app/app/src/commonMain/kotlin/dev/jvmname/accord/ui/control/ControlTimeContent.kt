@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Column
@@ -16,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.NextPlan
@@ -28,10 +28,8 @@ import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonColors
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -43,8 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter.Companion.tint
-import androidx.compose.ui.input.key.Key.Companion.L
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -70,7 +66,6 @@ import dev.jvmname.accord.ui.control.ControlTimeEvent.ManualPointEdit
 import dev.jvmname.accord.ui.theme.AccordTheme
 import dev.zacsweers.metro.AppScope
 import top.ltfan.multihaptic.compose.rememberVibrator
-import java.awt.SystemColor.text
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -298,11 +293,13 @@ fun RoundControlsSheet(modifier: Modifier = Modifier, actions: RoundControlActio
             for ((action, icon) in actionsList) {
                 AnimatedVisibility(action != null) {
                     //TODO tooltip?
-                    FilledTonalIconButton(onClick = {
-                        Logger.d { "clicked action" }
-                        action?.invoke()
-                    }) {
-                        Icon(icon, "")
+                    FilledTonalIconButton(
+                        modifier = modifier.size(IconButtonDefaults.mediumContainerSize()),
+                        onClick = {
+                            Logger.d { "clicked action" }
+                            action?.invoke()
+                        }) {
+                        Icon(icon, "", modifier = Modifier.size(32.dp))
                     }
                 }
             }

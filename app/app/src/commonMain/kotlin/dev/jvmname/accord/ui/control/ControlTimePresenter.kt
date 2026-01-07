@@ -113,6 +113,7 @@ class SoloControlTimePresenter(
 
 
                     ControlTimeEvent.BeginNextRound -> {
+                        roundTracker.endRound()
                         roundTracker.startRound()
                     }
 
