@@ -21,7 +21,6 @@ import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 
 @[Inject SingleIn(MatchScope::class)]
 class RoundTracker(
@@ -73,8 +72,9 @@ class RoundTracker(
         timerJob?.cancel()
         timerJob = null
 
-        _roundEvent.value?.let {
-            _roundEvent.value = RoundEvent(
+        _roundEvent.update {
+            it ?: return@update null
+            RoundEvent(
                 remaining = it.remaining,
                 roundNumber = it.roundNumber,
                 totalRounds = totalRounds,

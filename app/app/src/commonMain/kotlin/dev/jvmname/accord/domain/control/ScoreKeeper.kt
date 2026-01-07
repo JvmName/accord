@@ -4,7 +4,6 @@ import androidx.compose.runtime.Immutable
 import co.touchlab.kermit.Logger
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
-import dev.jvmname.accord.ui.control.ControlTimeEvent
 import dev.jvmname.accord.ui.control.ControlTimeEvent.ManualPointEdit
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.SingleIn
@@ -14,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.update
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.time.Duration
@@ -110,17 +110,20 @@ class RealScoreKeeper(
             }
             .launchIn(scope)
 
-        // Auto-reset scores on round end
+        // Auto-reset scores on transition from ENDED to STARTED
         roundTracker.roundEvent
             .onEach { latestRoundEvent.exchange(it) }
-            .onEach { event ->
-                when (event?.state) {
-                    RoundEvent.RoundState.ENDED, RoundEvent.RoundState.MATCH_ENDED -> {
-                        Logger.d { "Round ended, resetting scores" }
-                        resetScores()
-                    }
-
-                    else -> Unit //ignore
+            .scan(Pair<RoundEvent?, RoundEvent?>(null, null)) { (_, current), new ->
+                current to new
+            }
+            .onEach { (previous, current) ->
+                Logger.d { "State transition: prev=${previous?.state}/${previous?.round} -> curr=${current?.state}/${current?.round}" }
+                if (previous?.round is BaseRound.Break
+                    && current?.state == RoundEvent.RoundState.STARTED
+                    && current.round is BaseRound.Round
+                ) {
+                    Logger.d { "Round transitioning from ENDED Break to STARTED Round, resetting scores" }
+                    resetScores()
                 }
             }
             .launchIn(scope)
