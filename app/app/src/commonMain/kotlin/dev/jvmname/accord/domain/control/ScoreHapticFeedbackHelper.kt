@@ -109,7 +109,7 @@ sealed interface HapticTrigger {
         override val effect = HapticEffect {
             click
             click{
-                delay = 50.milliseconds
+                delay = 110.milliseconds
                 delayType = DelayType.Pause
             }
         }
