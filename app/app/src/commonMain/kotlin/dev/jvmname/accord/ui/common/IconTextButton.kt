@@ -2,12 +2,11 @@ package dev.jvmname.accord.ui.common
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Create
@@ -40,9 +39,12 @@ fun IconTextButton(
     ) {
         icon?.let {
             Icon(it, contentDescription = "")
-            Spacer(modifier.width(4.dp))
         }
-        Text(text, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(start = 6.dp)
+        )
     }
 }
 
