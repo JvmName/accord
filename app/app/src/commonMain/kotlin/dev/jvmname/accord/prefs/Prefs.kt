@@ -14,10 +14,10 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.plus
 import kotlinx.serialization.json.Json
-import okio.Path.Companion.toPath
 
 @[Inject SingleIn(AppScope::class)]
 class Prefs(
@@ -33,6 +33,18 @@ class Prefs(
             produceFile = { dirs.getDataStorePath(FILENAME) },
         )
     }
+
+    suspend fun setAuthToken(token: String?) {
+        datastore.edit { prefs ->
+            prefs.remove(AUTH_TOKEN)
+            token?.let { prefs.set(AUTH_TOKEN, it) }
+        }
+    }
+
+    suspend fun getAuthToken(): String? {
+        return datastore.data.first().get(AUTH_TOKEN)
+    }
+
 
     suspend fun updateMatInfo(info: MatInfo?) {
         datastore.edit { prefs ->
@@ -50,5 +62,7 @@ class Prefs(
     companion object {
         const val FILENAME = "prefs.preferences_pb"
         val MAT_INFO = stringPreferencesKey("mat_info")
+
+        val AUTH_TOKEN = stringPreferencesKey("auth_token")
     }
 }

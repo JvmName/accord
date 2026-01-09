@@ -85,6 +85,7 @@ kotlin {
                     "androidx.compose.ui.ExperimentalComposeUiApi",
                     "kotlinx.serialization.ExperimentalSerializationApi",
                     "kotlin.concurrent.atomics.ExperimentalAtomicApi",
+                    "kotlinx.serialization.InternalSerializationApi",
                     "androidx.compose.material.ExperimentalMaterial3ExpressiveApi",
                     "androidx.compose.material3.ExperimentalMaterial3ExpressiveApi",
                 )
