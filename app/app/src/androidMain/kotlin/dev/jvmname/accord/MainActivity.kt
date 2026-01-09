@@ -12,6 +12,7 @@ import com.slack.circuit.foundation.rememberCircuitNavigator
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuitx.android.rememberAndroidScreenAwareNavigator
 import dev.jvmname.accord.di.LocalGraph
+import dev.jvmname.accord.di.LocalPlatformContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,7 +20,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val graph = (application as AccordApplication).graph
-            CompositionLocalProvider(LocalGraph provides graph) {
+            CompositionLocalProvider(
+                LocalGraph provides graph,
+                LocalPlatformContext provides this@MainActivity
+            ) {
                 App(graph.circuit, ::finish)
             }
         }

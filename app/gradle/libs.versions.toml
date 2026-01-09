@@ -17,11 +17,11 @@ material3 = "1.10.0-alpha05"
 materialIconsExtended = "1.7.3"
 serialization = "1.10.0-RC"
 multihaptic = "0.2.2"
+sound = "0.2.6-beta02"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
 androidx-datastore = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
-
 
 compose-ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "composeMultiplatform" }
 compose-ui-util = { module = "org.jetbrains.compose.ui:ui-util", version.ref = "composeMultiplatform" }
@@ -33,12 +33,14 @@ circuit-codegen = { module = "com.slack.circuit:circuit-codegen", version.ref = 
 circuitx-overlays = { module = "com.slack.circuit:circuitx-overlays", version.ref = "circuit" }
 circuitx-gestureNav = { module = "com.slack.circuit:circuitx-gesture-navigation", version.ref = "circuit" }
 circuitx-android = { module = "com.slack.circuit:circuitx-android", version.ref = "circuit" }
+
 foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "composeMultiplatform" }
 material-icons = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
 material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
 runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composeMultiplatform" }
 ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
 ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
+composeResources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
@@ -55,6 +57,7 @@ multihaptic = { module = "top.ltfan.multihaptic:multihaptic-compose", version.re
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 kotlin-result = { module = "com.michael-bull.kotlin-result:kotlin-result", version.ref = "kotlinResult" }
 kotlin-result-coroutines = { module = "com.michael-bull.kotlin-result:kotlin-result-coroutines", version.ref = "kotlinResult" }
+sound = { module = "app.lexilabs.basic:basic-sound", version.ref = "sound" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
