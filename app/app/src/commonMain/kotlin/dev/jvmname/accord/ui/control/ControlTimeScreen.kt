@@ -8,6 +8,7 @@ import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.screen.Screen
 import dev.drewhamilton.poko.Poko
 import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.domain.control.AudioEvent
 import dev.jvmname.accord.domain.control.BaseRound
 import dev.jvmname.accord.domain.control.HapticEvent
 import dev.jvmname.accord.domain.control.RoundEvent
@@ -32,6 +33,7 @@ data class ControlTimeState(
 class MatchState(
     val score: Score,
     val haptic: HapticEvent?,
+    val audio: AudioEvent?,
     val roundInfo: RoundEvent?,
 )
 
