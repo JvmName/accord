@@ -38,6 +38,7 @@ kotlin {
                 implementation(libs.compose.ui.util)
                 implementation(libs.material.icons)
                 implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.composeResources)
 
                 implementation(libs.circuit.foundation)
                 implementation(libs.circuit.overlay)
@@ -57,6 +58,7 @@ kotlin {
 
                 implementation(libs.multihaptic)
                 implementation(libs.kermit)
+                implementation(libs.sound)
             }
         }
 
