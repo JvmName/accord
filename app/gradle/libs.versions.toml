@@ -17,6 +17,7 @@ material3 = "1.10.0-alpha05"
 materialIconsExtended = "1.7.3"
 serialization = "1.10.0-RC"
 multihaptic = "0.2.2"
+socketio = "2.1.2"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
@@ -55,6 +56,7 @@ multihaptic = { module = "top.ltfan.multihaptic:multihaptic-compose", version.re
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 kotlin-result = { module = "com.michael-bull.kotlin-result:kotlin-result", version.ref = "kotlinResult" }
 kotlin-result-coroutines = { module = "com.michael-bull.kotlin-result:kotlin-result-coroutines", version.ref = "kotlinResult" }
+socketio-client = { module = "io.socket:socket.io-client", version.ref = "socketio" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
