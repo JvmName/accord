@@ -7,7 +7,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import dev.jvmname.accord.network.model.MatInfo
+import dev.jvmname.accord.network.Mat
+import dev.jvmname.accord.network.User
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
@@ -37,26 +38,35 @@ class Prefs(
     suspend fun setAuthToken(token: String?) {
         datastore.edit { prefs ->
             prefs.remove(AUTH_TOKEN)
-            token?.let { prefs.set(AUTH_TOKEN, it) }
+            token?.let { prefs[AUTH_TOKEN] = it }
         }
     }
 
     suspend fun getAuthToken(): String? {
-        return datastore.data.first().get(AUTH_TOKEN)
+        return datastore.data.first()[AUTH_TOKEN]
     }
 
 
-    suspend fun updateMatInfo(info: MatInfo?) {
+    suspend fun updateMatInfo(info: Mat?) {
         datastore.edit { prefs ->
             if (info == null) prefs.clear()
             else prefs[MAT_INFO] = json.encodeToString(info)
         }
-
     }
 
-    fun observeMatInfo(): Flow<MatInfo?> {
+    fun observeMatInfo(): Flow<Mat?> {
         return datastore.data
-            .map { prefs -> prefs[MAT_INFO]?.let { json.decodeFromString<MatInfo>(it) } }
+            .map { prefs -> prefs[MAT_INFO]?.let { json.decodeFromString<Mat>(it) } }
+    }
+
+    suspend fun updateMainUser(user: User) {
+        datastore.edit {
+            it[MAIN_USER] = json.encodeToString(user)
+        }
+    }
+
+    suspend fun getMainUser(): User {
+        return json.decodeFromString(datastore.data.first()[MAIN_USER]!!)
     }
 
     companion object {
@@ -64,5 +74,7 @@ class Prefs(
         val MAT_INFO = stringPreferencesKey("mat_info")
 
         val AUTH_TOKEN = stringPreferencesKey("auth_token")
+
+        val MAIN_USER = stringPreferencesKey("user.main")
     }
 }
