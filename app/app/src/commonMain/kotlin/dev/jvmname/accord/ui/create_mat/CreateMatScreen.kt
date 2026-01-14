@@ -5,13 +5,13 @@ import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.screen.PopResult
 import com.slack.circuit.runtime.screen.Screen
-import dev.jvmname.accord.network.model.MatInfo
+import dev.jvmname.accord.network.Mat
 import dev.jvmname.accord.parcel.CommonParcelize
 
 @CommonParcelize
 data object CreateMatScreen : Screen {
     @CommonParcelize
-    data class CreateMatResult(val mat: MatInfo) : PopResult
+    data class CreateMatResult(val mat: Mat) : PopResult
 }
 
 @Immutable

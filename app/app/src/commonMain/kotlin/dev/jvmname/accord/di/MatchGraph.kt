@@ -1,6 +1,7 @@
 package dev.jvmname.accord.di
 
 import dev.jvmname.accord.domain.control.RoundConfig
+import dev.jvmname.accord.ui.control.ControlTimeType
 import dev.jvmname.accord.ui.control.SoloControlTimePresenter
 import dev.zacsweers.metro.GraphExtension
 import dev.zacsweers.metro.Provides
@@ -17,6 +18,9 @@ interface MatchGraph {
 
     @GraphExtension.Factory
     fun interface Factory {
-        operator fun invoke(@Provides config: RoundConfig): MatchGraph
+        operator fun invoke(
+            @Provides config: RoundConfig,
+            @Provides controlType: ControlTimeType
+        ): MatchGraph
     }
 }

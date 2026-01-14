@@ -10,11 +10,11 @@ import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.foundation.rememberAnsweringNavigator
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
-import dev.jvmname.accord.domain.MatCreator
+import dev.jvmname.accord.domain.MatManager
 import dev.jvmname.accord.prefs.Prefs
-import dev.jvmname.accord.ui.create_mat.CreateMatScreen
 import dev.jvmname.accord.ui.control.ControlTimeScreen
 import dev.jvmname.accord.ui.control.ControlTimeType
+import dev.jvmname.accord.ui.create_mat.CreateMatScreen
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
@@ -26,7 +26,7 @@ class MainPresenter(
     @Assisted private val screen: MainScreen,
     @Assisted private val navigator: Navigator,
     private val prefs: Prefs,
-    private val matCreator: MatCreator,
+    private val matManager: MatManager,
 ) : Presenter<MainState> {
 
 
