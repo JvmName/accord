@@ -17,21 +17,21 @@ import io.ktor.http.contentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+
+typealias NetworkResult<T> = Result<T, ApiError>
+
 @SingleIn(AppScope::class)
 @Inject
-class AccordClient(
-    private val httpClient: HttpClient,
-) {
-    private val baseURL = "http://localhost:3000"
+class AccordClient(private val httpClient: HttpClient) {
 
     // ========================================================================
     // Authentication
     // ========================================================================
 
-    suspend fun createUser(name: String, email: String): Result<CreateUserResponse, ApiError> {
+    suspend fun createUser(name: String, email: String): NetworkResult<CreateUserResponse> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.post("$baseURL/users") {
+                httpClient.post("users") {
                     contentType(ContentType.Application.Json)
                     setBody(CreateUserRequest(name, email))
                 }.body<ApiResult<CreateUserResponseData>>()
@@ -45,10 +45,10 @@ class AccordClient(
     // Mats
     // ========================================================================
 
-    suspend fun createMat(name: String, judgeCount: Int): Result<Mat, ApiError> {
+    suspend fun createMat(name: String, judgeCount: Int): NetworkResult<Mat> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.post("$baseURL/mats") {
+                httpClient.post("mats") {
                     contentType(ContentType.Application.Json)
                     setBody(CreateMatRequest(name, judgeCount))
                 }.body<ApiResult<MatResponseData>>()
@@ -58,10 +58,10 @@ class AccordClient(
         }
     }
 
-    suspend fun getMat(matId: String): Result<Mat, ApiError> {
+    suspend fun getMat(matId: String): NetworkResult<Mat> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.get("$baseURL/mat/$matId")
+                httpClient.get("mat/$matId")
                     .body<ApiResult<MatResponseData>>()
             }
                 .unwrapApiResult()
@@ -69,10 +69,10 @@ class AccordClient(
         }
     }
 
-    suspend fun joinMat(matCode: String): Result<Mat, ApiError> {
+    suspend fun joinMat(matCode: String): NetworkResult<Mat> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.post("$baseURL/mat/$matCode/join")
+                httpClient.post("mat/$matCode/join")
                     .body<ApiResult<MatResponseData>>()
             }
                 .unwrapApiResult()
@@ -80,10 +80,10 @@ class AccordClient(
         }
     }
 
-    suspend fun leaveMat(matCode: String): Result<Mat, ApiError> {
+    suspend fun leaveMat(matCode: String): NetworkResult<Mat> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.delete("$baseURL/mat/$matCode/join")
+                httpClient.delete("mat/$matCode/join")
                     .body<ApiResult<MatResponseData>>()
             }
                 .unwrapApiResult()
@@ -91,10 +91,10 @@ class AccordClient(
         }
     }
 
-    suspend fun listJudges(matCode: String): Result<List<User>, ApiError> {
+    suspend fun listJudges(matCode: String): NetworkResult<List<User>> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.get("$baseURL/mat/$matCode/judges")
+                httpClient.get("mat/$matCode/judges")
                     .body<ApiResult<JudgesResponseData>>()
             }
                 .unwrapApiResult()
@@ -102,10 +102,10 @@ class AccordClient(
         }
     }
 
-    suspend fun listViewers(matCode: String): Result<List<User>, ApiError> {
+    suspend fun listViewers(matCode: String): NetworkResult<List<User>> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.get("$baseURL/mat/$matCode/viewers")
+                httpClient.get("mat/$matCode/viewers")
                     .body<ApiResult<ViewersResponseData>>()
             }
                 .unwrapApiResult()
@@ -121,10 +121,10 @@ class AccordClient(
         matCode: String,
         redCompetitorId: UserId,
         blueCompetitorId: UserId
-    ): Result<Match, ApiError> {
+    ): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.post("$baseURL/mat/$matCode/matches") {
+                httpClient.post("mat/$matCode/matches") {
                     contentType(ContentType.Application.Json)
                     setBody(CreateMatchRequest(redCompetitorId, blueCompetitorId))
                 }.body<ApiResult<MatchResponseData>>()
@@ -134,10 +134,10 @@ class AccordClient(
         }
     }
 
-    suspend fun getMatch(matchId: MatchId): Result<Match, ApiError> {
+    suspend fun getMatch(matchId: MatchId): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.get("$baseURL/match/${matchId.id}")
+                httpClient.get("match/${matchId.id}")
                     .body<ApiResult<MatchResponseData>>()
             }
                 .unwrapApiResult()
@@ -145,10 +145,10 @@ class AccordClient(
         }
     }
 
-    suspend fun startMatch(matchId: MatchId): Result<Match, ApiError> {
+    suspend fun startMatch(matchId: MatchId): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.post("$baseURL/match/${matchId.id}/start")
+                httpClient.post("match/${matchId.id}/start")
                     .body<ApiResult<MatchResponseData>>()
             }
                 .unwrapApiResult()
@@ -160,10 +160,10 @@ class AccordClient(
         matchId: MatchId,
         submission: String? = null,
         submitter: CompetitorColor? = null
-    ): Result<Match, ApiError> {
+    ): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.post("$baseURL/match/${matchId.id}/end") {
+                httpClient.post("match/${matchId.id}/end") {
                     contentType(ContentType.Application.Json)
                     setBody(EndMatchRequest(submission, submitter))
                 }.body<ApiResult<MatchResponseData>>()
@@ -177,10 +177,10 @@ class AccordClient(
     // Rounds
     // ========================================================================
 
-    suspend fun startRound(matchId: MatchId): Result<Match, ApiError> {
+    suspend fun startRound(matchId: MatchId): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.post("$baseURL/match/${matchId.id}/rounds")
+                httpClient.post("match/${matchId.id}/rounds")
                     .body<ApiResult<MatchResponseData>>()
             }
                 .unwrapApiResult()
@@ -192,10 +192,10 @@ class AccordClient(
         matchId: MatchId,
         submission: String? = null,
         submitter: CompetitorColor? = null
-    ): Result<Match, ApiError> {
+    ): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.post("$baseURL/match/${matchId.id}/rounds/end") {
+                httpClient.post("match/${matchId.id}/rounds/end") {
                     contentType(ContentType.Application.Json)
                     setBody(EndRoundRequest(submission, submitter))
                 }.body<ApiResult<MatchResponseData>>()
@@ -209,10 +209,13 @@ class AccordClient(
     // Riding Time Votes
     // ========================================================================
 
-    suspend fun startRidingTimeVote(matchId: MatchId, rider: CompetitorColor): Result<Match, ApiError> {
+    suspend fun startRidingTimeVote(
+        matchId: MatchId,
+        rider: CompetitorColor
+    ): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.post("$baseURL/match/${matchId.id}/ridingTime") {
+                httpClient.post("match/${matchId.id}/ridingTime") {
                     contentType(ContentType.Application.Json)
                     setBody(StartRidingTimeVoteRequest(rider))
                 }.body<ApiResult<MatchResponseData>>()
@@ -222,10 +225,10 @@ class AccordClient(
         }
     }
 
-    suspend fun endRidingTimeVote(matchId: MatchId, rider: CompetitorColor): Result<Match, ApiError> {
+    suspend fun endRidingTimeVote(matchId: MatchId, rider: CompetitorColor): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.delete("$baseURL/match/${matchId.id}/ridingTime") {
+                httpClient.delete("match/${matchId.id}/ridingTime") {
                     contentType(ContentType.Application.Json)
                     setBody(EndRidingTimeVoteRequest(rider))
                 }.body<ApiResult<MatchResponseData>>()

@@ -49,6 +49,7 @@ actual class SocketClient actual constructor(
             auth = mapOf("apiToken" to token.apiToken)
             transports = arrayOf("websocket")
             reconnectionDelay = 330
+            //TODO websocketfactory
         }
         socket = IO.socket(baseUrl.baseUrl, options)
     }
