@@ -33,7 +33,7 @@ class DelegatingControlTimePresenter(
     override fun present(): ControlTimeState {
         val accordGraph = LocalGraph.current
         val matchGraph = remember(screen) {
-            accordGraph.matchGraphFactory(RoundConfig.RdojoKombat)
+            accordGraph.matchGraphFactory(RoundConfig.RdojoKombat, screen.type)
         }
 
         val delegate: Presenter<ControlTimeState> = remember(screen, navigator, matchGraph) {

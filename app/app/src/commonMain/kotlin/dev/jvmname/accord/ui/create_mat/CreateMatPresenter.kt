@@ -8,7 +8,7 @@ import androidx.compose.runtime.setValue
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
-import dev.jvmname.accord.domain.MatCreator
+import dev.jvmname.accord.domain.MatManager
 import dev.jvmname.accord.ui.onEither
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 class CreateMatPresenter(
     @Assisted private val navigator: Navigator,
     private val scope: CoroutineScope,
-    private val matCreator: MatCreator
+    private val matManager: MatManager
 ) : Presenter<CreateMatState> {
     @Composable
     override fun present(): CreateMatState {
@@ -38,7 +38,7 @@ class CreateMatPresenter(
                         loading = true
                         error = null
 
-                        matCreator.createMat(event.name, event.count)
+                        matManager.createMat(event.name, event.count)
                             .onEither(
                                 success = {
                                     navigator.pop(
