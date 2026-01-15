@@ -32,7 +32,6 @@ class AccordClient(private val httpClient: HttpClient) {
         return withContext(Dispatchers.IO) {
             catchRunning {
                 httpClient.post("users") {
-                    contentType(ContentType.Application.Json)
                     setBody(CreateUserRequest(name, email))
                 }.body<ApiResult<CreateUserResponseData>>()
             }
@@ -49,7 +48,6 @@ class AccordClient(private val httpClient: HttpClient) {
         return withContext(Dispatchers.IO) {
             catchRunning {
                 httpClient.post("mats") {
-                    contentType(ContentType.Application.Json)
                     setBody(CreateMatRequest(name, judgeCount))
                 }.body<ApiResult<MatResponseData>>()
             }
