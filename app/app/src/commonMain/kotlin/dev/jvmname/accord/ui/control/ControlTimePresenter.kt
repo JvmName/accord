@@ -12,10 +12,10 @@ import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.di.LocalGraph
 import dev.jvmname.accord.domain.control.ButtonPressTracker
-import dev.jvmname.accord.domain.control.RoundConfig
-import dev.jvmname.accord.domain.control.RoundTracker
 import dev.jvmname.accord.domain.control.ScoreHapticFeedbackHelper
 import dev.jvmname.accord.domain.control.ScoreKeeper
+import dev.jvmname.accord.domain.control.rounds.RoundConfig
+import dev.jvmname.accord.domain.control.rounds.RoundTracker
 import dev.jvmname.accord.prefs.Prefs
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
@@ -33,13 +33,13 @@ class DelegatingControlTimePresenter(
     override fun present(): ControlTimeState {
         val accordGraph = LocalGraph.current
         val matchGraph = remember(screen) {
-            accordGraph.matchGraphFactory(RoundConfig.RdojoKombat)
+            accordGraph.matchGraphFactory(RoundConfig.RdojoKombat, screen.type)
         }
 
         val delegate: Presenter<ControlTimeState> = remember(screen, navigator, matchGraph) {
             when (screen.type) {
                 ControlTimeType.SOLO -> matchGraph.soloFactory.create(screen, navigator)
-                ControlTimeType.CONSENSUS -> TODO()
+                ControlTimeType.CONSENSUS -> matchGraph.consensusFactory.create(screen, navigator)
             }
         }
 

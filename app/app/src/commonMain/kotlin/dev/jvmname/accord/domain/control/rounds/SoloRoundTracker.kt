@@ -1,10 +1,7 @@
-package dev.jvmname.accord.domain.control
+package dev.jvmname.accord.domain.control.rounds
 
-import dev.drewhamilton.poko.Poko
 import dev.jvmname.accord.di.MatchScope
-import dev.jvmname.accord.domain.control.BaseRound.Break
-import dev.jvmname.accord.domain.control.BaseRound.Round
-import dev.jvmname.accord.domain.control.RoundEvent.RoundState
+import dev.jvmname.accord.domain.control.rounds.BaseRound.Round
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
@@ -20,13 +17,12 @@ import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.minutes
 
 @[Inject SingleIn(MatchScope::class)]
-class RoundTracker(
+class SoloRoundTracker(
     private val scope: CoroutineScope,
     private val config: RoundConfig,
-) {
+) : RoundTracker {
     private var roundNumber: Int = 1
     private var overallIndex: Int = 0
     private var isPaused = AtomicBoolean(false)
@@ -35,10 +31,10 @@ class RoundTracker(
     private val totalRounds: Int = config.rounds.count { it is Round }
 
     private val _roundEvent = MutableStateFlow<RoundEvent?>(null)
-    val roundEvent: StateFlow<RoundEvent?> = _roundEvent.asStateFlow()
+    override val roundEvent: StateFlow<RoundEvent?> = _roundEvent.asStateFlow()
 
 
-    fun startRound() {
+    override fun startRound() {
         // Advance to next round if not the first call
         if (_roundEvent.value != null) {
             nextRound()
@@ -52,23 +48,23 @@ class RoundTracker(
             roundNumber = roundNumber,
             totalRounds = totalRounds,
             round = round,
-            state = RoundState.STARTED
+            state = RoundEvent.RoundState.STARTED
         )
         runTimer(round)
     }
 
-    fun pause() {
+    override fun pause() {
         isPaused.exchange(true)
         _roundEvent.update {
-            it?.copy(state = RoundState.PAUSED)
+            it?.copy(state = RoundEvent.RoundState.PAUSED)
         }
     }
 
-    fun resume() {
+    override fun resume() {
         isPaused.store(false)
     }
 
-    fun endRound() {
+    override fun endRound() {
         timerJob?.cancel()
         timerJob = null
 
@@ -79,7 +75,7 @@ class RoundTracker(
                 roundNumber = it.roundNumber,
                 totalRounds = totalRounds,
                 round = it.round,
-                state = RoundState.ENDED
+                state = RoundEvent.RoundState.ENDED
             )
         }
     }
@@ -96,11 +92,11 @@ class RoundTracker(
             // No more rounds - emit final End event
             _roundEvent.update {
                 RoundEvent(
-                    remaining = Duration.ZERO,
+                    remaining = Duration.Companion.ZERO,
                     roundNumber = roundNumber,
                     totalRounds = totalRounds,
                     round = it!!.round,
-                    state = RoundState.MATCH_ENDED
+                    state = RoundEvent.RoundState.MATCH_ENDED
                 )
             }
         }
@@ -116,7 +112,7 @@ class RoundTracker(
                         roundNumber = roundNumber,
                         totalRounds = totalRounds,
                         round = config[overallIndex],
-                        state = RoundState.STARTED
+                        state = RoundEvent.RoundState.STARTED
                     )
                 }
             }
@@ -146,72 +142,5 @@ class RoundTracker(
 
     private suspend fun maybePauseTicker() {
         while (isPaused.load()) delay(100.milliseconds)
-    }
-}
-
-data class RoundConfig(val rounds: List<BaseRound>) {
-    operator fun get(index: Int): BaseRound = rounds[index]
-    fun getRound(roundIndex: Int): Round? = rounds.firstNotNullOfOrNull { br ->
-        (br as? Round)?.takeIf { it.index == roundIndex }
-    }
-
-    companion object {
-        val RdojoKombat = RoundConfig(
-            listOf(
-                Round(
-                    index = 1,
-                    duration = 3.minutes,
-                    maxPoints = 24,
-                ),
-                Break(1.minutes),
-                Round(
-                    index = 2,
-                    maxPoints = 16,
-                    duration = 2.minutes
-                ),
-                Break(1.minutes),
-                Round(
-                    index = 3,
-                    maxPoints = 8,
-                    duration = 1.minutes,
-                    optional = true
-                ),
-            )
-        )
-
-
-    }
-}
-
-sealed interface BaseRound {
-    val duration: Duration
-
-    @Poko
-    class Round(
-        val index: Int,
-        val maxPoints: Int,
-        override val duration: Duration,
-        val optional: Boolean = false,
-    ) : BaseRound
-
-    @Poko
-    class Break(override val duration: Duration) : BaseRound
-}
-
-data class RoundEvent(
-    val remaining: Duration,
-    val roundNumber: Int,
-    val totalRounds: Int,
-    val round: BaseRound,
-    val state: RoundState,
-) {
-    enum class RoundState {
-        STARTED, PAUSED, ENDED, MATCH_ENDED
-    }
-
-    fun remainingHumanTime(): String {
-        val minutes = remaining.inWholeMinutes
-        val seconds = remaining.inWholeSeconds % 60
-        return "$minutes:${seconds.toString().padStart(2, '0')}"
     }
 }
