@@ -8,11 +8,11 @@ import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.screen.Screen
 import dev.drewhamilton.poko.Poko
 import dev.jvmname.accord.domain.Competitor
-import dev.jvmname.accord.domain.control.BaseRound
 import dev.jvmname.accord.domain.control.HapticEvent
-import dev.jvmname.accord.domain.control.RoundEvent
-import dev.jvmname.accord.domain.control.RoundEvent.RoundState
 import dev.jvmname.accord.domain.control.Score
+import dev.jvmname.accord.domain.control.rounds.BaseRound
+import dev.jvmname.accord.domain.control.rounds.RoundEvent
+import dev.jvmname.accord.domain.control.rounds.RoundEvent.RoundState
 import dev.jvmname.accord.parcel.CommonParcelize
 
 
