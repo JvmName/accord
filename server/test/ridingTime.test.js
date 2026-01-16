@@ -5,6 +5,7 @@ const   TestHelpers           = require('./helpers');
 const judge1 = {id: TestHelpers.Faker.Text.randomString(10)};
 const judge2 = {id: TestHelpers.Faker.Text.randomString(10)};
 const judge3 = {id: TestHelpers.Faker.Text.randomString(10)};
+const competitorId = TestHelpers.Faker.Text.randomString(10);
 
 const createVote = (startMin, startSec, endMin, endSec, judge) => {
     const startAt = new Date(2026, 0, 1, 10, startMin, startSec)
@@ -36,8 +37,11 @@ describe('calculateRidingTime', () => {
         const votes  = [judge1Vote1, judge1Vote2, judge1Vote3];
         const judges = [judge1];
         const endAt  = judge1Vote3.ended_at;
-        const time   = calculateRidingTime(votes, judges, endAt);
-        expect(time).toEqual(30);
+        const result = calculateRidingTime(votes, judges, endAt, competitorId);
+        // 3 periods of 10 seconds each = 3 × floor(10000ms/3000ms) = 3 × 3 = 9 points
+        expect(result.points).toEqual(9);
+        expect(result.activeControlTimeMs).toEqual(0);
+        expect(result.activeCompetitor).toBeNull();
     });
 
     it ('calculates riding time when there are two judges', () => {
@@ -45,8 +49,11 @@ describe('calculateRidingTime', () => {
                         judge2Vote1, judge2Vote2, judge2Vote3, judge2Vote4];
         const judges = [judge1, judge2];
         const endAt  = judge1Vote3.ended_at;
-        const time   = calculateRidingTime(votes, judges, endAt);
-        expect(time).toEqual(15);
+        const result = calculateRidingTime(votes, judges, endAt, competitorId);
+        // Control periods when both judges vote: 10s + 5s (overlaps) = 3 points
+        expect(result.points).toEqual(3);
+        expect(result.activeControlTimeMs).toEqual(0);
+        expect(result.activeCompetitor).toBeNull();
     });
 
     it ('calculates riding time when there are three judges', () => {
@@ -55,8 +62,11 @@ describe('calculateRidingTime', () => {
                         judge3Vote1, judge3Vote2, judge3Vote3, judge3Vote4];
         const judges = [judge1, judge2, judge3];
         const endAt  = judge1Vote3.ended_at;
-        const time   = calculateRidingTime(votes, judges, endAt);
-        expect(time).toEqual(29);
+        const result = calculateRidingTime(votes, judges, endAt, competitorId);
+        // Control periods when at least 2 of 3 judges vote = 7 points
+        expect(result.points).toEqual(7);
+        expect(result.activeControlTimeMs).toEqual(0);
+        expect(result.activeCompetitor).toBeNull();
     });
 
     it ('calculates riding time when there a round has not ended', () => {
@@ -64,10 +74,19 @@ describe('calculateRidingTime', () => {
                                    judge2Vote1, judge2Vote2, judge2Vote3, judge2Vote4, judge2Vote5,
                                    judge3Vote1, judge3Vote2, judge3Vote3, judge3Vote4];
         const judges            = [judge1, judge2, judge3];
-        const timeSinceLastVote = (new Date().getTime() - judge2Vote5.started_at.getTime())/1000;
-        const time              = calculateRidingTime(votes, judges);
-        const expected          = 29 + timeSinceLastVote;
-        expect(time).toBeCloseTo(expected);
+        const msSinceLastVote   = new Date().getTime() - judge2Vote5.started_at.getTime();
+        const result            = calculateRidingTime(votes, judges, null, competitorId);
+
+        // 21 seconds (7 points × 3) of completed control + ongoing time
+        const completedMs       = 21000;
+        const totalMs           = completedMs + msSinceLastVote;
+        const expectedPoints    = Math.floor(totalMs / 3000);
+        const expectedRemainder = totalMs % 3000;
+
+        // Allow for timing variance (within 10 points = 30 seconds)
+        expect(result.points).toBeGreaterThanOrEqual(expectedPoints - 10);
+        expect(result.points).toBeLessThanOrEqual(expectedPoints + 10);
+        expect(result.activeCompetitor).toEqual(competitorId);
     });
 });
 
