@@ -254,6 +254,13 @@ module.exports = {
             "allowNull": false,
             "primaryKey": false,
             "unique": false
+        },
+        "round_type": {
+            "type": "VARCHAR(255)",
+            "allowNull": true,
+            "defaultValue": "RdojoKombat",
+            "primaryKey": false,
+            "unique": false
         }
     },
     "riding_time_votes": {
@@ -340,6 +347,26 @@ module.exports = {
         "updated_at": {
             "type": "DATETIME",
             "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "round_index": {
+            "type": "INTEGER",
+            "allowNull": true,
+            "defaultValue": null,
+            "primaryKey": false,
+            "unique": false
+        },
+        "max_points": {
+            "type": "INTEGER",
+            "allowNull": true,
+            "defaultValue": null,
+            "primaryKey": false,
+            "unique": false
+        },
+        "tech_fall_winner": {
+            "type": "VARCHAR(255)",
+            "allowNull": true,
             "primaryKey": false,
             "unique": false
         }

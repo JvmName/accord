@@ -1,4 +1,5 @@
 const { BaseRecord }     = require('../lib/active_record');
+const { getRoundConfig } = require('../lib/roundConfig');
 const { Mat }            = require('./mat');
 const { Round }          = require('./round');
 const { User }           = require('./user');
@@ -42,23 +43,82 @@ class Match extends BaseRecord {
     }
 
 
+    getRoundConfig() {
+        const roundType = this.round_type || 'RdojoKombat';
+        return getRoundConfig(roundType);
+    }
+
+
+    async createRound(roundIndex) {
+        const config = this.getRoundConfig();
+        const maxPoints = config.getMaxPoints(roundIndex);
+
+        const newRound = await Round.create({
+            match_id: this.id,
+            round_index: roundIndex,
+            max_points: maxPoints
+        });
+
+        return newRound;
+    }
+
+
     async startRound() {
         const lastRound = await this.getLastRound();
         if (lastRound && !lastRound.ended) {
             throw new Error("Cannot start a new round while there is an active round");
         }
 
-        const newRound = await Round.create({match_id: this.id});
+        // Determine round index (1 for first round)
+        const allRounds = await this.getRounds();
+        const roundIndex = allRounds.length + 1;
+
+        await this.createRound(roundIndex);
     }
 
 
-    async endRound({ submission, submitter }={}) {
+    async endRound({ submission, submitter, techFallWinner }={}) {
         const lastRound = await this.getLastRound();
         if (!lastRound || lastRound.ended) {
             throw new Error("No available round to end");
         }
 
-        await lastRound.end({ submission, submitter });
+        await lastRound.end({ submission, submitter, techFallWinner });
+
+        // AUTO-CREATE NEXT ROUND (Best 2 of 3 logic)
+        const allRounds = await this.getRounds();
+        const endedRounds = allRounds.filter(r => r.ended);
+        const roundCount = endedRounds.length;
+
+        if (roundCount === 1) {
+            // After round 1: always create round 2
+            await this.createRound(2);
+        } else if (roundCount === 2) {
+            // After round 2: check if 1-1
+            // Determine winners
+            let redWins = 0;
+            let blueWins = 0;
+
+            for (const round of endedRounds) {
+                const response = {};
+                await round.addRoundResultToApiResponse(response);
+                const winner = response.result?.winner;
+
+                if (winner?.id === this.red_competitor_id) {
+                    redWins++;
+                } else if (winner?.id === this.blue_competitor_id) {
+                    blueWins++;
+                }
+                // Ties don't count as wins for either side
+            }
+
+            if (redWins === 1 && blueWins === 1) {
+                // Score is 1-1, create optional round 3
+                await this.createRound(3);
+            }
+            // Else: 2-0 or 0-2, match is over, don't create round 3
+        }
+        // After round 3: match is over (don't create more rounds)
     }
 
 
