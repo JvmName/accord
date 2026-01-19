@@ -31,8 +31,8 @@ const CONFIGS = {
     'RdojoKombat': RdojoKombat
 };
 
-function getRoundConfig(roundType) {
-    return CONFIGS[roundType] || CONFIGS['RdojoKombat'];
+function getRoundConfig(matchType) {
+    return CONFIGS[matchType] || CONFIGS['RdojoKombat'];
 }
 
 module.exports = { RoundConfig, getRoundConfig, RdojoKombat };

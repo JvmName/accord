@@ -255,7 +255,7 @@ module.exports = {
             "primaryKey": false,
             "unique": false
         },
-        "round_type": {
+        "match_type": {
             "type": "VARCHAR(255)",
             "allowNull": true,
             "defaultValue": "RdojoKombat",

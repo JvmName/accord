@@ -44,8 +44,8 @@ class Match extends BaseRecord {
 
 
     getRoundConfig() {
-        const roundType = this.round_type || 'RdojoKombat';
-        return getRoundConfig(roundType);
+        const matchType = this.match_type || 'RdojoKombat';
+        return getRoundConfig(matchType);
     }
 
 
