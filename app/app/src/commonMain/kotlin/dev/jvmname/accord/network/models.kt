@@ -155,7 +155,7 @@ class Round(
     @SerialName("ended_at")
     val endedAt: Long?,
     @SerialName("ridingTime")
-    val ridingTime: Map<UserId, Double>,
+    val controlTime: Map<UserId, Int>,
     val result: RoundResult,
 ) : CommonParcelable
 
@@ -175,8 +175,8 @@ enum class RoundResultType {
     @SerialName("submission")
     SUBMISSION,
 
-    @SerialName("riding_time")
-    RIDING_TIME,
+    @SerialName("control_time")
+    CONTROL_TIME,
 
     @SerialName("tie")
     TIE,
