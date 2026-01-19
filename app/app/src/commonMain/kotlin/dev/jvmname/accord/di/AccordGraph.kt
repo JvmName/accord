@@ -4,6 +4,7 @@ import androidx.compose.runtime.compositionLocalOf
 import com.slack.circuit.foundation.Circuit
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.ui.Ui
+import dev.jvmname.accord.network.BaseUrl
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
@@ -33,10 +34,11 @@ interface AccordGraph {
     }
 
     @DependencyGraph.Factory
-    fun interface Factory {
+    interface Factory {
         fun create(
             @Provides context: PlatformContext,
             @Provides clock: Clock,
+            @Provides baseWebsocketUrl: BaseUrl = BaseUrl("http://localhost:3000")
         ): AccordGraph
     }
 }

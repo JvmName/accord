@@ -7,17 +7,19 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import dev.jvmname.accord.network.model.MatInfo
+import dev.jvmname.accord.network.Mat
+import dev.jvmname.accord.network.Match
+import dev.jvmname.accord.network.User
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.plus
 import kotlinx.serialization.json.Json
-import okio.Path.Companion.toPath
 
 @[Inject SingleIn(AppScope::class)]
 class Prefs(
@@ -34,21 +36,61 @@ class Prefs(
         )
     }
 
-    suspend fun updateMatInfo(info: MatInfo?) {
+    suspend fun setAuthToken(token: String?) {
+        datastore.edit { prefs ->
+            prefs.remove(AUTH_TOKEN)
+            token?.let { prefs[AUTH_TOKEN] = it }
+        }
+    }
+
+    suspend fun getAuthToken(): String? {
+        return datastore.data.first()[AUTH_TOKEN]
+    }
+
+
+    suspend fun updateMatInfo(info: Mat?) {
         datastore.edit { prefs ->
             if (info == null) prefs.clear()
             else prefs[MAT_INFO] = json.encodeToString(info)
         }
-
     }
 
-    fun observeMatInfo(): Flow<MatInfo?> {
+    fun observeMatInfo(): Flow<Mat?> {
         return datastore.data
-            .map { prefs -> prefs[MAT_INFO]?.let { json.decodeFromString<MatInfo>(it) } }
+            .map { prefs -> prefs[MAT_INFO]?.let { json.decodeFromString<Mat>(it) } }
+    }
+
+    suspend fun updateMainUser(user: User) {
+        datastore.edit {
+            it[MAIN_USER] = json.encodeToString(user)
+        }
+    }
+
+    suspend fun getMainUser(): User {
+        return json.decodeFromString(datastore.data.first()[MAIN_USER]!!)
+    }
+
+    suspend fun updateCurrentMatch(match: Match?) {
+        datastore.edit { prefs ->
+            if (match == null) {
+                prefs.remove(CURRENT_MATCH)
+            } else {
+                prefs[CURRENT_MATCH] = json.encodeToString(match)
+            }
+        }
+    }
+
+    fun observeCurrentMatch(): Flow<Match?> {
+        return datastore.data.map { prefs ->
+            prefs[CURRENT_MATCH]?.let { json.decodeFromString<Match>(it) }
+        }
     }
 
     companion object {
         const val FILENAME = "prefs.preferences_pb"
         val MAT_INFO = stringPreferencesKey("mat_info")
+        val AUTH_TOKEN = stringPreferencesKey("auth_token")
+        val MAIN_USER = stringPreferencesKey("user.main")
+        val CURRENT_MATCH = stringPreferencesKey("current_match")
     }
 }
