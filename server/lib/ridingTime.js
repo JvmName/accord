@@ -5,11 +5,17 @@ class RidingTimeCalculator {
     #ridingTime;
     #votes;
     #voteThreshold;
+    #competitorId;
+    #activeControlTimeMs;
+    #activeCompetitor;
 
-    constructor(votes, judges, endAt) {
+    constructor(votes, judges, endAt, competitorId) {
         this.#endAt  = endAt || new Date();
         this.#votes  = votes;
         this.#votes.sort((v1,v2) => v1.started_at - v2.started_at);
+        this.#competitorId = competitorId;
+        this.#activeControlTimeMs = 0;
+        this.#activeCompetitor = null;
 
         if (judges.length == 1) {
             this.#voteThreshold = 1;
@@ -17,6 +23,9 @@ class RidingTimeCalculator {
             this.#voteThreshold = Math.max(Math.ceil(judges.length/2), 2);
         }
     }
+
+    get activeControlTimeMs() { return this.#activeControlTimeMs; }
+    get activeCompetitor() { return this.#activeCompetitor; }
 
 
     calculate() {
@@ -29,8 +38,18 @@ class RidingTimeCalculator {
             this.endVote(this.activeVotes[0]);
         }
 
+        // Track ongoing control
         if (this.controlActive) {
-            this.endControlPeriod(this.#endAt);
+            const ongoingTime = this.#endAt.getTime() - this.#controlStartedAt.getTime();
+            this.#activeControlTimeMs = ongoingTime % 3000;  // Remainder
+            this.#activeCompetitor = this.#competitorId;
+
+            // Add completed periods to points
+            this.#ridingTime += Math.floor(ongoingTime / 3000);
+            this.#controlStartedAt = null;  // Prevent double-counting
+        } else {
+            this.#activeControlTimeMs = 0;
+            this.#activeCompetitor = null;
         }
     }
 
@@ -81,18 +100,26 @@ class RidingTimeCalculator {
 
     endControlPeriod(endAt) {
         const time = endAt.getTime() - this.#controlStartedAt.getTime();
-      if (endAt < this.#controlStartedAt) {
-      }
-        this.#ridingTime += time/1000;
+        if (endAt < this.#controlStartedAt) {
+            console.error('endControlPeriod: endAt < controlStartedAt - data inconsistency');
+            return;
+        }
+        this.#ridingTime += Math.floor(time / 3000);  // POINTS CALCULATION
         this.#controlStartedAt = null;
+        this.#activeControlTimeMs = 0;  // Clear active state
+        this.#activeCompetitor = null;  // Clear active state
     }
 }
 
 
-function calculateRidingTime(votes, judges, endAt) {
-    const calculator = new RidingTimeCalculator(votes, judges, endAt)
+function calculateRidingTime(votes, judges, endAt, competitorId) {
+    const calculator = new RidingTimeCalculator(votes, judges, endAt, competitorId)
     calculator.calculate();
-    return calculator.ridingTime;
+    return {
+        points: calculator.ridingTime,
+        activeControlTimeMs: calculator.activeControlTimeMs,
+        activeCompetitor: calculator.activeCompetitor
+    };
 }
 
 

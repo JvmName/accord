@@ -31,6 +31,7 @@ class MatchesController extends ServerController {
             creator_id:         this.currentUser.id,
             red_competitor_id:  red.id,
             blue_competitor_id: blue.id,
+            match_type:         this.params.matchType || 'RdojoKombat',
         });
 
         await this.render({ match }, {includeMat: true});

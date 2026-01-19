@@ -16,8 +16,12 @@ function addMatchEventHandlers(webSocket, webSocketServer) {
 
 async function handleMatchJoined(matchId) {
     const match = await Match.find(matchId)
-    if (!await this.authorizer.can('view', match)) return;
+    if (!await this.authorizer.can('view', match)) {
+        console.log(`Authorization failed for match ${matchId}`);
+        return;
+    }
 
+    console.log(`Socket joining match room: ${matchId}`);
     this.join(roomForMatch(matchId));
     queueMatchUpdate(matchId);
 }
@@ -29,10 +33,14 @@ function handleMatchLeft(matchId) {
 
 
 function queueMatchUpdate(matchId) {
-    if (MATCH_UPDATER_TIMEOUTS[matchId]) return;
+    if (MATCH_UPDATER_TIMEOUTS[matchId]) {
+        console.log(`Match updater already running for ${matchId}`);
+        return;
+    }
 
     const room       = roomForMatch(matchId);
     const numClients = WEB_SOCKET_SERVER.numClientsInRoom(room)
+    console.log(`Queueing match update for ${matchId}, clients in room: ${numClients}`);
     if (!numClients) return;
 
     MATCH_UPDATER_TIMEOUTS[matchId] = setTimeout(async () => {
@@ -53,6 +61,7 @@ async function emitMatchUpdate(match) {
     const apiResponse = await match.toApiResponse(options);
 
     const room = roomForMatch(match.id);
+    console.log(`Emitting match.update to room ${room}`);
     WEB_SOCKET_SERVER.emit(room, 'match.update', apiResponse);
 }
 

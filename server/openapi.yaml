@@ -1,0 +1,987 @@
+openapi: 3.0.3
+info:
+  title: Accord Wrestling API
+  description: |
+    Backend API for wrestling competition management system with real-time judging.
+
+    **Features:**
+    - Mat (competition area) management
+    - Match scheduling and control
+    - Multi-judge points-based scoring system (1 point = 3 seconds of control)
+    - Best 2 of 3 rounds with tech fall detection
+    - Real-time WebSocket updates
+
+    **Authentication:**
+    All endpoints except user creation require an API token in the `X-Api-Token` header.
+  version: 2.0.0
+  contact:
+    name: API Support
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User creation and API token management
+  - name: Mats
+    description: Competition area management
+  - name: Matches
+    description: Match creation and control
+  - name: Rounds
+    description: Round management within matches
+  - name: Control Time Votes
+    description: Judge voting for control time (points-based scoring)
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /users:
+    post:
+      tags:
+        - Authentication
+      summary: Create User (Sign Up)
+      description: |
+        Creates a new user and returns a one-time API token.
+
+        **CRITICAL:** The API token is only returned once and cannot be retrieved later.
+        Store it securely immediately after creation.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+              properties:
+                name:
+                  type: string
+                  example: Dick Grayson
+                email:
+                  type: string
+                  format: email
+                  example: richard@we.com
+      responses:
+        '200':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      api_token:
+                        type: string
+                        format: uuid
+                        example: 81e15f46-133c-4236-bb67-1329f233eea7
+                  status:
+                    type: string
+                    example: ok
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /mats:
+    post:
+      tags:
+        - Mats
+      summary: Create Mat
+      description: Creates a new competition area with specified number of judges. Automatically generates admin and viewer access codes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - judge_count
+              properties:
+                name:
+                  type: string
+                  example: Mat 1
+                judge_count:
+                  type: integer
+                  minimum: 1
+                  example: 3
+      responses:
+        '200':
+          description: Mat created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      mat:
+                        $ref: '#/components/schemas/MatWithCodes'
+                  status:
+                    type: string
+                    example: ok
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /mat/{matId}:
+    get:
+      tags:
+        - Mats
+      summary: Get Mat Details
+      description: Retrieves mat information including judges, current match, and upcoming matches. The matId can be either a UUID or a mat code.
+      parameters:
+        - name: matId
+          in: path
+          required: true
+          description: Mat UUID or mat code (e.g., pig.eagle.camel)
+          schema:
+            type: string
+          example: c23869d3-a82b-4fba-bce5-cfb5f5a57140
+      responses:
+        '200':
+          description: Mat details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      mat:
+                        $ref: '#/components/schemas/MatWithMatches'
+                  status:
+                    type: string
+                    example: ok
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /mat/{matCode}/join:
+    post:
+      tags:
+        - Mats
+      summary: Join Mat as Judge/Viewer
+      description: |
+        Joins the mat as a judge or viewer based on the code type.
+        - Admin code: Joins as judge (requires available slots)
+        - Viewer code: Joins as viewer (unlimited)
+      parameters:
+        - name: matCode
+          in: path
+          required: true
+          description: Mat code (determines role)
+          schema:
+            type: string
+            pattern: '^\w+\.\w+\.\w+$'
+          example: pig.eagle.camel
+      responses:
+        '200':
+          description: Successfully joined mat
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      mat:
+                        $ref: '#/components/schemas/Mat'
+                  status:
+                    type: string
+                    example: ok
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      tags:
+        - Mats
+      summary: Leave Mat
+      description: Removes current user from mat's judges or viewers list (based on code role)
+      parameters:
+        - name: matCode
+          in: path
+          required: true
+          description: Mat code
+          schema:
+            type: string
+          example: pig.eagle.camel
+      responses:
+        '200':
+          description: Successfully left mat
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      mat:
+                        $ref: '#/components/schemas/Mat'
+                  status:
+                    type: string
+                    example: ok
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /mat/{matCode}/judges:
+    get:
+      tags:
+        - Mats
+      summary: List Judges
+      description: Returns list of all judges assigned to the mat
+      parameters:
+        - name: matCode
+          in: path
+          required: true
+          schema:
+            type: string
+          example: pig.eagle.camel
+      responses:
+        '200':
+          description: Judges list retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      judges:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+                  status:
+                    type: string
+                    example: ok
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /mat/{matCode}/viewers:
+    get:
+      tags:
+        - Mats
+      summary: List Viewers
+      description: Returns list of all viewers assigned to the mat
+      parameters:
+        - name: matCode
+          in: path
+          required: true
+          schema:
+            type: string
+          example: pig.eagle.camel
+      responses:
+        '200':
+          description: Viewers list retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      viewers:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+                  status:
+                    type: string
+                    example: ok
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /mat/{matCode}/matches:
+    post:
+      tags:
+        - Matches
+      summary: Create Match
+      description: Creates a new match on the mat. Requires admin mat code for authorization.
+      parameters:
+        - name: matCode
+          in: path
+          required: true
+          description: Mat code or mat ID
+          schema:
+            type: string
+          example: pig.eagle.camel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - red_competitor_id
+                - blue_competitor_id
+              properties:
+                red_competitor_id:
+                  type: string
+                  format: uuid
+                  example: 086d09e1-6909-464c-8518-ca8eccb3edf2
+                blue_competitor_id:
+                  type: string
+                  format: uuid
+                  example: 789e15f46-133c-4236-bb67-1329f233eea7
+      responses:
+        '200':
+          description: Match created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      match:
+                        $ref: '#/components/schemas/Match'
+                  status:
+                    type: string
+                    example: ok
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /match/{matchId}:
+    get:
+      tags:
+        - Matches
+      summary: Get Match Details
+      description: Retrieves full match details including competitors, judges, and all rounds
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          description: Match UUID
+          schema:
+            type: string
+            format: uuid
+          example: 33777df4-3d37-41a3-8b1e-41128fc269f2
+      responses:
+        '200':
+          description: Match details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      match:
+                        $ref: '#/components/schemas/MatchDetail'
+                  status:
+                    type: string
+                    example: ok
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /match/{matchId}/start:
+    post:
+      tags:
+        - Matches
+      summary: Start Match
+      description: |
+        Starts the match by:
+        1. Setting started_at timestamp
+        2. Copying judges from mat to match (snapshot)
+        3. Automatically creating the first round (Round 1: maxPoints = 24)
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 33777df4-3d37-41a3-8b1e-41128fc269f2
+      responses:
+        '200':
+          description: Match started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      match:
+                        $ref: '#/components/schemas/MatchDetail'
+                  status:
+                    type: string
+                    example: ok
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /match/{matchId}/end:
+    post:
+      tags:
+        - Matches
+      summary: End Match
+      description: |
+        Ends the match and the current round. Optionally specify a submission winner.
+        If no submission is provided, winner is determined by control points.
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 33777df4-3d37-41a3-8b1e-41128fc269f2
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                submission:
+                  type: string
+                  description: Submission technique name
+                  example: Rear Naked Choke
+                submitter:
+                  type: string
+                  enum: [red, blue]
+                  description: Color of competitor who won by submission
+                  example: red
+      responses:
+        '200':
+          description: Match ended successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      match:
+                        $ref: '#/components/schemas/MatchDetail'
+                  status:
+                    type: string
+                    example: ok
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /match/{matchId}/rounds:
+    post:
+      tags:
+        - Rounds
+      summary: Start New Round
+      description: |
+        Starts a new round in the match. Can only start a new round if the previous round has ended.
+
+        **Best 2 of 3 Logic:**
+        - Round 1 is auto-created when match starts (maxPoints: 24)
+        - Round 2 is auto-created when Round 1 ends (maxPoints: 16)
+        - Round 3 is auto-created only if score is 1-1 after Round 2 (maxPoints: 8)
+
+        Manual round creation is typically not needed due to auto-progression.
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 33777df4-3d37-41a3-8b1e-41128fc269f2
+      responses:
+        '200':
+          description: Round started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      match:
+                        $ref: '#/components/schemas/MatchDetail'
+                  status:
+                    type: string
+                    example: ok
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /match/{matchId}/rounds/end:
+    post:
+      tags:
+        - Rounds
+      summary: End Current Round
+      description: |
+        Ends the current round and calculates the winner.
+        - If submission provided: Winner is the submitter
+        - If no submission: Winner has more control points
+        - If control points equal: Tie (no winner)
+        - Tech fall: Round auto-ends when a competitor reaches maxPoints
+
+        After round ends, the next round is auto-created based on best 2 of 3 logic.
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 33777df4-3d37-41a3-8b1e-41128fc269f2
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                submission:
+                  type: string
+                  description: Submission technique name
+                  example: Armbar
+                submitter:
+                  type: string
+                  enum: [red, blue]
+                  description: Color of competitor who won by submission
+                  example: blue
+      responses:
+        '200':
+          description: Round ended successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      match:
+                        $ref: '#/components/schemas/MatchDetail'
+                  status:
+                    type: string
+                    example: ok
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /match/{matchId}/ridingTime:
+    post:
+      tags:
+        - Control Time Votes
+      summary: Start Control Time Vote
+      description: |
+        Judge starts voting that a competitor has control.
+        Control points accumulate when threshold of judges vote for the same rider.
+
+        **Scoring:**
+        - 1 point is awarded for every 3 seconds of control
+        - Partial time (0-2 seconds) tracked in activeControlTime
+        - Tech fall occurs when competitor reaches round's maxPoints
+
+        **Thresholds:**
+        - 1 judge: threshold = 1
+        - 2+ judges: threshold = max(ceil(judges/2), 2)
+
+        Each judge can only have ONE active vote at a time.
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 33777df4-3d37-41a3-8b1e-41128fc269f2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - rider
+              properties:
+                rider:
+                  type: string
+                  enum: [red, blue]
+                  description: Which competitor has control
+                  example: red
+      responses:
+        '200':
+          description: Control time vote started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      match:
+                        $ref: '#/components/schemas/MatchDetail'
+                  status:
+                    type: string
+                    example: ok
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      tags:
+        - Control Time Votes
+      summary: End Control Time Vote
+      description: Judge ends their active control time vote, indicating loss of control.
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 33777df4-3d37-41a3-8b1e-41128fc269f2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - rider
+              properties:
+                rider:
+                  type: string
+                  enum: [red, blue]
+                  description: Which competitor (currently unused, ends judge's active vote regardless)
+                  example: red
+      responses:
+        '200':
+          description: Control time vote ended
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      match:
+                        $ref: '#/components/schemas/MatchDetail'
+                  status:
+                    type: string
+                    example: ok
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Token
+      description: API token received during user creation
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 086d09e1-6909-464c-8518-ca8eccb3edf2
+        name:
+          type: string
+          example: Dick Grayson
+        email:
+          type: string
+          format: email
+          example: richard@we.com
+
+    MatCode:
+      type: object
+      properties:
+        code:
+          type: string
+          pattern: '^\w+\.\w+\.\w+$'
+          example: pig.eagle.camel
+        role:
+          type: string
+          enum: [admin, viewer]
+          example: admin
+
+    Mat:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: c23869d3-a82b-4fba-bce5-cfb5f5a57140
+        name:
+          type: string
+          example: Mat 1
+        judge_count:
+          type: integer
+          example: 3
+        creator_id:
+          type: string
+          format: uuid
+          example: 086d09e1-6909-464c-8518-ca8eccb3edf2
+        judges:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+
+    MatWithCodes:
+      allOf:
+        - $ref: '#/components/schemas/Mat'
+        - type: object
+          properties:
+            codes:
+              type: array
+              items:
+                $ref: '#/components/schemas/MatCode'
+              minItems: 2
+              maxItems: 2
+
+    Match:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 33777df4-3d37-41a3-8b1e-41128fc269f2
+        creator_id:
+          type: string
+          format: uuid
+          example: 086d09e1-6909-464c-8518-ca8eccb3edf2
+        mat_id:
+          type: string
+          format: uuid
+          example: 1222e44d-5463-4932-9f95-795641c6010e
+        started_at:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix epoch in milliseconds (null if not started)
+          example: 1767246227927
+        ended_at:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix epoch in milliseconds (null if not ended)
+          example: null
+        red_competitor:
+          $ref: '#/components/schemas/User'
+        blue_competitor:
+          $ref: '#/components/schemas/User'
+        mat:
+          $ref: '#/components/schemas/Mat'
+
+    MatchDetail:
+      allOf:
+        - $ref: '#/components/schemas/Match'
+        - type: object
+          properties:
+            judges:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+              description: Snapshot of judges when match started
+            rounds:
+              type: array
+              items:
+                $ref: '#/components/schemas/Round'
+
+    MatWithMatches:
+      allOf:
+        - $ref: '#/components/schemas/Mat'
+        - type: object
+          properties:
+            current_match:
+              allOf:
+                - $ref: '#/components/schemas/Match'
+                - description: The currently active match (started but not ended)
+              nullable: true
+            upcoming_matches:
+              type: array
+              items:
+                $ref: '#/components/schemas/Match'
+              description: Matches that have been created but not started
+
+    Round:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: c7b62fb7-9a67-4926-a23f-17dcd58a3f75
+        roundIndex:
+          type: integer
+          minimum: 1
+          maximum: 3
+          description: Round number (1, 2, or 3)
+          example: 1
+        maxPoints:
+          type: integer
+          enum: [24, 16, 8]
+          description: Maximum points for this round (24 for R1, 16 for R2, 8 for R3)
+          example: 24
+        started_at:
+          type: integer
+          format: int64
+          description: Unix epoch in milliseconds
+          example: 1767246227927
+        ended_at:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix epoch in milliseconds (null if round is active)
+          example: 1767251747838
+        controlTime:
+          type: object
+          description: Map of competitor IDs to control points (1 point = 3 seconds)
+          additionalProperties:
+            type: integer
+            minimum: 0
+          example:
+            "086d09e1-6909-464c-8518-ca8eccb3edf2": 5
+            "789e15f46-133c-4236-bb67-1329f233eea7": 4
+        activeControlTime:
+          type: integer
+          minimum: 0
+          maximum: 2
+          description: Seconds of active control time (remainder before next point, 0-2)
+          example: 2
+        activeCompetitor:
+          type: string
+          format: uuid
+          nullable: true
+          description: Competitor UUID who currently has active control (null if no active control)
+          example: "086d09e1-6909-464c-8518-ca8eccb3edf2"
+        techFallWin:
+          type: string
+          format: uuid
+          nullable: true
+          description: Competitor UUID who won by tech fall (reaching maxPoints), null if round ongoing or ended differently
+          example: null
+        result:
+          type: object
+          properties:
+            winner:
+              allOf:
+                - $ref: '#/components/schemas/User'
+              nullable: true
+              description: Winning competitor (null if tie or round not ended)
+            method:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [submission, tech_fall, tie, null]
+                  nullable: true
+                  description: How the round was won (tech_fall replaces riding_time)
+                  example: tech_fall
+                value:
+                  oneOf:
+                    - type: string
+                      description: Submission technique name (when type is submission)
+                    - type: integer
+                      description: Winning control points (when type is tech_fall)
+                    - type: "null"
+                      description: No value (when type is tie or null)
+                  nullable: true
+                  example: 24
+
+    ErrorResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            errors:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+              example:
+                name: ["required"]
+                email: ["invalid email"]
+        status:
+          type: string
+          enum: [bad request, unauthorized, not found, server error]
+          example: bad request
+
+  responses:
+    BadRequest:
+      description: Validation error or bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            data:
+              errors:
+                name: ["required"]
+                email: ["invalid email"]
+            status: bad request
+
+    Unauthorized:
+      description: Missing or invalid API token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            data:
+              errors:
+                auth: ["unauthorized"]
+            status: unauthorized
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            data:
+              errors:
+                resource: ["not found"]
+            status: not found
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            data:
+              errors:
+                server: ["internal error"]
+            status: server error
