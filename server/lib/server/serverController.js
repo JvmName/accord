@@ -214,7 +214,7 @@ class ServerController {
     async validateParameters(validations) {
         const errors = {};
         for (const [parameterName, parameterValidations] of Object.entries(validations)) {
-            const parameterErrors = this.validateParameter(this.params[parameterName], parameterValidations);
+            const parameterErrors = this.validateParameter(parameterName, parameterValidations);
             if (parameterErrors.length) errors[parameterName] = parameterErrors;
         }
 
@@ -222,15 +222,27 @@ class ServerController {
     }
 
 
-    validateParameter(value, parameterValidations) {
-      const errors = [];
-      for (const [validationType, validationOptions] of Object.entries(parameterValidations)) {
-          const validationMethod = `validate${camelize(validationType)}`;
-          const error = this[validationMethod](value, validationOptions);
-          if (error) errors.push(error);
-      }
+    validateParameter(parameterName, parameterValidations) {
+        const errors = [];
+        const value = this.valueForParameterName(parameterName)
 
-      return errors;
+        for (const [validationType, validationOptions] of Object.entries(parameterValidations)) {
+            const validationMethod = `validate${camelize(validationType)}`;
+            const error = this[validationMethod](value, validationOptions);
+            if (error) errors.push(error);
+        }
+
+        return errors;
+    }
+
+
+    valueForParameterName(parameterName) {
+        const paramNamePcs = parameterName.split('.');
+        let value = this.params;
+        for (const paramNamePc of paramNamePcs) {
+            value = (value || {})[paramNamePc];
+        }
+        return value;
     }
 
 

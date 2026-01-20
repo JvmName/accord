@@ -3,6 +3,7 @@ const { Mat }                 = require('../models/mat');
 const { Match }               = require('../models/match');
 const { ServerController }    = require('../lib/server');
 const { User }                = require('../models/user');
+const { ValidationError }     = require('../lib/server');
 
 
 class MatchesController extends ServerController {
@@ -17,14 +18,13 @@ class MatchesController extends ServerController {
     ***********************************************************************************************/
     async postIndex() {
         await this.authorize('create a match', this.currentMat);
-
-        const { red, blue, errors } = await this.getMatCreationVariables();
-        if (Object.keys(errors).length) return await this.renderErrors(errors);
-
-        await this.authorize('create a match', this.currentMat);
         await this.authorize('assign',         this.currentMat);
-        await this.authorize('assign',         red);
-        await this.authorize('assign',         blue);
+        await this.validateCreation();
+
+        const { red, blue } = await this.getCompetitors();
+
+        await this.authorize('assign', red);
+        await this.authorize('assign', blue);
 
         const match = await Match.create({
             mat_id:             this.currentMat.id,
@@ -93,26 +93,41 @@ class MatchesController extends ServerController {
     /***********************************************************************************************
     * HELPERS
     ***********************************************************************************************/
-    async getMatCreationVariables() {
-        const errors = {};
-        const red    = await this.getUser('red_competitor_id');
-        const blue   = await this.getUser('blue_competitor_id');
+    async validateCreation() {
+        const redId    = this.valueForParameterName('red.id');
+        const redName  = this.valueForParameterName('red.name');
+        const blueId   = this.valueForParameterName('blue.id');
+        const blueName = this.valueForParameterName('blue.name');
 
-        if (!this.currentMat) errors.matId              = ['invalid'];
-        if (!red)             errors.red_competitor_id  = ['invalid'];
-        if (!blue)            errors.blue_competitor_id = ['invalid'];
-        if (blue && red && blue.id == red.id) {
-            errors.red_competitor_id  = ['red and blue competitors must be different'];
-            errors.blue_competitor_id = ['red and blue competitors must be different'];
+        const errors = {};
+        if (!redId && !redName) {
+            errors['red.id']   = ['red.id or red.name required'];
+            errors['red.name'] = ['red.id or red.name required'];
+        }
+        if (!blueId && !blueName) {
+            errors['blue.id']   = ['blue.id or blue.name required'];
+            errors['blue.name'] = ['blue.id or blue.name required'];
         }
 
-        return { red, blue, errors };
+        if (Object.keys(errors).length) throw new ValidationError(errors);
     }
 
 
-    async getUser(paramName) {
-        const userId = this.params[paramName];
-        if (userId) return await User.find(userId);
+    async getCompetitors() {
+        let red, blue;
+        if (this.params.red.id) {
+            red = await User.find(this.params.red.id);
+        } else {
+            red = await User.create({name: this.params.red.name});
+        }
+
+        if (this.params.blue.id) {
+            blue = await User.find(this.params.blue.id);
+        } else {
+            blue = await User.create({name: this.params.blue.name});
+        }
+
+        return { red, blue };
     }
 }
 

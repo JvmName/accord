@@ -12,6 +12,8 @@ class Authorizer {
 
 
     async can(action, scope) {
+        if (!scope) return false;
+
         const cls = this.classForScope(scope);
         switch(cls.name) {
             case 'String':
