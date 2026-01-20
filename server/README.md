@@ -7,7 +7,7 @@ in the `x-api-token` header. This API token is returned via the user creation en
 ### Create a User
 `POST /users`
 ##### request parameters
-`email`, `name`
+`name`
 ##### response
 ```
 {
@@ -41,10 +41,14 @@ in the `x-api-token` header. This API token is returned via the user creation en
 
 ### Add a Judge or Viewer (judge or viewer is determined by the mat code)
 `POST /mat/:matCode/join`
+##### request parameters
+`name` (optional. default: "Anonymous")
 ##### response
 ```
 {
   "mat": MAT_PAYLOAD (includes `judges`)
+  "user": USER_PAYLOAD,
+  "api_token": "81e15f46-133c-4236-bb67-1329f233eea7"
 }
 ```
 
@@ -81,7 +85,9 @@ in the `x-api-token` header. This API token is returned via the user creation en
 ### Create a Match
 `POST /mat/:matId/matches` (`:matId` can be either the id of the mat or a mat code.)
 ##### request parameters
-`red_competitor_id`, `blue_competitor_id`
+`red[name]` OR `red[id]`, `blue[name]` OR `blue[id]`
+
+*Passing a name will create a new user. Passing an id will use an existing user*
 ##### response
 ```
 {
@@ -164,7 +170,6 @@ Listen to the event `match.update` to receive updates every second for a match. 
 {
     "id": "6e8dc5f0-eb35-4c5c-aa64-d0177eb05c12",
     "name": "Dick Grayson",
-    "email": "richard@we.com"
 }
 ```
 
