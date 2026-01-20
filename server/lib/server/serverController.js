@@ -295,7 +295,6 @@ class ServerController {
 
 
     async #initCurrentUser() {
-      console.log(this.apiToken);
         if (this.apiToken) this.#currentUser = await User.findByApiToken(this.apiToken);
     }
 

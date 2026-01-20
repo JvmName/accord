@@ -34,7 +34,9 @@ class Authorizer {
 
 
     async simpleScopePermission(action, scope) {
-        if (scope == 'test') return true;
+        if (scope == 'authenticated')   return Boolean(this.#user);
+        if (scope == 'unauthenticated') return true;
+        if (scope == 'test')            return true;
         return false;
     }
 
