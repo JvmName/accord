@@ -283,6 +283,7 @@ class ServerController {
 
 
     async #initCurrentUser() {
+      console.log(this.apiToken);
         if (this.apiToken) this.#currentUser = await User.findByApiToken(this.apiToken);
     }
 
@@ -338,6 +339,7 @@ class ServerController {
 
     get apiToken()       { return this.requestHeaders['x-api-token']; }
     get currentUser()    { return this.#currentUser    || null; }
+    set currentUser(user){ this.#currentUser = user;            }
     get currentMat()     { return this.#currentMat     || null; }
     get currentMatch()   { return this.#currentMatch   || null; }
     get currentMatCode() { return this.#currentMatCode || null; }
