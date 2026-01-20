@@ -1,12 +1,13 @@
 const { Mat }              = require('../../models/mat');
 const { MatCode }          = require('../../models/matCode');
 const { ServerController } = require('../../lib/server');
+const { User }             = require('../../models/user');
 
 
 class UsersController extends ServerController {
 
     setupCallbacks() {
-        this.beforeCallback('authenticateRequest');
+        this.beforeCallback('authenticateRequest', {except: 'postJoin'});
     }
 
 
@@ -26,9 +27,11 @@ class UsersController extends ServerController {
 
 
     async postJoin() {
-        await this.addUser(this.currentMatCode.role);
+        await this.addUser();
         if (!this.rendered) {
-            await this.render({ mat: this.currentMat }, {includeMatJudges: true});
+            const mat  = this.currentMat;
+            const user = this.currentUser;
+            await this.render({ mat, user, api_token: this.currentUser.api_token }, {includeMatJudges: true});
         }
     }
 
@@ -54,7 +57,13 @@ class UsersController extends ServerController {
     /***********************************************************************************************
     * HELPERS
     ***********************************************************************************************/
-    async addUser(role) {
+    async addUser() {
+        if (!this.currentUser) {
+            const name       = this.params.name || 'Anonymous';
+            this.currentUser = await User.create({name: name});
+        }
+
+        const role = this.currentMatCode.role;
         if (role == MatCode.ROLES.ADMIN) {
             await this.addAsJudge();
         } else {
@@ -74,7 +83,7 @@ class UsersController extends ServerController {
     }
 
 
-    async addAsJudge() {
+    async addAsJudge(user) {
         await this.authorize("assign",            this.currentMat);
         await this.authorize("be assigned judge", this.currentMat);
 
@@ -92,7 +101,7 @@ class UsersController extends ServerController {
     }
 
 
-    async addAsViewer() {
+    async addAsViewer(user) {
         const viewers = await this.currentMat.getViewers({where: {id: this.currentUser.id}});
         if (viewers.length) {
             await this.renderErrors({matCode: ['user is already a viewer']});
