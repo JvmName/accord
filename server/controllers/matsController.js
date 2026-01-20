@@ -4,11 +4,6 @@ const { MatCode }          = require('../models/matCode');
 
 
 class MatsController extends ServerController {
-    setupCallbacks() {
-        this.beforeCallback('authenticateRequest');
-    }
-
-
     /***********************************************************************************************
     * ACTIONS
     ***********************************************************************************************/
@@ -42,7 +37,7 @@ class MatsController extends ServerController {
     * HELPERS
     ***********************************************************************************************/
     async createMat() {
-        const mat = await Mat.create({creator_id:  this.currentUser.id,
+        const mat = await Mat.create({creator_id:  this.currentUser?.id,
                                       judge_count: this.params.judge_count,
                                       name:        this.params.name});
         await this.createMatCode(mat, MatCode.ROLES.ADMIN);
