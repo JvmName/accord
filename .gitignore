@@ -183,3 +183,6 @@ vite.config.ts.timestamp-*
 
 .ai/*
 ../.ai/*
+
+# local dev test scripts
+devTest
