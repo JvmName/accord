@@ -94,7 +94,7 @@ class WebSocket {
 
 
     get id()          { return this.#ioSocket.id }
-    get apiToken()    { return this.#ioSocket.handshake.auth?.apiToken; }
+    get apiToken()    { return this.#ioSocket.handshake.query?.apiToken; }
     get currentUser() { return this.#currentUser || null; }
 
 
