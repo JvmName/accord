@@ -14,6 +14,7 @@ import com.slack.circuit.runtime.Navigator
 import dev.jvmname.accord.di.AccordGraph
 import dev.jvmname.accord.di.EmptyPlatformContext
 import dev.jvmname.accord.di.LocalGraph
+import dev.jvmname.accord.di.LocalPlatformContext
 import dev.zacsweers.metro.createGraphFactory
 import kotlin.time.Clock
 
@@ -32,7 +33,10 @@ fun main() = application {
         onCloseRequest = ::exitApplication,
         state = windowState,
     ) {
-        CompositionLocalProvider(LocalGraph provides graph) {
+        CompositionLocalProvider(
+            LocalGraph provides graph,
+            LocalPlatformContext provides EmptyPlatformContext
+        ) {
             App(graph.circuit, ::exitApplication)
         }
     }

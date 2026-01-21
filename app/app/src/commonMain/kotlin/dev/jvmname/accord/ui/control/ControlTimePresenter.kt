@@ -11,6 +11,7 @@ import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.di.LocalGraph
+import dev.jvmname.accord.domain.control.AudioFeedbackHelper
 import dev.jvmname.accord.domain.control.ButtonPressTracker
 import dev.jvmname.accord.domain.control.RoundConfig
 import dev.jvmname.accord.domain.control.RoundTracker
@@ -63,6 +64,7 @@ class SoloControlTimePresenter(
     private val buttonTracker: ButtonPressTracker,
     private val scoreKeeper: ScoreKeeper,
     private val hapticFeedbackHelper: ScoreHapticFeedbackHelper,
+    private val audioFeedbackHelper: AudioFeedbackHelper,
     private val roundTracker: RoundTracker,
 ) : Presenter<ControlTimeState> {
 
@@ -75,11 +77,13 @@ class SoloControlTimePresenter(
 
         val score by remember { scoreKeeper.score }.collectAsState()
         val hapticEvent by remember { hapticFeedbackHelper.hapticEvents }.collectAsState(null)
+        val audioEvent by remember { audioFeedbackHelper.audioEvents }.collectAsState(null)
         val roundEvent by remember { roundTracker.roundEvent }.collectAsState()
 
         val matchState = MatchState(
             score = score,
             haptic = hapticEvent,
+            audio = audioEvent,
             roundInfo = roundEvent,
         )
 
