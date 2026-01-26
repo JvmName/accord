@@ -8,6 +8,7 @@ const   nodeUtil                          = require('util');
 
 
 class BaseRecord extends Model {
+    #cachedAssociations = {};
     static _connection;
     static _initialized = false;
 
@@ -138,6 +139,33 @@ class BaseRecord extends Model {
         }
 
         super.belongsToMany(model, options);
+    }
+
+
+    async getCachedAssociation(associationName, Cls, where, queryOptions) {
+        const clear = queryOptions.clear;
+        delete queryOptions.clear
+
+        if (Object.keys(queryOptions).length) {
+            queryOptions.where = {...queryOptions.where, ...where};
+            return await Cls.findAll(queryOptions);
+        }
+        
+        if (!this.#cachedAssociations[associationName] || clear) {
+            const record = await Cls.findAll({ where });
+            this._cacheRecord(associationName, record);
+        }
+        return this.#cachedAssociations[associationName];
+    }
+
+
+    clearCachedAssociation(associationName) {
+        delete this.#cachedAssociations[associationName];
+    }
+
+
+    _cacheRecord(key, record) {
+        return this.#cachedAssociations[key] = record
     }
 
 

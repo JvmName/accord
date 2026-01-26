@@ -21,8 +21,8 @@ class RidingTimeVoteController extends ServerController {
             await this.#currentRound.startRidingTime(this.currentUser, this.params.rider);
         } catch(err) {
             await this.renderErrors({matchId: [err.message]});
+            return false;
         }
-
 
         const options = {includeRounds: true, includeJudges: true, includeMat: true};
         await this.render({match: this.currentMatch}, options);
@@ -34,6 +34,7 @@ class RidingTimeVoteController extends ServerController {
             await this.#currentRound.endRidingTime(this.currentUser, this.params.rider);
         } catch(err) {
             await this.renderErrors({matchId: [err.message]});
+            return false;
         }
 
         const options = {includeRounds: true, includeJudges: true, includeMat: true};

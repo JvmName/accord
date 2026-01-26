@@ -4,6 +4,7 @@
     "private": true,
     "scripts": {
         "start": "nodemon ./bin/www",
+        "worker": "nodemon ./bin/worker",
         "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules node_modules/jest/bin/jest.js",
         "db:create_migration": "./bin/migrate create_migration",
         "db:migrate": "./bin/migrate migrate",

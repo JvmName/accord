@@ -1,4 +1,6 @@
 const pino = require('pino');
+
+const procName = process.env.PROC_NAME || "SERVER";
 const logger = pino({
     transport: {
         level: process.env.LOG_LEVEL ? 'debug' : 'info',
@@ -6,7 +8,7 @@ const logger = pino({
         options: {
             colorize: true,
             ignore: 'pid,hostname,responseTime',
-            translateTime: 'SYS:standard',
+            translateTime: `SYS:yyyy-mm-dd HH:MM:ss]["${procName}"`,
             messageFormat: '{msg}',
         }
     },

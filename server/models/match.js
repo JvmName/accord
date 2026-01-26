@@ -1,10 +1,67 @@
-const { BaseRecord }     = require('../lib/active_record');
-const { Mat }            = require('./mat');
-const { Round }          = require('./round');
-const { User }           = require('./user');
+const { BaseRecord }       = require('../lib/active_record');
+const { Mat }              = require('./mat');
+const { RDojoKombatRules } = require('../lib/rules');
+const { Round }            = require('./round');
+const { User }             = require('./user');
 
 
 class Match extends BaseRecord {
+    #winner;
+
+    /***********************************************************************************************
+    * ASSOCIATIONS
+    ***********************************************************************************************/
+    async getRounds(queryOptions={}) {
+        const rounds = await this.getCachedAssociation('rounds',
+                                                       Round,
+                                                       {match_id: this.id},
+                                                       queryOptions);
+        rounds.forEach(r => r._cacheMatch(this));
+        return rounds;
+    }
+
+
+    async getRedCompetitor(queryOptions={}) {
+        return (await this.getCachedAssociation('redCompetitor',
+                                                User,
+                                                {id: this.red_competitor_id},
+                                                queryOptions))[0] || null;
+    }
+
+
+    async getBlueCompetitor(queryOptions={}) {
+        return (await this.getCachedAssociation('blueCompetitor',
+                                                User,
+                                                {id: this.blue_competitor_id},
+                                                queryOptions))[0] || null;
+    }
+
+
+    async getWinner(clear=false) {
+        if (this.#winner != undefined) return this.#winner;
+
+        const rounds = (await this.getRounds()).filter(r => r.ended);
+
+        let redWins  = 0;
+        let blueWins = 0;
+        let winner;
+        for (const round of rounds) {
+            winner = await round.getWinner();
+            if (!winner)                              continue;
+            if (winner.id == this.red_competitor_id)  redWins += 1;
+            if (winner.id == this.blue_competitor_id) blueWins += 1;
+        }
+
+        const roundsToWin = Math.ceil(this.maxRounds/2)
+        if (redWins  >= roundsToWin)        return this.#winner = await this.getRedCompetitor();
+        if (blueWins >= roundsToWin)        return this.#winner = await this.getBlueCompetitor();
+        if (rounds.length < this.maxRounds) return this.#winner = null;
+        if (redWins > blueWins)             return this.#winner = await this.getRedCompetitor();
+        if (blueWins > redWins)             return this.#winner = await this.getBlueCompetitor();
+        return this.#winner = null;
+    }
+
+
     /***********************************************************************************************
     * ROUNDS
     ***********************************************************************************************/
@@ -23,14 +80,14 @@ class Match extends BaseRecord {
     }
 
 
-    async end({submission, submitter}) {
+    async end() {
         if (this.ended)    throw new Error("This match has already ended");
         if (!this.started) throw new Error("This match has already not started");
 
         await Match.transaction(async () => {
             this.ended_at = new Date();
             await this.save();
-            await this.endRound({ submission, submitter });
+            await this.endRound({safe: true});
         });
     }
 
@@ -49,12 +106,14 @@ class Match extends BaseRecord {
         }
 
         const newRound = await Round.create({match_id: this.id});
+        this.clearCachedAssociation('rounds')
     }
 
 
-    async endRound({ submission, submitter }={}) {
+    async endRound({ submission, submitter, safe }={}) {
         const lastRound = await this.getLastRound();
         if (!lastRound || lastRound.ended) {
+            if (safe) return;
             throw new Error("No available round to end");
         }
 
@@ -81,6 +140,7 @@ class Match extends BaseRecord {
         const response           = await super.toApiResponse();
         response.red_competitor  = await this.getRedCompetitor();
         response.blue_competitor = await this.getBlueCompetitor();
+        response.winner          = await this.getWinner();
 
         if (options.includeMat)         response.mat    = await this.getMat();
         if (options.includeMatchJudges) response.judges = await this.getJudges();
@@ -93,19 +153,11 @@ class Match extends BaseRecord {
     }
 
 
-    get sortKey() {
-        return this.created_at;
-    }
-
-
-    get ended() {
-        return Boolean(this.ended_at);
-    }
-
-
-    get started() {
-        return Boolean(this.started_at);
-    }
+    get sortKey()   { return this.created_at }
+    get ended()     { return Boolean(this.ended_at) }
+    get started()   { return Boolean(this.started_at) }
+    get rules()     { return RDojoKombatRules }
+    get maxRounds() { return this.rules.maxRounds }
 }
 
 

@@ -1,10 +1,44 @@
 const { BaseRecord }          = require('../lib/active_record');
-const { calculateRidingTime } = require('../lib/ridingTime');
 const { RidingTimeVote }      = require('./ridingTimeVote');
+const { RDojoKombatRules }    = require('../lib/rules');
 const { User }                = require('./user');
 
 
 class Round extends BaseRecord {
+    #blueScore;
+    #redScore;
+    #winMethod;
+    #winner;
+
+
+    /***********************************************************************************************
+    * ASSOCIATIONS
+    ***********************************************************************************************/
+    async getRidingTimeVotes(queryOptions={}) {
+        return await this.getCachedAssociation('ridingTimeVotes',
+                                               RidingTimeVote,
+                                               {round_id: this.id},
+                                               queryOptions);
+    }
+
+
+    async getMatch(queryOptions={}) {
+        const { Match } = require('./match');
+        return (await this.getCachedAssociation('match',
+                                               Match,
+                                               {id: this.match_id},
+                                               queryOptions))[0] || null;
+    }
+
+
+    _cacheMatch(match) {
+        this._cacheRecord('match', [match]);
+    }
+
+
+    /***********************************************************************************************
+    * RIDING TIME
+    ***********************************************************************************************/
     async startRidingTime(judge, riderColor) {
         const activeVote = await this.currentRidingTimeVoteForJudge(judge)
         if (activeVote) throw new Error(`Riding time is already active`);
@@ -34,6 +68,9 @@ class Round extends BaseRecord {
     }
 
 
+    /***********************************************************************************************
+    * STATUS
+    ***********************************************************************************************/
     async end({submission, submitter}={}) {
         const where = {ended_at: null};
         const ridingTimeVotes = await this.getRidingTimeVotes({ where });
@@ -50,58 +87,106 @@ class Round extends BaseRecord {
 
         this.ended_at = new Date();
         await this.save();
-    }
 
-
-    async toApiResponse() {
-        const response = {
-            id:         this.id,
-            started_at: this.started_at,
-            ended_at:   this.ended_at
+        const allRounds = await match.getRounds();
+        if (allRounds.length == match.maxRounds) {
+            await match.end();
+        } else {
+            const winner = await match.getWinner();
+            if (winner) await match.end()
         }
-
-        await this.addRoundResultToApiResponse(response);
-
-        return response;
     }
 
 
-    async addRoundResultToApiResponse(response) {
+    /***********************************************************************************************
+    * RESULTS
+    ***********************************************************************************************/
+    async getWinner() {
+        await this.#collectResultsData();
+        return this.#winner;
+    }
+
+
+    async getRedScore() {
+        await this.#collectResultsData();
+        return this.#redScore;
+    }
+
+
+    async getBlueScore() {
+        await this.#collectResultsData();
+        return this.#blueScore;
+    }
+
+
+    async getWinMethod() {
+        await this.#collectResultsData();
+        return this.#winMethod;
+    }
+
+
+    async #collectResultsData() {
+        if (this.#redScore !== undefined) return;
+
         const match          = await this.getMatch();
         const red            = await match.getRedCompetitor();
         const blue           = await match.getBlueCompetitor();
         const judges         = await match.getJudges();
 
-        const votes          = await this.getRidingTimeVotes();
-        const redVotes       = votes.filter(vote => vote.competitor_id == red.id);
-        const blueVotes      = votes.filter(vote => vote.competitor_id == blue.id);
-        const redRidingTime  = calculateRidingTime(redVotes,  judges, this.ended_at);
-        const blueRidingTime = calculateRidingTime(blueVotes, judges, this.ended_at);
+        const { redScore, blueScore } = await this.#getScore(red, blue, judges);
+        const { winner, method }      = this.#determineWinner(red, blue, redScore, blueScore);
 
-        response.ridingTime = {[red.id]:  redRidingTime, [blue.id]: blueRidingTime};
-        response.result     = {winner: null, method: {type: null, value: null}};
-
-        if (!this.ended) return;
-
-        if (this.submission) {
-            response.result.winner       = red.id == this.submission_by ? red : blue;
-            response.result.method.type  = 'submission'
-            response.result.method.value = this.submission;
-
-        } else if (redRidingTime != blueRidingTime) {
-            response.result.winner       = redRidingTime > blueRidingTime ? red : blue;
-            response.result.method.type  = 'riding_time';
-            response.result.method.value = Math.max(redRidingTime, blueRidingTime);
-        } else {
-            response.result.method.type  = 'tie';
-        }
-
+        this.#redScore  = redScore;
+        this.#blueScore = blueScore;
+        this.#winner    = winner;
+        this.#winMethod = method;
     }
 
 
-    get started_at() { return this.created_at };
-    get started()    { return Boolean(this.started_at) };
-    get ended()      { return Boolean(this.ended_at) };
+    async #getScore(red, blue, judges) {
+        const votes = await this.getRidingTimeVotes();
+        return this.rules.scoreRound(red, blue, judges, votes);
+    }
+
+
+    #determineWinner(red, blue, redScore, blueScore) {
+        return this.rules.determineWinner(red, blue, redScore, blueScore, this);
+    }
+
+
+    /***********************************************************************************************
+    * API
+    ***********************************************************************************************/
+    async toApiResponse() {
+        const match     = await this.getMatch();
+        const redScore  = await this.getRedScore();
+        const blueScore = await this.getBlueScore();
+        const winner    = await this.getWinner();
+        const method    = await this.getWinMethod();
+
+        const score = {
+            [match.red_competitor_id]:  redScore,
+            [match.blue_competitor_id]: blueScore,
+        }
+
+        const result = { winner, method };
+
+        const response = {
+            id:         this.id,
+            started_at: this.started_at,
+            ended_at:   this.ended_at,
+            score,
+            result,
+        }
+
+        return response;
+    }
+
+
+    get started_at() { return this.created_at }
+    get started()    { return Boolean(this.started_at) }
+    get ended()      { return Boolean(this.ended_at) }
+    get rules()      { return RDojoKombatRules }
 }
 
 
