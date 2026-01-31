@@ -4,9 +4,9 @@ import androidx.compose.runtime.Immutable
 import co.touchlab.kermit.Logger
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
-import dev.jvmname.accord.domain.control.rounds.BaseRound
-import dev.jvmname.accord.domain.control.rounds.RoundConfig
+import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
+import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.rounds.RoundTracker
 import dev.jvmname.accord.ui.control.ControlTimeEvent.ManualPointEdit
 import dev.zacsweers.metro.ContributesBinding
@@ -35,7 +35,7 @@ class RealScoreKeeper(
     tracker: ButtonPressTracker,
     roundTracker: RoundTracker,
     scope: CoroutineScope,
-    private val config: RoundConfig,
+    private val config: MatchConfig,
 ) : ScoreKeeper {
 
     private var latestRoundEvent = AtomicReference<RoundEvent?>(null)
@@ -65,7 +65,7 @@ class RealScoreKeeper(
                             Logger.d("received button hold before beginning - ignoring")
                             return@onEach
                         }
-                        if (roundEvent.round is BaseRound.Break) {
+                        if (roundEvent.round is RoundInfo.Break) {
                             Logger.d("received button hold during break - ignoring")
                             return@onEach
                         }
@@ -122,9 +122,9 @@ class RealScoreKeeper(
             }
             .onEach { (previous, current) ->
                 Logger.d { "State transition: prev=${previous?.state}/${previous?.round} -> curr=${current?.state}/${current?.round}" }
-                if (previous?.round is BaseRound.Break
+                if (previous?.round is RoundInfo.Break
                     && current?.state == RoundEvent.RoundState.STARTED
-                    && current.round is BaseRound.Round
+                    && current.round is RoundInfo.Round
                 ) {
                     Logger.d { "Round transitioning from ENDED Break to STARTED Round, resetting scores" }
                     resetScores()

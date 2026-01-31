@@ -41,12 +41,22 @@ class ConsensusControlTimePresenter(
 
         // For consensus mode, we track the match state from the network
         val currentMatch by matchManager.observeCurrentMatch().collectAsState(null)
+        if (currentMatch == null) return ControlTimeState(
+            matName = matName,
+            matchState = MatchState(
+                score = Score(0, 0, null, null, null),
+                null,
+                null
+            ),
+            eventSink = {}
+        )
         val roundEvent by remember { roundTracker.roundEvent }.collectAsState()
 
         // Get the active round's riding time data
         val activeRound = currentMatch?.rounds?.lastOrNull { it.endedAt == null }
-        val redRidingTime = activeRound?.ridingTime?.get(currentMatch?.redCompetitor?.id) ?: 0.0
-        val blueRidingTime = activeRound?.ridingTime?.get(currentMatch?.blueCompetitor?.id) ?: 0.0
+        val controlTime = activeRound?.controlTime.orEmpty()
+        val redRidingTime = controlTime.getOrElse(currentMatch.redCompetitor.id) { 0 }
+        val blueRidingTime = controlTime.get(currentMatch?.blueCompetitor?.id) ?: 0
 
         // Create a simplified match state for consensus mode
         // We don't track button presses or local scoring - everything comes from the network

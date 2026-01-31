@@ -53,9 +53,9 @@ import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.color
 import dev.jvmname.accord.domain.control.Score
 import dev.jvmname.accord.domain.control.buttonHold
-import dev.jvmname.accord.domain.control.rounds.BaseRound
-import dev.jvmname.accord.domain.control.rounds.RoundConfig
+import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
+import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.StubVibrator
 import dev.jvmname.accord.ui.common.IconTextButton
@@ -122,8 +122,8 @@ fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
                 val roundInfo = state.matchState.roundInfo
                 when (val round = roundInfo?.round) {
                     null -> null
-                    is BaseRound.Break -> "Break"
-                    is BaseRound.Round -> "Round ${round.index} of ${roundInfo.totalRounds}"
+                    is RoundInfo.Break -> "Break"
+                    is RoundInfo.Round -> "Round ${round.index} of ${roundInfo.totalRounds}"
                 }
             }
             roundNumber?.let {
@@ -327,7 +327,7 @@ private fun ControlTimeContentPreview() {
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
                         totalRounds = 3,
-                        round = RoundConfig.RdojoKombat.rounds[0],
+                        round = MatchConfig.RdojoKombat.rounds[0],
                         state = RoundEvent.RoundState.STARTED
                     )
                 ),
@@ -359,7 +359,7 @@ private fun ControlTimeContentPreview_Paused() {
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
                         totalRounds = 3,
-                        round = RoundConfig.RdojoKombat.rounds[0],
+                        round = MatchConfig.RdojoKombat.rounds[0],
                         state = RoundEvent.RoundState.PAUSED
                     )
                 ),
@@ -391,7 +391,7 @@ private fun ControlTimeContentPreview_Holding() {
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
                         totalRounds = 3,
-                        round = RoundConfig.RdojoKombat.rounds[0],
+                        round = MatchConfig.RdojoKombat.rounds[0],
                         state = RoundEvent.RoundState.STARTED
                     ),
                 ),

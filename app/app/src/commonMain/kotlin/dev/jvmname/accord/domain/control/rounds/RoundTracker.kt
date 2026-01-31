@@ -1,7 +1,8 @@
 package dev.jvmname.accord.domain.control.rounds
 
 import dev.drewhamilton.poko.Poko
-import dev.jvmname.accord.domain.control.rounds.BaseRound.Round
+import dev.jvmname.accord.domain.control.rounds.RoundInfo.Break
+import dev.jvmname.accord.domain.control.rounds.RoundInfo.Round
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
@@ -38,28 +39,28 @@ interface RoundTracker {
     fun endRound()
 }
 
-data class RoundConfig(val rounds: List<BaseRound>) {
-    operator fun get(index: Int): BaseRound = rounds[index]
-    fun getRound(roundIndex: Int): BaseRound.Round? = rounds.firstNotNullOfOrNull { br ->
+data class MatchConfig(val rounds: List<RoundInfo>) {
+    operator fun get(index: Int): RoundInfo = rounds[index]
+    fun getRound(roundIndex: Int): Round? = rounds.firstNotNullOfOrNull { br ->
         (br as? Round)?.takeIf { it.index == roundIndex }
     }
 
-    companion object {
-        val RdojoKombat = RoundConfig(
+    companion object Companion {
+        val RdojoKombat = MatchConfig(
             listOf(
-                BaseRound.Round(
+                Round(
                     index = 1,
                     duration = 3.minutes,
                     maxPoints = 24,
                 ),
-                BaseRound.Break(1.minutes),
-                BaseRound.Round(
+                Break(1.minutes),
+                Round(
                     index = 2,
                     maxPoints = 16,
                     duration = 2.minutes
                 ),
-                BaseRound.Break(1.minutes),
-                BaseRound.Round(
+                Break(1.minutes),
+                Round(
                     index = 3,
                     maxPoints = 8,
                     duration = 1.minutes,
@@ -72,7 +73,7 @@ data class RoundConfig(val rounds: List<BaseRound>) {
     }
 }
 
-sealed interface BaseRound {
+sealed interface RoundInfo {
     val duration: Duration
 
     @Poko
@@ -81,17 +82,17 @@ sealed interface BaseRound {
         val maxPoints: Int,
         override val duration: Duration,
         val optional: Boolean = false,
-    ) : BaseRound
+    ) : RoundInfo
 
     @Poko
-    class Break(override val duration: Duration) : BaseRound
+    class Break(override val duration: Duration) : RoundInfo
 }
 
 data class RoundEvent(
     val remaining: Duration,
     val roundNumber: Int,
     val totalRounds: Int,
-    val round: BaseRound,
+    val round: RoundInfo,
     val state: RoundState,
 ) {
     enum class RoundState {

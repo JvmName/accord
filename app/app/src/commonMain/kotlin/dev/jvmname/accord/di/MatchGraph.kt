@@ -1,10 +1,11 @@
 package dev.jvmname.accord.di
 
 import dev.jvmname.accord.domain.MatchManager
+import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.NetworkRoundTracker
-import dev.jvmname.accord.domain.control.rounds.RoundConfig
 import dev.jvmname.accord.domain.control.rounds.RoundTracker
 import dev.jvmname.accord.domain.control.rounds.SoloRoundTracker
+import dev.jvmname.accord.domain.control.rounds.Timer
 import dev.jvmname.accord.network.MatchId
 import dev.jvmname.accord.ui.control.ConsensusControlTimePresenter
 import dev.jvmname.accord.ui.control.ControlTimeType
@@ -27,7 +28,7 @@ interface MatchGraph {
     @GraphExtension.Factory
     interface Factory {
         operator fun invoke(
-            @Provides config: RoundConfig,
+            @Provides config: MatchConfig,
             @Provides controlType: ControlTimeType,
             @Provides matchId: MatchId? = null
         ): MatchGraph
@@ -37,16 +38,27 @@ interface MatchGraph {
         @Provides
         fun provideRoundTracker(
             scope: CoroutineScope,
-            config: RoundConfig,
+            config: MatchConfig,
             controlType: ControlTimeType,
             matchId: MatchId?,
-            matchManager: MatchManager
+            matchManager: MatchManager,
+            timer: Timer,
         ): RoundTracker {
             return when (controlType) {
-                ControlTimeType.SOLO -> SoloRoundTracker(scope, config)
+                ControlTimeType.SOLO -> SoloRoundTracker(
+                    timer = timer,
+                    config = config,
+                    scope = scope
+                )
+
                 ControlTimeType.CONSENSUS -> {
                     requireNotNull(matchId) { "MatchId is required for network round tracker" }
-                    NetworkRoundTracker(scope, matchManager, matchId)
+                    NetworkRoundTracker(
+                        scope = scope,
+                        matchManager = matchManager,
+                        matchId = matchId,
+                        timer = timer,
+                    )
                 }
             }
         }

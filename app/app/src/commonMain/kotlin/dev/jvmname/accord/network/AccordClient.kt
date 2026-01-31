@@ -1,6 +1,5 @@
 package dev.jvmname.accord.network
 
-import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.map
 import dev.jvmname.accord.ui.catchRunning
 import dev.zacsweers.metro.AppScope
@@ -17,8 +16,6 @@ import io.ktor.http.contentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-
-typealias NetworkResult<T> = Result<T, ApiError>
 
 @SingleIn(AppScope::class)
 @Inject

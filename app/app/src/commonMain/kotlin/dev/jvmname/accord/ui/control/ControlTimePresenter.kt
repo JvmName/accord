@@ -14,7 +14,7 @@ import dev.jvmname.accord.di.LocalGraph
 import dev.jvmname.accord.domain.control.ButtonPressTracker
 import dev.jvmname.accord.domain.control.ScoreHapticFeedbackHelper
 import dev.jvmname.accord.domain.control.ScoreKeeper
-import dev.jvmname.accord.domain.control.rounds.RoundConfig
+import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundTracker
 import dev.jvmname.accord.prefs.Prefs
 import dev.zacsweers.metro.AppScope
@@ -33,7 +33,7 @@ class DelegatingControlTimePresenter(
     override fun present(): ControlTimeState {
         val accordGraph = LocalGraph.current
         val matchGraph = remember(screen) {
-            accordGraph.matchGraphFactory(RoundConfig.RdojoKombat, screen.type)
+            accordGraph.matchGraphFactory(MatchConfig.RdojoKombat, screen.type)
         }
 
         val delegate: Presenter<ControlTimeState> = remember(screen, navigator, matchGraph) {
