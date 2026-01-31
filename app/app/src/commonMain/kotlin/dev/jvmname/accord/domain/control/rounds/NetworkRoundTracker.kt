@@ -13,27 +13,29 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Network-based round tracker that syncs with the backend API.
- * Unlike SoloRoundTracker, this doesn't use local timers - rounds are controlled via network calls.
  */
 @[Inject SingleIn(MatchScope::class)]
 class NetworkRoundTracker(
     private val scope: CoroutineScope,
     private val matchManager: MatchManager,
     private val matchId: MatchId,
+    private val timer: Timer,
+    private val clock: Clock,
 ) : RoundTracker {
 
     private val _roundEvent = MutableStateFlow<RoundEvent?>(null)
     override val roundEvent: StateFlow<RoundEvent?> = _roundEvent.asStateFlow()
 
     private var currentRoundNumber: Int = 0
-    private var isPaused: Boolean = false
 
     init {
         // Observe match updates to sync round state
@@ -46,9 +48,10 @@ class NetworkRoundTracker(
 
     override fun startRound() {
         scope.launch {
-            matchManager.startRound(matchId)
+            matchManager.startRound()
                 .onSuccess { match ->
                     updateRoundStateFromMatch(match)
+                    runTimer(match)
                 }
                 .onFailure { error ->
                     // Handle error (could emit error state)
@@ -59,16 +62,14 @@ class NetworkRoundTracker(
     }
 
     override fun pause() {
-        // Pause is only local - doesn't sync to network
-        isPaused = true
+        timer.pause()
         _roundEvent.update {
             it?.copy(state = RoundEvent.RoundState.PAUSED)
         }
     }
 
     override fun resume() {
-        // Resume is only local - doesn't sync to network
-        isPaused = false
+        timer.resume()
         _roundEvent.update {
             it?.copy(state = RoundEvent.RoundState.STARTED)
         }
@@ -88,30 +89,24 @@ class NetworkRoundTracker(
 
     private fun updateRoundStateFromMatch(match: Match) {
         // Find the active round (started but not ended)
-        val activeRound = match.rounds.lastOrNull { it.endedAt == null }
+        val activeRound = match.rounds.firstOrNull { it.endedAt == null }
 
         if (activeRound != null) {
-            currentRoundNumber = match.rounds.indexOf(activeRound) + 1
+            currentRoundNumber = activeRound.index
             val totalRounds = match.rounds.size
-
-            // Calculate elapsed time from startedAt
-            val elapsed = (System.currentTimeMillis() - activeRound.startedAt).seconds
-
-            // For network rounds, we don't have a fixed duration, so remaining is always unknown
-            // We can just show elapsed time or set remaining to zero
-            val remaining = Duration.ZERO
+            val config = MatchConfig.RdojoKombat.getRound(currentRoundNumber)
 
             _roundEvent.value = RoundEvent(
-                remaining = remaining,
+                remaining = timer.remaining,
                 roundNumber = currentRoundNumber,
                 totalRounds = totalRounds,
-                round = BaseRound.Round(
+                round = RoundInfo.Round(
                     index = currentRoundNumber,
-                    maxPoints = 0, // Network rounds don't have max points concept
-                    duration = elapsed,
+                    maxPoints = config!!.maxPoints,
+                    duration = config!!.duration,
                     optional = false
                 ),
-                state = if (isPaused) RoundState.PAUSED else RoundState.STARTED
+                state = if (timer.isPaused) RoundState.PAUSED else RoundState.STARTED
             )
         } else if (match.endedAt != null) {
             // Match ended
@@ -120,7 +115,7 @@ class NetworkRoundTracker(
                     remaining = Duration.ZERO,
                     roundNumber = match.rounds.size,
                     totalRounds = match.rounds.size,
-                    round = BaseRound.Round(
+                    round = RoundInfo.Round(
                         index = match.rounds.size,
                         maxPoints = 0,
                         duration = Duration.ZERO,
@@ -132,6 +127,36 @@ class NetworkRoundTracker(
         } else {
             // No active round, match not ended - waiting to start
             _roundEvent.value = null
+        }
+    }
+
+    private fun runTimer(match: Match) {
+        val totalRounds = match.rounds.size
+        val currentRound = match.rounds[currentRoundNumber] //Todo eventually use this
+        val roundInfo = MatchConfig.RdojoKombat.getRound(currentRoundNumber)
+        scope.launch {
+            timer.start(roundInfo!!.duration, 500.milliseconds)
+                .dropWhile { it == Duration.ZERO }
+                .collect { remaining ->
+                    when (remaining) {
+                        Duration.ZERO -> {
+                            endRound()
+                            startRound()
+                        }
+
+                        else -> {
+                            _roundEvent.update {
+                                RoundEvent(
+                                    remaining = remaining,
+                                    roundNumber = currentRoundNumber,
+                                    totalRounds = totalRounds,
+                                    round = roundInfo!!,
+                                    state = RoundEvent.RoundState.STARTED
+                                )
+                            }
+                        }
+                    }
+                }
         }
     }
 }

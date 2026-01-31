@@ -1,33 +1,27 @@
 package dev.jvmname.accord.domain.control.rounds
 
 import dev.jvmname.accord.di.MatchScope
-import dev.jvmname.accord.domain.control.rounds.BaseRound.Round
+import dev.jvmname.accord.domain.control.rounds.RoundInfo.Round
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 @[Inject SingleIn(MatchScope::class)]
 class SoloRoundTracker(
+    private val timer: Timer,
+    private val config: MatchConfig,
     private val scope: CoroutineScope,
-    private val config: RoundConfig,
 ) : RoundTracker {
     private var roundNumber: Int = 1
     private var overallIndex: Int = 0
-    private var isPaused = AtomicBoolean(false)
-    private var timerJob: Job? = null
-
     private val totalRounds: Int = config.rounds.count { it is Round }
 
     private val _roundEvent = MutableStateFlow<RoundEvent?>(null)
@@ -54,19 +48,18 @@ class SoloRoundTracker(
     }
 
     override fun pause() {
-        isPaused.exchange(true)
+        timer.pause()
         _roundEvent.update {
             it?.copy(state = RoundEvent.RoundState.PAUSED)
         }
     }
 
     override fun resume() {
-        isPaused.store(false)
+        timer.resume()
     }
 
     override fun endRound() {
-        timerJob?.cancel()
-        timerJob = null
+        timer.cancel()
 
         _roundEvent.update {
             it ?: return@update null
@@ -102,45 +95,30 @@ class SoloRoundTracker(
         }
     }
 
-    private fun runTimer(baseRound: BaseRound) {
-        timerJob?.cancel()
-        timerJob = scope.launch {
-            ticker(500.milliseconds, baseRound.duration) { remaining ->
-                _roundEvent.update {
-                    RoundEvent(
-                        remaining = remaining,
-                        roundNumber = roundNumber,
-                        totalRounds = totalRounds,
-                        round = config[overallIndex],
-                        state = RoundEvent.RoundState.STARTED
-                    )
+    private fun runTimer(baseRound: RoundInfo) {
+        scope.launch {
+            timer.start(baseRound.duration, 500.milliseconds)
+                .dropWhile { it == Duration.ZERO }
+                .collect { remaining ->
+                    when (remaining) {
+                        Duration.ZERO -> {
+                            endRound()
+                            startRound()
+                        }
+
+                        else -> {
+                            _roundEvent.update {
+                                RoundEvent(
+                                    remaining = remaining,
+                                    roundNumber = roundNumber,
+                                    totalRounds = totalRounds,
+                                    round = config[overallIndex],
+                                    state = RoundEvent.RoundState.STARTED
+                                )
+                            }
+                        }
+                    }
                 }
-            }
-            endRound()
         }
-    }
-
-    private suspend fun ticker(
-        updateFreq: Duration,
-        timeLimit: Duration,
-        block: (Duration) -> Unit,
-    ) {
-        var remainingTime = timeLimit
-
-        while (currentCoroutineContext().isActive && remainingTime.isPositive()) {
-            // Wait while paused
-            maybePauseTicker()
-
-            val delayDuration = minOf(remainingTime, updateFreq)
-            delay(delayDuration)
-
-            maybePauseTicker()
-            remainingTime -= delayDuration
-            block(remainingTime)
-        }
-    }
-
-    private suspend fun maybePauseTicker() {
-        while (isPaused.load()) delay(100.milliseconds)
     }
 }
