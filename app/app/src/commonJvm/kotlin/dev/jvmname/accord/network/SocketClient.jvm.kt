@@ -4,6 +4,7 @@ import co.touchlab.kermit.Logger
 import dev.jvmname.accord.ui.catchRunning
 import dev.jvmname.accord.ui.onEither
 import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import dev.zacsweers.metro.SingleIn
@@ -30,14 +31,14 @@ import org.json.JSONObject
 @AssistedInject
 actual class SocketClient actual constructor(
     baseUrl: BaseUrl,
-    token: ApiToken,
+    @Assisted token: AuthToken,
     private val json: Json,
     private val scope: CoroutineScope,
 ) {
 
     @[AssistedFactory SingleIn(AppScope::class)]
     actual interface Factory {
-        actual fun create(token: ApiToken): SocketClient
+        actual fun create(token: AuthToken): SocketClient
     }
 
     private val socket: Socket
@@ -46,7 +47,7 @@ actual class SocketClient actual constructor(
 
     init {
         val options = IO.Options().apply {
-            auth = mapOf("apiToken" to token.apiToken)
+            auth = mapOf("apiToken" to token.token)
             transports = arrayOf("websocket")
             reconnectionDelay = 330
             //TODO websocketfactory

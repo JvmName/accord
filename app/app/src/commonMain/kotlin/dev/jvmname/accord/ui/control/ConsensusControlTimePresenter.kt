@@ -11,6 +11,7 @@ import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.domain.MatchManager
 import dev.jvmname.accord.domain.control.Score
 import dev.jvmname.accord.domain.control.rounds.RoundTracker
+import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.prefs.Prefs
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
@@ -34,14 +35,13 @@ class ConsensusControlTimePresenter(
 
     @Composable
     override fun present(): ControlTimeState {
-
         val matName by produceState("") {
             value = prefs.observeMatInfo().filterNotNull().first().name
         }
 
         // For consensus mode, we track the match state from the network
         val currentMatch by matchManager.observeCurrentMatch().collectAsState(null)
-        if (currentMatch == null) return ControlTimeState(
+        val current: Match = currentMatch ?: return ControlTimeState(
             matName = matName,
             matchState = MatchState(
                 score = Score(0, 0, null, null, null),
@@ -53,9 +53,9 @@ class ConsensusControlTimePresenter(
         val roundEvent by remember { roundTracker.roundEvent }.collectAsState()
 
         // Get the active round's riding time data
-        val activeRound = currentMatch?.rounds?.lastOrNull { it.endedAt == null }
+        val activeRound = current.rounds.lastOrNull { it.endedAt == null }
         val controlTime = activeRound?.controlTime.orEmpty()
-        val redRidingTime = controlTime.getOrElse(currentMatch.redCompetitor.id) { 0 }
+        val redRidingTime = controlTime.getOrElse(current.redCompetitor.id) { 0 }
         val blueRidingTime = controlTime.get(currentMatch?.blueCompetitor?.id) ?: 0
 
         // Create a simplified match state for consensus mode

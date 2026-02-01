@@ -29,7 +29,7 @@ interface HttpModule {
         }.also {
             it.plugin(HttpSend).intercept { request ->
                 if (!request.url.encodedPath.endsWith("/users")) {
-                    request.headers.append("X-Api-Token", prefs.getAuthToken()!!)
+                    request.headers.append("X-Api-Token", prefs.getAuthToken()!!.token)
                 }
                 execute(request)
             }

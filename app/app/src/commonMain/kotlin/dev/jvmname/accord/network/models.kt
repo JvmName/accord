@@ -5,6 +5,7 @@ import dev.jvmname.accord.parcel.CommonParcelable
 import dev.jvmname.accord.parcel.CommonParcelize
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.time.Instant
 
 @[Serializable(with = ApiResultSerializer::class)]
 sealed interface ApiResult<out T> {
@@ -108,9 +109,9 @@ class Match(
     @SerialName("mat_id")
     val matId: MatId,
     @SerialName("started_at")
-    val startedAt: Long?,
+    val startedAt: Instant?,
     @SerialName("ended_at")
-    val endedAt: Long?,
+    val endedAt: Instant?,
     @SerialName("red_competitor")
     val redCompetitor: User,
     @SerialName("blue_competitor")
@@ -150,12 +151,17 @@ enum class CompetitorColor {
 @[Poko Serializable CommonParcelize]
 class Round(
     val id: RoundId,
-    @SerialName("started_at")
-    val startedAt: Long,
-    @SerialName("ended_at")
-    val endedAt: Long?,
-    @SerialName("ridingTime")
-    val controlTime: Map<UserId, Int>,
+    @SerialName("round_index") val index: Int,
+    @SerialName("max_points") val pointThreshold: Int,
+    @SerialName("started_at") val startedAt: Instant,
+    @SerialName("ended_at") val endedAt: Instant?,
+    @SerialName("ridingTime") val controlTime: Map<UserId, Int>,
+    val activeControlTime: Int?, //seconds,
+    val activeCompetitor: UserId?,
+    @SerialName("tech_fall_winner")
+    val techFallWinner: UserId?,
+    @SerialName("submission_by")
+    val submissionBy: UserId?,
     val result: RoundResult,
 ) : CommonParcelable
 

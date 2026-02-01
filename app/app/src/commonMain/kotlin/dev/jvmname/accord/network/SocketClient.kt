@@ -1,6 +1,7 @@
 package dev.jvmname.accord.network
 
 import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import dev.zacsweers.metro.SingleIn
@@ -12,19 +13,19 @@ import kotlinx.serialization.json.Json
 value class BaseUrl(val baseUrl: String)
 
 @JvmInline
-value class ApiToken(val apiToken: String)
+value class AuthToken(val token: String)
 
 /** Socket.IO client for real-time match updates. */
 @AssistedInject
 expect class SocketClient(
     baseUrl: BaseUrl,
-    token: ApiToken,
+    @Assisted token: AuthToken,
     json: Json,
     scope: CoroutineScope
 ) {
     @[AssistedFactory SingleIn(AppScope::class)]
      interface Factory {
-        fun create(token: ApiToken): SocketClient
+        fun create(token: AuthToken): SocketClient
     }
 
     /**

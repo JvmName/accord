@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -29,7 +28,6 @@ class NetworkRoundTracker(
     private val matchManager: MatchManager,
     private val matchId: MatchId,
     private val timer: Timer,
-    private val clock: Clock,
 ) : RoundTracker {
 
     private val _roundEvent = MutableStateFlow<RoundEvent?>(null)

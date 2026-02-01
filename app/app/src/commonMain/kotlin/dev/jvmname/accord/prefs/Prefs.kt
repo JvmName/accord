@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
+import dev.jvmname.accord.network.AuthToken
 import dev.jvmname.accord.network.Mat
 import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.network.User
@@ -36,15 +37,15 @@ class Prefs(
         )
     }
 
-    suspend fun setAuthToken(token: String?) {
+    suspend fun setAuthToken(token: AuthToken?) {
         datastore.edit { prefs ->
             prefs.remove(AUTH_TOKEN)
-            token?.let { prefs[AUTH_TOKEN] = it }
+            token?.let { prefs[AUTH_TOKEN] = it.token }
         }
     }
 
-    suspend fun getAuthToken(): String? {
-        return datastore.data.first()[AUTH_TOKEN]
+    suspend fun getAuthToken(): AuthToken? {
+        return datastore.data.first()[AUTH_TOKEN]?.let { AuthToken(it) }
     }
 
 
