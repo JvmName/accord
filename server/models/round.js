@@ -159,12 +159,12 @@ class Round extends BaseRecord {
     * API
     ***********************************************************************************************/
     async toApiResponse() {
-        const match     = await this.getMatch();
-        const redScore  = await this.getRedScore();
-        const blueScore = await this.getBlueScore();
-        const winner    = await this.getWinner();
-        const method    = await this.getWinMethod();
-        const maxLength = await this.getMaxLength();
+        const match       = await this.getMatch();
+        const redScore    = await this.getRedScore();
+        const blueScore   = await this.getBlueScore();
+        const winner      = await this.getWinner();
+        const method      = await this.getWinMethod();
+        const maxDuration = await this.getMaxDuration();
 
         const score = {
             [match.red_competitor_id]:  redScore,
@@ -174,10 +174,10 @@ class Round extends BaseRecord {
         const result = { winner, method };
 
         const response = {
-            id:         this.id,
-            started_at: this.started_at,
-            ended_at:   this.ended_at,
-            max_length: maxLength,
+            id:           this.id,
+            started_at:   this.started_at,
+            ended_at:     this.ended_at,
+            max_duration: maxDuration,
             score,
             result,
         }
@@ -207,9 +207,9 @@ class Round extends BaseRecord {
     }
 
 
-    async getMaxLength() {
+    async getMaxDuration() {
         const idx = await this.getIndex();
-        return this.rules.roundLengths[idx] || 0;
+        return this.rules.roundDurations[idx] || 0;
     }
 }
 

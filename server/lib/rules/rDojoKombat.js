@@ -3,7 +3,7 @@ const { calculateRidingTime } = require('../ridingTime');
 
 const RDojoKombatRules = {
     maxRounds: 3,
-    roundLengths: [180, 120, 60],
+    roundDurations: [180, 120, 60],
 
     scoreRound(red, blue, judges, votes) {
         const redVotes       = votes.filter(vote => vote.competitor_id == red.id);
