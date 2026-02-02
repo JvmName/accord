@@ -155,7 +155,9 @@ class BaseRecord extends Model {
             const record = await Cls.findAll({ where });
             this._cacheRecord(associationName, record);
         }
-        return this.#cachedAssociations[associationName];
+
+        const associations =  this.#cachedAssociations[associationName];
+        return Array.from(associations);
     }
 
 
