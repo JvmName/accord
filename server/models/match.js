@@ -17,6 +17,7 @@ class Match extends BaseRecord {
                                                        {match_id: this.id},
                                                        queryOptions);
         rounds.forEach(r => r._cacheMatch(this));
+        rounds.sort((r1,r2) => r1.created_at - r2.created_at);
         return rounds;
     }
 
@@ -123,8 +124,7 @@ class Match extends BaseRecord {
 
     async getLastRound() {
         const rounds = await this.getRounds();
-        rounds.sort((r1, r2) => r2.created_at - r1.created_at);
-        return rounds[0] || null;
+        return rounds[rounds.length-1] || null;
     }
 
 
@@ -146,7 +146,6 @@ class Match extends BaseRecord {
         if (options.includeMatchJudges) response.judges = await this.getJudges();
         if (options.includeRounds) {
             response.rounds = await this.getRounds();
-            response.rounds.sort((r1,r2) => r1.created_at - r2.created_at);
         }
 
         return response;

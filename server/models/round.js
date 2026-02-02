@@ -6,6 +6,7 @@ const { User }                = require('./user');
 
 class Round extends BaseRecord {
     #blueScore;
+    #index;
     #redScore;
     #winMethod;
     #winner;
@@ -163,6 +164,7 @@ class Round extends BaseRecord {
         const blueScore = await this.getBlueScore();
         const winner    = await this.getWinner();
         const method    = await this.getWinMethod();
+        const maxLength = await this.getMaxLength();
 
         const score = {
             [match.red_competitor_id]:  redScore,
@@ -175,6 +177,7 @@ class Round extends BaseRecord {
             id:         this.id,
             started_at: this.started_at,
             ended_at:   this.ended_at,
+            max_length: maxLength,
             score,
             result,
         }
@@ -183,10 +186,31 @@ class Round extends BaseRecord {
     }
 
 
+    /***********************************************************************************************
+    * PROPERTIES
+    ***********************************************************************************************/
     get started_at() { return this.created_at }
     get started()    { return Boolean(this.started_at) }
     get ended()      { return Boolean(this.ended_at) }
     get rules()      { return RDojoKombatRules }
+
+
+    async getIndex() {
+        if (this.#index !== undefined) return this.#index;
+        
+        const match    = await this.getMatch();
+        const rounds   = await match.getRounds();
+        const roundIds = rounds.map(r => r.id);
+
+        this.#index    = roundIds.indexOf(this.id);
+        return this.#index;
+    }
+
+
+    async getMaxLength() {
+        const idx = await this.getIndex();
+        return this.rules.roundLengths[idx] || 0;
+    }
 }
 
 
