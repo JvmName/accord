@@ -18,6 +18,7 @@ import dev.jvmname.accord.ui.catchRunning
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicReference
@@ -27,10 +28,11 @@ class MatchManager(
     private val prefs: Prefs,
     private val client: AccordClient,
     private val socketFactory: SocketClient.Factory,
-    scope: CoroutineScope,
+    private val scope: CoroutineScope,
 ) {
     private var activeMatch = AtomicReference<Match?>(null)
     private lateinit var socket: SocketClient
+    private var observationJob: Job? = null
 
     init {
         scope.launch {
@@ -49,6 +51,14 @@ class MatchManager(
             .onSuccess { match ->
                 cacheMatch(match)
                 socket.connect()
+                // Subscribe to match updates and pipe them into prefs
+                observationJob?.cancel()
+                observationJob = scope.launch {
+                    socket.observeMatch(match.id).collect { updatedMatch ->
+                        cacheMatch(updatedMatch)
+                        prefs.updateCurrentMatch(updatedMatch)
+                    }
+                }
             }
     }
 
@@ -85,6 +95,9 @@ class MatchManager(
                 cacheMatch(match)
                 // Clear current match from prefs since match ended
                 prefs.updateCurrentMatch(null)
+                // Stop observing match updates
+                observationJob?.cancel()
+                observationJob = null
                 socket.disconnect()
             }
     }
