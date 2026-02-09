@@ -51,11 +51,11 @@ import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.color
-import dev.jvmname.accord.domain.control.Score
 import dev.jvmname.accord.domain.control.buttonHold
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
+import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.StubVibrator
 import dev.jvmname.accord.ui.common.IconTextButton

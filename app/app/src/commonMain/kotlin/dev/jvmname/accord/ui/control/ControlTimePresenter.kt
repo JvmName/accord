@@ -13,9 +13,9 @@ import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.di.LocalGraph
 import dev.jvmname.accord.domain.control.ButtonPressTracker
 import dev.jvmname.accord.domain.control.ScoreHapticFeedbackHelper
-import dev.jvmname.accord.domain.control.ScoreKeeper
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundTracker
+import dev.jvmname.accord.domain.control.score.ScoreKeeper
 import dev.jvmname.accord.prefs.Prefs
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted

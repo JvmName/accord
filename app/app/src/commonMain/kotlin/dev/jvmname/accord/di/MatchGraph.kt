@@ -1,18 +1,15 @@
 package dev.jvmname.accord.di
 
-import dev.jvmname.accord.domain.MatchManager
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
-import dev.jvmname.accord.domain.control.rounds.NetworkRoundTracker
 import dev.jvmname.accord.domain.control.rounds.RoundTracker
-import dev.jvmname.accord.domain.control.rounds.SoloRoundTracker
-import dev.jvmname.accord.domain.control.rounds.Timer
+import dev.jvmname.accord.domain.control.score.ScoreKeeper
 import dev.jvmname.accord.network.MatchId
 import dev.jvmname.accord.ui.control.ConsensusControlTimePresenter
 import dev.jvmname.accord.ui.control.ControlTimeType
 import dev.jvmname.accord.ui.control.SoloControlTimePresenter
 import dev.zacsweers.metro.GraphExtension
 import dev.zacsweers.metro.Provides
-import kotlinx.coroutines.CoroutineScope
+import dev.zacsweers.metro.Qualifier
 
 /**
  * Dependency graph for a single match session.
@@ -36,31 +33,26 @@ interface MatchGraph {
 
     companion object {
         @Provides
-        fun provideRoundTracker(
-            scope: CoroutineScope,
-            config: MatchConfig,
+        fun provideScoreKeeper(
             controlType: ControlTimeType,
-            matchId: MatchId?,
-            matchManager: MatchManager,
-            timer: Timer,
-        ): RoundTracker {
-            return when (controlType) {
-                ControlTimeType.SOLO -> SoloRoundTracker(
-                    timer = timer,
-                    config = config,
-                    scope = scope
-                )
+                @ForControlType(ControlTimeType.SOLO) solo: Lazy<RoundTracker>,
+                @ForControlType(ControlTimeType.CONSENSUS) consensus: Lazy<RoundTracker>,
+        ): RoundTracker = when (controlType) {
+            ControlTimeType.SOLO -> solo.value
+            ControlTimeType.CONSENSUS -> consensus.value
+        }
 
-                ControlTimeType.CONSENSUS -> {
-                    requireNotNull(matchId) { "MatchId is required for network round tracker" }
-                    NetworkRoundTracker(
-                        scope = scope,
-                        matchManager = matchManager,
-                        matchId = matchId,
-                        timer = timer,
-                    )
-                }
-            }
+        @Provides
+        fun provideRoundTracker(
+            controlType: ControlTimeType,
+            @ForControlType(ControlTimeType.SOLO) solo: Lazy<ScoreKeeper>,
+            @ForControlType(ControlTimeType.CONSENSUS) consensus: Lazy<ScoreKeeper>,
+        ): ScoreKeeper = when (controlType) {
+            ControlTimeType.SOLO -> solo.value
+            ControlTimeType.CONSENSUS -> consensus.value
         }
     }
 }
+
+@Qualifier
+annotation class ForControlType(val type: ControlTimeType)

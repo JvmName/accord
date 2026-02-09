@@ -134,6 +134,28 @@ class MatchManager(
             }
     }
 
+    suspend fun startRidingTimeVote(
+        matchId: MatchId,
+        competitor: CompetitorColor
+    ): NetworkResult<Match> {
+        return client.startRidingTimeVote(matchId, competitor)
+            .onSuccess { match ->
+                cacheMatch(match)
+                // Socket updates will handle prefs updates
+            }
+    }
+
+    suspend fun endRidingTimeVote(
+        matchId: MatchId,
+        competitor: CompetitorColor
+    ): NetworkResult<Match> {
+        return client.endRidingTimeVote(matchId, competitor)
+            .onSuccess { match ->
+                cacheMatch(match)
+                // Socket updates will handle prefs updates
+            }
+    }
+
     fun observeCurrentMatch(): Flow<Match?> = prefs.observeCurrentMatch()
 
     private fun cacheMatch(match: Match) {

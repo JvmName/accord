@@ -1,15 +1,19 @@
-package dev.jvmname.accord.domain.control
+package dev.jvmname.accord.domain.control.score
 
-import androidx.compose.runtime.Immutable
 import co.touchlab.kermit.Logger
+import dev.jvmname.accord.di.ForControlType
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.domain.control.ButtonEvent
+import dev.jvmname.accord.domain.control.ButtonPressTracker
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.rounds.RoundTracker
-import dev.jvmname.accord.ui.control.ControlTimeEvent.ManualPointEdit
+import dev.jvmname.accord.ui.control.ControlTimeEvent
+import dev.jvmname.accord.ui.control.ControlTimeType
 import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,15 +27,11 @@ import kotlin.concurrent.atomics.AtomicReference
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-
-interface ScoreKeeper {
-    val score: StateFlow<Score>
-    fun resetScores()
-    fun manualEdit(competitor: Competitor, action: ManualPointEdit.Action)
-}
-
-@[ContributesBinding(MatchScope::class) SingleIn(MatchScope::class)]
-class RealScoreKeeper(
+@Inject
+@SingleIn(MatchScope::class)
+@ContributesBinding(MatchScope::class)
+@ForControlType(ControlTimeType.SOLO)
+class RealSoloScoreKeeper(
     tracker: ButtonPressTracker,
     roundTracker: RoundTracker,
     scope: CoroutineScope,
@@ -62,20 +62,20 @@ class RealScoreKeeper(
                     is ButtonEvent.Holding -> {
                         val roundEvent = latestRoundEvent.load()
                         if (roundEvent == null) {
-                            Logger.d("received button hold before beginning - ignoring")
+                            Logger.Companion.d("received button hold before beginning - ignoring")
                             return@onEach
                         }
                         if (roundEvent.round is RoundInfo.Break) {
-                            Logger.d("received button hold during break - ignoring")
+                            Logger.Companion.d("received button hold during break - ignoring")
                             return@onEach
                         }
                         if (roundEvent.state == RoundEvent.RoundState.PAUSED) {
-                            Logger.d("received button hold during pause - ignoring")
+                            Logger.Companion.d("received button hold during pause - ignoring")
                             return@onEach
                         }
 
                         _score.update { prev ->
-                            val previousTime = prev.activeControlTime ?: Duration.ZERO
+                            val previousTime = prev.activeControlTime ?: Duration.Companion.ZERO
                             val totalSessionTime = previousTime + OneSecond
 
                             val previousSessionPoints = (previousTime / PointThreshold).toInt()
@@ -95,7 +95,7 @@ class RealScoreKeeper(
                                 activeCompetitor = event.competitor,
                                 techFallWin = hasTechFallWin(newRedPoints, newBluePoints)
                             ).also {
-                                Logger.d { "Score: \n$it" }
+                                Logger.Companion.d { "Score: \n$it" }
                             }
                         }
                     }
@@ -121,12 +121,12 @@ class RealScoreKeeper(
                 current to new
             }
             .onEach { (previous, current) ->
-                Logger.d { "State transition: prev=${previous?.state}/${previous?.round} -> curr=${current?.state}/${current?.round}" }
+                Logger.Companion.d { "State transition: prev=${previous?.state}/${previous?.round} -> curr=${current?.state}/${current?.round}" }
                 if (previous?.round is RoundInfo.Break
                     && current?.state == RoundEvent.RoundState.STARTED
                     && current.round is RoundInfo.Round
                 ) {
-                    Logger.d { "Round transitioning from ENDED Break to STARTED Round, resetting scores" }
+                    Logger.Companion.d { "Round transitioning from ENDED Break to STARTED Round, resetting scores" }
                     resetScores()
                 }
             }
@@ -135,17 +135,17 @@ class RealScoreKeeper(
 
     override fun manualEdit(
         competitor: Competitor,
-        action: ManualPointEdit.Action
+        action: ControlTimeEvent.ManualPointEdit.Action
     ) {
         //double-check we're paused
         if (latestRoundEvent.load()?.state != RoundEvent.RoundState.PAUSED) {
-            Logger.d { "ignoring $action because state is not paused, it's ${latestRoundEvent.load()?.state}" }
+            Logger.Companion.d { "ignoring $action because state is not paused, it's ${latestRoundEvent.load()?.state}" }
             return
         }
 
         val actionFun = when (action) {
-            ManualPointEdit.Action.INCREMENT -> { p: Int -> p + 1 }
-            ManualPointEdit.Action.DECREMENT -> { p: Int -> p - 1 }
+            ControlTimeEvent.ManualPointEdit.Action.INCREMENT -> { p: Int -> p + 1 }
+            ControlTimeEvent.ManualPointEdit.Action.DECREMENT -> { p: Int -> p - 1 }
         }
 
         _score.update {
@@ -174,24 +174,5 @@ class RealScoreKeeper(
             bluePoints >= threshold -> Competitor.BLUE
             else -> null
         }
-    }
-}
-
-@Immutable
-data class Score(
-    val redPoints: Int,
-    val bluePoints: Int,
-    val activeControlTime: Duration?, // Total session time, null when no active control
-    val activeCompetitor: Competitor?, // null when no one is controlling
-    val techFallWin: Competitor?, // null until threshold reached
-) {
-    fun getPoints(competitor: Competitor) = when (competitor) {
-        Competitor.RED -> redPoints
-        Competitor.BLUE -> bluePoints
-    }
-
-    fun controlTimeHumanReadable(competitor: Competitor) = when (activeCompetitor) {
-        competitor -> ((activeControlTime!!.inWholeSeconds % 3) + 1).toString()
-        else -> null
     }
 }

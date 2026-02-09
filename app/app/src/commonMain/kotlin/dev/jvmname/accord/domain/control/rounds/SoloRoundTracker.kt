@@ -1,7 +1,10 @@
 package dev.jvmname.accord.domain.control.rounds
 
+import dev.jvmname.accord.di.ForControlType
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.control.rounds.RoundInfo.Round
+import dev.jvmname.accord.ui.control.ControlTimeType
+import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
@@ -14,7 +17,10 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
-@[Inject SingleIn(MatchScope::class)]
+@Inject
+@SingleIn(MatchScope::class)
+@ContributesBinding(MatchScope::class)
+@ForControlType(ControlTimeType.SOLO)
 class SoloRoundTracker(
     private val timer: Timer,
     private val config: MatchConfig,

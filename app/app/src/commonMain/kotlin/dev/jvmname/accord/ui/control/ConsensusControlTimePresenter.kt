@@ -8,10 +8,9 @@ import androidx.compose.runtime.remember
 import co.touchlab.kermit.Logger
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
-import dev.jvmname.accord.domain.MatchManager
-import dev.jvmname.accord.domain.control.Score
+import dev.jvmname.accord.domain.control.ButtonPressTracker
 import dev.jvmname.accord.domain.control.rounds.RoundTracker
-import dev.jvmname.accord.network.Match
+import dev.jvmname.accord.domain.control.score.ScoreKeeper
 import dev.jvmname.accord.prefs.Prefs
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
@@ -29,7 +28,8 @@ class ConsensusControlTimePresenter(
     @Assisted private val screen: ControlTimeScreen,
     @Assisted private val navigator: Navigator,
     private val prefs: Prefs,
-    private val matchManager: MatchManager,
+    private val buttonTracker: ButtonPressTracker,
+    private val scoreKeeper: ScoreKeeper,
     private val roundTracker: RoundTracker,
 ) : Presenter<ControlTimeState> {
 
@@ -39,36 +39,12 @@ class ConsensusControlTimePresenter(
             value = prefs.observeMatInfo().filterNotNull().first().name
         }
 
-        // For consensus mode, we track the match state from the network
-        val currentMatch by matchManager.observeCurrentMatch().collectAsState(null)
-        val current: Match = currentMatch ?: return ControlTimeState(
-            matName = matName,
-            matchState = MatchState(
-                score = Score(0, 0, null, null, null),
-                null,
-                null
-            ),
-            eventSink = {}
-        )
+        val score by remember { scoreKeeper.score }.collectAsState()
         val roundEvent by remember { roundTracker.roundEvent }.collectAsState()
 
-        // Get the active round's riding time data
-        val activeRound = current.rounds.lastOrNull { it.endedAt == null }
-        val controlTime = activeRound?.controlTime.orEmpty()
-        val redRidingTime = controlTime.getOrElse(current.redCompetitor.id) { 0 }
-        val blueRidingTime = controlTime.get(currentMatch?.blueCompetitor?.id) ?: 0
-
-        // Create a simplified match state for consensus mode
-        // We don't track button presses or local scoring - everything comes from the network
         val matchState = MatchState(
-            score = Score(
-                redPoints = redRidingTime.toInt(),
-                bluePoints = blueRidingTime.toInt(),
-                activeControlTime = TODO(),
-                activeCompetitor = TODO(),
-                techFallWin = TODO()
-            ),
-            haptic = null, // No haptic feedback in consensus mode
+            score = score,
+            haptic = null, // TODO: Add haptic feedback in Task 3
             roundInfo = roundEvent,
         )
 
@@ -80,18 +56,18 @@ class ConsensusControlTimePresenter(
                 when (it) {
                     ControlTimeEvent.Back -> navigator.pop()
 
-                    // Button press/release not used in consensus mode
                     is ControlTimeEvent.ButtonPress -> {
-                        Logger.d { "Button press ignored in consensus mode: ${it.competitor}" }
+                        Logger.d { "Presenter press ${it.competitor}" }
+                        buttonTracker.recordPress(it.competitor)
                     }
 
                     is ControlTimeEvent.ButtonRelease -> {
-                        Logger.d { "Button release ignored in consensus mode: ${it.competitor}" }
+                        Logger.d { "Presenter release ${it.competitor}" }
+                        buttonTracker.recordRelease(it.competitor)
                     }
 
-                    // Manual point edit not used in consensus mode
                     is ControlTimeEvent.ManualPointEdit -> {
-                        Logger.d { "Manual point edit ignored in consensus mode" }
+                        scoreKeeper.manualEdit(it.competitor, it.action)
                     }
 
                     ControlTimeEvent.BeginNextRound -> {

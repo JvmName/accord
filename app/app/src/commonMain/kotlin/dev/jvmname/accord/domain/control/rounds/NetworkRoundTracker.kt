@@ -2,11 +2,14 @@ package dev.jvmname.accord.domain.control.rounds
 
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
+import dev.jvmname.accord.di.ForControlType
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.MatchManager
 import dev.jvmname.accord.domain.control.rounds.RoundEvent.RoundState
 import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.network.MatchId
+import dev.jvmname.accord.ui.control.ControlTimeType
+import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
@@ -22,13 +25,18 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * Network-based round tracker that syncs with the backend API.
  */
-@[Inject SingleIn(MatchScope::class)]
+@Inject
+@SingleIn(MatchScope::class)
+@ContributesBinding(MatchScope::class)
+@ForControlType(ControlTimeType.CONSENSUS)
 class NetworkRoundTracker(
     private val scope: CoroutineScope,
     private val matchManager: MatchManager,
-    private val matchId: MatchId,
+    matchId: MatchId?,
     private val timer: Timer,
 ) : RoundTracker {
+
+    private val matchId = requireNotNull(matchId) { "matchId cannot be null!" }
 
     private val _roundEvent = MutableStateFlow<RoundEvent?>(null)
     override val roundEvent: StateFlow<RoundEvent?> = _roundEvent.asStateFlow()
