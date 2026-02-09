@@ -151,17 +151,11 @@ class AccordClient(private val httpClient: HttpClient) {
         }
     }
 
-    suspend fun endMatch(
-        matchId: MatchId,
-        submission: String? = null,
-        submitter: CompetitorColor? = null
-    ): NetworkResult<Match> {
+    suspend fun endMatch(matchId: MatchId): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.post("match/${matchId.id}/end") {
-                    contentType(ContentType.Application.Json)
-                    setBody(EndMatchRequest(submission, submitter))
-                }.body<ApiResult<MatchResponseData>>()
+                httpClient.post("match/${matchId.id}/end")
+                    .body<ApiResult<MatchResponseData>>()
             }
                 .unwrapApiResult()
                 .map { it.match }

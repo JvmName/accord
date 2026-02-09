@@ -28,6 +28,7 @@ class Prefs(
     private val json: Json,
     scope: CoroutineScope
 ) {
+
     private val datastore: DataStore<Preferences> by lazy {
         PreferenceDataStoreFactory.createWithPath(
             corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },

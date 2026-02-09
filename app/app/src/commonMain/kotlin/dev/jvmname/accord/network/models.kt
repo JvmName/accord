@@ -113,9 +113,10 @@ class Match(
     @SerialName("ended_at")
     val endedAt: Instant?,
     @SerialName("red_competitor")
-    val redCompetitor: User,
+    val red: User,
     @SerialName("blue_competitor")
-    val blueCompetitor: User,
+    val blue: User,
+    val winner: User? = null,
     val mat: Mat? = null,
     val judges: List<User> = emptyList(),
     val rounds: List<Round> = emptyList(),
@@ -127,13 +128,6 @@ class CreateMatchRequest(
     val redCompetitorId: UserId,
     @SerialName("blue_competitor_id")
     val blueCompetitorId: UserId,
-)
-
-//TODO this is wrong
-@[Poko Serializable]
-class EndMatchRequest(
-    val submission: String? = null,
-    val submitter: CompetitorColor? = null,
 )
 
 enum class CompetitorColor {
@@ -153,15 +147,10 @@ class Round(
     val id: RoundId,
     @SerialName("round_index") val index: Int,
     @SerialName("max_points") val pointThreshold: Int,
+    @SerialName("max_duration") val maxDuration: Int,
     @SerialName("started_at") val startedAt: Instant,
     @SerialName("ended_at") val endedAt: Instant?,
-    @SerialName("ridingTime") val controlTime: Map<UserId, Int>,
-    val activeControlTime: Int?, //seconds,
-    val activeCompetitor: UserId?,
-    @SerialName("tech_fall_winner")
-    val techFallWinner: UserId?,
-    @SerialName("submission_by")
-    val submissionBy: UserId?,
+    val score: Map<UserId, Int>,
     val result: RoundResult,
 ) : CommonParcelable
 
@@ -181,8 +170,8 @@ enum class RoundResultType {
     @SerialName("submission")
     SUBMISSION,
 
-    @SerialName("control_time")
-    CONTROL_TIME,
+    @SerialName("points")
+    POINTS,
 
     @SerialName("tie")
     TIE,

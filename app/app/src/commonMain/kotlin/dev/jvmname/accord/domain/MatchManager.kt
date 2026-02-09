@@ -74,17 +74,13 @@ class MatchManager(
             }
     }
 
-    suspend fun endMatch(
-        submission: String? = null,
-        submitter: CompetitorColor? = null
-    ): NetworkResult<Match> {
-
+    suspend fun endMatch(): NetworkResult<Match> {
         return catchRunning { activeMatch.load() }
             .flatMapping { match ->
                 if (match == null) error("Must create match first")
                 Ok(match)
             }
-            .flatMap { client.endMatch(it.id, submission, submitter) }
+            .flatMap { client.endMatch(it.id) }
             .onSuccess { match ->
                 cacheMatch(match)
                 // Clear current match from prefs since match ended
