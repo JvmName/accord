@@ -1,6 +1,22 @@
 #!/usr/bin/env node
-
-
 const { ApplicationServer } = require('../lib/server');
+const { spawn }             = require('node:child_process');
+
+
 const server = new ApplicationServer();
+/*
+const worker = spawn('npm', ['run', 'worker', server.workerToken]);
+worker.stdout.on('data', data => console.log(data.toString().trim()));
+*/
+
+
+const handler = () => {
+    server.close();
+    //worker.kill();
+};
+process.on('SIGINT',  handler);
+process.on('SIGTERM', handler);
+process.on('SIGUSR2', handler);
+
+
 server.listen();

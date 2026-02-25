@@ -4,6 +4,7 @@ const   fs                 = require('fs');
 const   httpLogger         = require('pino-http')
 const { logger }           = require('../logger');
 const { pino }             = require('pino');
+const { randomUUID }       = require('crypto');
 const   responseTime       = require('response-time');
 const { Server }           = require('http');
 const { SystemController } = require('./systemController');
@@ -19,6 +20,8 @@ class ApplicationServer {
     #host;
     #_httpServer;
     #port;
+    #webSocketServer;
+    #workerToken;
 
 
     constructor({ port, host }={}) {
@@ -36,6 +39,12 @@ class ApplicationServer {
         this.#httpServer.listen(this.#port, this.#host, () => {
             this.logger.info(`Server is running on port ${this.#port}`);
         });
+    }
+
+
+    close() {
+        this.#httpServer.close();
+        this.#httpServer.closeAllConnections();
     }
 
 
@@ -69,8 +78,18 @@ class ApplicationServer {
     * WEB SOCKETS
     ***********************************************************************************************/
     startWebSocketServer() {
-        const server = new WebSocketServer(this.#httpServer, this.corsOrigin);
-        server.listen();
+        if (this.#webSocketServer) return;
+        this.#webSocketServer = new WebSocketServer(this.#httpServer, this.corsOrigin);
+        this.#webSocketServer.listen();
+    }
+
+
+    /***********************************************************************************************
+    * WORKERS
+    ***********************************************************************************************/
+    get workerToken() {
+        if (!this.#workerToken) this.#workerToken = randomUUID();
+        return this.#workerToken;
     }
 
 

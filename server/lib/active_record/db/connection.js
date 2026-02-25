@@ -1,5 +1,6 @@
-const { QueryInterface }          = require('./queryInterface');
 const { ConnectionConfiguration } = require('./connectionConfiguration');
+const { logger }                  = require('../../logger');
+const { QueryInterface }          = require('./queryInterface');
 const { Sequelize }               = require('sequelize');
 
 
@@ -57,6 +58,7 @@ class Connection {
             ...this.dialectOptions,
             define:  { underscored: true },
             dialect: this.dialect,
+            logging: (sql) => logger.info(sql)
         };
 
         if (!this.loggingEnabled) options.logging = false;
