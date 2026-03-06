@@ -4,6 +4,7 @@
     "private": true,
     "scripts": {
         "start": "nodemon ./bin/www",
+        "worker": "nodemon ./bin/worker",
         "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules node_modules/jest/bin/jest.js",
         "db:create_migration": "./bin/migrate create_migration",
         "db:migrate": "./bin/migrate migrate",
@@ -29,7 +30,8 @@
         "sequelize": "^6.0.0",
         "sequelize-cli": "^6.0.0",
         "sqlite3": "^5.0.0",
-        "socket.io": "^4.0.0"
+        "socket.io": "^4.0.0",
+        "express-openapi-validator": "^5.0.0"
     },
     "devDependencies": {
         "nodemon": "^3.1.11",

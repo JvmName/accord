@@ -1,7 +1,8 @@
-const { ApplicationServer } = require('./applicationServer');
-const { ServerController } = require('./serverController');
+const { ApplicationServer }                 = require('./applicationServer');
+const { ServerController, ValidationError } = require('./serverController');
 
 module.exports = {
     ApplicationServer,
     ServerController,
+    ValidationError
 }

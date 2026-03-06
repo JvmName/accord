@@ -4,13 +4,17 @@ const   fs                 = require('fs');
 const   httpLogger         = require('pino-http')
 const { logger }           = require('../logger');
 const { pino }             = require('pino');
+const { randomUUID }       = require('crypto');
 const   responseTime       = require('response-time');
 const { Server }           = require('http');
 const { SystemController } = require('./systemController');
+const { DocsController }   = require('./docsController');
 const { AuthorizationError,
         ServerController,
         ValidationError }  = require('./serverController');
 const { WebSocketServer }  = require('./webSocketServer');
+const { generateDocs,
+        getOpenApiSpec }   = require('../openapi/index.js');
 
 
 class ApplicationServer {
@@ -19,6 +23,8 @@ class ApplicationServer {
     #host;
     #_httpServer;
     #port;
+    #webSocketServer;
+    #workerToken;
 
 
     constructor({ port, host }={}) {
@@ -29,6 +35,16 @@ class ApplicationServer {
 
 
     async listen() {
+        // 1. Scan controller directories and populate class cache (no routes registered yet)
+        const classes = this.controllerClasses;
+
+        // 2. Generate docs and add validator middleware before any routes exist
+        if (CONSTANTS.DEV) {
+            generateDocs(classes);
+            this.use(...this.#openApiValidatorMiddleware());
+        }
+
+        // 3. Register routes (uses cached classes, so no re-scan)
         await this.registerControllers();
         this.startWebSocketServer();
 
@@ -36,6 +52,12 @@ class ApplicationServer {
         this.#httpServer.listen(this.#port, this.#host, () => {
             this.logger.info(`Server is running on port ${this.#port}`);
         });
+    }
+
+
+    close() {
+        this.#httpServer.close();
+        this.#httpServer.closeAllConnections();
     }
 
 
@@ -69,8 +91,18 @@ class ApplicationServer {
     * WEB SOCKETS
     ***********************************************************************************************/
     startWebSocketServer() {
-        const server = new WebSocketServer(this.#httpServer, this.corsOrigin);
-        server.listen();
+        if (this.#webSocketServer) return;
+        this.#webSocketServer = new WebSocketServer(this.#httpServer, this.corsOrigin);
+        this.#webSocketServer.listen();
+    }
+
+
+    /***********************************************************************************************
+    * WORKERS
+    ***********************************************************************************************/
+    get workerToken() {
+        if (!this.#workerToken) this.#workerToken = randomUUID();
+        return this.#workerToken;
     }
 
 
@@ -135,6 +167,16 @@ class ApplicationServer {
     use() { this.#expressServer.use(...arguments); }
 
 
+    #openApiValidatorMiddleware() {
+        const OpenApiValidator = require('express-openapi-validator');
+        return OpenApiValidator.middleware({
+            apiSpec:           getOpenApiSpec(),
+            validateRequests:  true,
+            validateResponses: true,
+        });
+    }
+
+
     /***********************************************************************************************
     * SETTINGS
     ***********************************************************************************************/
@@ -161,6 +203,7 @@ class ApplicationServer {
 
     #registerDefaultControllers() {
         this.#registerController(SystemController);
+        if (CONSTANTS.DEV) this.#registerController(DocsController);
     }
 
 

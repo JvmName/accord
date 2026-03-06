@@ -1,6 +1,7 @@
-const { logger }    = require('../logger');
-const IoServer      = require("socket.io")
-const { WebSocket } = require('./webSocket');
+const { logger }          = require('../logger');
+const   IoServer          = require("socket.io")
+const { WebSocket }       = require('./webSocket');
+const { WorkerWebSocket } = require('./workerWebSocket');
 
 
 class WebSocketServer {
@@ -16,6 +17,11 @@ class WebSocketServer {
 
     listen() {
         this.on('connection', this.#handleWebSocketConnection);
+    }
+
+
+    close() {
+        this.#_ioServer.close();
     }
 
 
@@ -50,7 +56,18 @@ class WebSocketServer {
 
 
     async _initWebSocket(ioSocket, next) {
-        const socket = new WebSocket(ioSocket, this);
+        const query = ioSocket.handshake.query
+        let socket;
+
+        if (query?.apiToken) {
+            socket = new WebSocket(ioSocket, this);
+        } else if (query?.workerToken) {
+            socket = new WorkerWebSocket(ioSocket, this);
+        } else {
+            ioSocket.close();
+            return next();
+        }
+
         try {
             await socket.init();
             next();

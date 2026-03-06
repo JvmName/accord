@@ -280,12 +280,17 @@ describe('ServerController', () => {
         it ('throws an error when there is no `currentUser`', async () => {
             const controller = new FooController({}, {});
             await expect(async () => {
-                await controller.authorize('view', 'test')
+                await controller.authorize('view', 'authenticated')
             }).rejects.toThrow(AuthorizationError);
         });
 
         it ('does not throw an error when the `currentUser` is authorized', async () => {
-            await controllerWithUser.authorize('view', 'test');
+            await controllerWithUser.authorize('view', 'authenticated');
+        });
+
+        it ('does not throw an error when there is no need for a `currentUser`', async () => {
+            const controller = new FooController({}, {});
+            await controller.authorize('view', 'unauthenticated');
         });
 
         it ('throws an error when the `currentUser` is not authorized', async () => {

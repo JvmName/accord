@@ -21,8 +21,8 @@ class RidingTimeVoteController extends ServerController {
             await this.#currentRound.startRidingTime(this.currentUser, this.params.rider);
         } catch(err) {
             await this.renderErrors({matchId: [err.message]});
+            return false;
         }
-
 
         const options = {includeRounds: true, includeJudges: true, includeMat: true};
         await this.render({match: this.currentMatch}, options);
@@ -34,6 +34,7 @@ class RidingTimeVoteController extends ServerController {
             await this.#currentRound.endRidingTime(this.currentUser, this.params.rider);
         } catch(err) {
             await this.renderErrors({matchId: [err.message]});
+            return false;
         }
 
         const options = {includeRounds: true, includeJudges: true, includeMat: true};
@@ -45,6 +46,42 @@ class RidingTimeVoteController extends ServerController {
         return {
             deleteEndRidingTime: '/match/:matchId/ridingTime',
             postStartRidingTime: '/match/:matchId/ridingTime'
+        };
+    }
+
+
+    static get openapi() {
+        return {
+            postStartRidingTime: {
+                description: 'Start the riding time clock for the specified rider in the current round.',
+                tags: ['match/ridingTime'],
+                request: {
+                    params: {
+                        matchId: { type: 'string', required: true }
+                    },
+                    body: {
+                        rider: { type: 'string', enum: ['red', 'blue'], required: true }
+                    }
+                },
+                response: {
+                    match: { $ref: 'Match' }
+                }
+            },
+            deleteEndRidingTime: {
+                description: 'End the riding time clock for the specified rider in the current round.',
+                tags: ['match/ridingTime'],
+                request: {
+                    params: {
+                        matchId: { type: 'string', required: true }
+                    },
+                    query: {
+                        rider: { type: 'string', enum: ['red', 'blue'], required: true }
+                    }
+                },
+                response: {
+                    match: { $ref: 'Match' }
+                }
+            }
         };
     }
 

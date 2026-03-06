@@ -12,6 +12,8 @@ class Authorizer {
 
 
     async can(action, scope) {
+        if (!scope) return false;
+
         const cls = this.classForScope(scope);
         switch(cls.name) {
             case 'String':
@@ -32,7 +34,9 @@ class Authorizer {
 
 
     async simpleScopePermission(action, scope) {
-        if (scope == 'test') return true;
+        if (scope == 'authenticated')   return Boolean(this.#user);
+        if (scope == 'unauthenticated') return true;
+        if (scope == 'test')            return true;
         return false;
     }
 

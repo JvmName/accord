@@ -104,6 +104,13 @@ class ServerController {
     }
 
 
+    async renderHtml(html) {
+        this._response.set('Content-Type', 'text/html');
+        this._response.send(html);
+        this.#rendered = true;
+    }
+
+
     async formatJSONBody(body, options) {
         body = await this._formatJSONBody(body, options);
         return {data: body, status: this.statusText};
@@ -214,7 +221,7 @@ class ServerController {
     async validateParameters(validations) {
         const errors = {};
         for (const [parameterName, parameterValidations] of Object.entries(validations)) {
-            const parameterErrors = this.validateParameter(this.params[parameterName], parameterValidations);
+            const parameterErrors = this.validateParameter(parameterName, parameterValidations);
             if (parameterErrors.length) errors[parameterName] = parameterErrors;
         }
 
@@ -222,15 +229,27 @@ class ServerController {
     }
 
 
-    validateParameter(value, parameterValidations) {
-      const errors = [];
-      for (const [validationType, validationOptions] of Object.entries(parameterValidations)) {
-          const validationMethod = `validate${camelize(validationType)}`;
-          const error = this[validationMethod](value, validationOptions);
-          if (error) errors.push(error);
-      }
+    validateParameter(parameterName, parameterValidations) {
+        const errors = [];
+        const value = this.valueForParameterName(parameterName)
 
-      return errors;
+        for (const [validationType, validationOptions] of Object.entries(parameterValidations)) {
+            const validationMethod = `validate${camelize(validationType)}`;
+            const error = this[validationMethod](value, validationOptions);
+            if (error) errors.push(error);
+        }
+
+        return errors;
+    }
+
+
+    valueForParameterName(parameterName) {
+        const paramNamePcs = parameterName.split('.');
+        let value = this.params;
+        for (const paramNamePc of paramNamePcs) {
+            value = (value || {})[paramNamePc];
+        }
+        return value;
     }
 
 
@@ -338,11 +357,11 @@ class ServerController {
 
     get apiToken()       { return this.requestHeaders['x-api-token']; }
     get currentUser()    { return this.#currentUser    || null; }
+    set currentUser(user){ this.#currentUser = user;            }
     get currentMat()     { return this.#currentMat     || null; }
     get currentMatch()   { return this.#currentMatch   || null; }
     get currentMatCode() { return this.#currentMatCode || null; }
     get authorizer()  {
-        if (!this.currentUser) return;
         if (!this.#authorizer) this.#authorizer = new Authorizer(this.currentUser, this.currentMatCode);
         return this.#authorizer;
     }

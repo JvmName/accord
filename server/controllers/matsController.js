@@ -4,11 +4,6 @@ const { MatCode }          = require('../models/matCode');
 
 
 class MatsController extends ServerController {
-    setupCallbacks() {
-        this.beforeCallback('authenticateRequest');
-    }
-
-
     /***********************************************************************************************
     * ACTIONS
     ***********************************************************************************************/
@@ -38,11 +33,42 @@ class MatsController extends ServerController {
     }
 
 
+    static get openapi() {
+        return {
+            postIndex: {
+                description: "Create a new mat",
+                tags: ["mats"],
+                request: {
+                    body: {
+                        name:        { type: "string",  required: true },
+                        judge_count: { type: "integer", required: true }
+                    }
+                },
+                response: {
+                    mat: { $ref: "Mat" }
+                }
+            },
+            getMat: {
+                description: "Get a mat by ID or mat code",
+                tags: ["mats"],
+                request: {
+                    params: {
+                        matId: { type: "string", required: true }
+                    }
+                },
+                response: {
+                    mat: { $ref: "Mat" }
+                }
+            }
+        };
+    }
+
+
     /***********************************************************************************************
     * HELPERS
     ***********************************************************************************************/
     async createMat() {
-        const mat = await Mat.create({creator_id:  this.currentUser.id,
+        const mat = await Mat.create({creator_id:  this.currentUser?.id,
                                       judge_count: this.params.judge_count,
                                       name:        this.params.name});
         await this.createMatCode(mat, MatCode.ROLES.ADMIN);
