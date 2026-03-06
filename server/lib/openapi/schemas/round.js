@@ -6,7 +6,7 @@
 //   ended_at     (integer | null, ms)   — null if the round is still in progress
 //   max_duration (integer, ms)          — millisecond duration limit for this round
 //   score        (object)               — keys are competitor UUIDs, values are integer scores
-//   result       (object)               — { winner: User | null, method: string | null }
+//   result       (object)               — { winner: User | null, method: { type: string | null, value: string | integer | null } }
 // Timestamps are serialized as milliseconds (integer) via ServerController._formatJSONBody.
 
 const Round = {
@@ -48,9 +48,22 @@ const Round = {
                     description: "The winning competitor for this round, or null"
                 },
                 method: {
-                    type: "string",
+                    type: "object",
                     nullable: true,
-                    description: "The method by which the round was won (e.g. submission type), or null"
+                    properties: {
+                        type: {
+                            type: "string",
+                            nullable: true,
+                            enum: ["submission", "points", "tie", null],
+                            description: "How the round was won"
+                        },
+                        value: {
+                            nullable: true,
+                            description: "The submission name or point score; null if round is ongoing"
+                        }
+                    },
+                    required: ["type", "value"],
+                    description: "The method by which the round was won, or null if still in progress"
                 }
             },
             required: ["winner", "method"],
