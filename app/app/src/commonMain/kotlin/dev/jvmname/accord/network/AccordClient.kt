@@ -12,8 +12,6 @@ import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -116,16 +114,16 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun createMatch(
         matCode: String,
-        redCompetitor: User,
-        blueCompetitor: User,
+        redCompetitor: UserId,
+        blueCompetitor: UserId,
     ): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
             catchRunning {
                 httpClient.post("mat/$matCode/matches") {
                     setBody(
                         CreateMatchRequest(
-                            red = CompetitorRequest(redCompetitor.id, redCompetitor.name),
-                            blue = CompetitorRequest(blueCompetitor.id, blueCompetitor.name),
+                            red = CompetitorRequest(redCompetitor, CompetitorColor.RED.humanName),
+                            blue = CompetitorRequest(blueCompetitor, CompetitorColor.BLUE.humanName),
                         )
                     )
                 }.body<ApiResult<MatchResponseData>>()

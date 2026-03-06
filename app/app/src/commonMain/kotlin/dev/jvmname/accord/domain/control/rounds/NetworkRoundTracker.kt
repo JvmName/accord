@@ -95,44 +95,49 @@ class NetworkRoundTracker(
 
     private fun updateRoundStateFromMatch(match: Match) {
         // Find the active round (started but not ended)
-        val activeRound = match.rounds.firstOrNull { it.endedAt == null }
+        val activeRoundIndex = match.rounds.indexOfFirst { it.endedAt == null }.takeUnless { it == -1 }
+        val activeRound = activeRoundIndex?.let { match.rounds[it] }
 
-        if (activeRound != null) {
-            currentRoundNumber = activeRound.index
-            val totalRounds = match.rounds.size
-            val config = MatchConfig.RdojoKombat.getRound(currentRoundNumber)
+        when {
+            activeRound != null -> {
+                currentRoundNumber = activeRoundIndex
+                val totalRounds = match.rounds.size
+                val config = MatchConfig.RdojoKombat.getRound(currentRoundNumber)
 
-            _roundEvent.value = RoundEvent(
-                remaining = timer.remaining,
-                roundNumber = currentRoundNumber,
-                totalRounds = totalRounds,
-                round = RoundInfo.Round(
-                    index = currentRoundNumber,
-                    maxPoints = config!!.maxPoints,
-                    duration = config!!.duration,
-                    optional = false
-                ),
-                state = if (timer.isPaused) RoundState.PAUSED else RoundState.STARTED
-            )
-        } else if (match.endedAt != null) {
-            // Match ended
-            _roundEvent.update {
-                it?.copy(state = RoundEvent.RoundState.MATCH_ENDED) ?: RoundEvent(
-                    remaining = Duration.ZERO,
-                    roundNumber = match.rounds.size,
-                    totalRounds = match.rounds.size,
+                _roundEvent.value = RoundEvent(
+                    remaining = timer.remaining,
+                    roundNumber = currentRoundNumber,
+                    totalRounds = totalRounds,
                     round = RoundInfo.Round(
-                        index = match.rounds.size,
-                        maxPoints = 0,
-                        duration = Duration.ZERO,
+                        index = currentRoundNumber,
+                        maxPoints = config!!.maxPoints,
+                        duration = config.duration,
                         optional = false
                     ),
-                    state = RoundState.MATCH_ENDED
+                    state = if (timer.isPaused) RoundState.PAUSED else RoundState.STARTED
                 )
             }
-        } else {
-            // No active round, match not ended - waiting to start
-            _roundEvent.value = null
+            match.endedAt != null -> {
+                // Match ended
+                _roundEvent.update {
+                    it?.copy(state = RoundEvent.RoundState.MATCH_ENDED) ?: RoundEvent(
+                        remaining = Duration.ZERO,
+                        roundNumber = match.rounds.size,
+                        totalRounds = match.rounds.size,
+                        round = RoundInfo.Round(
+                            index = match.rounds.size,
+                            maxPoints = 0,
+                            duration = Duration.ZERO,
+                            optional = false
+                        ),
+                        state = RoundState.MATCH_ENDED
+                    )
+                }
+            }
+            else -> {
+                // No active round, match not ended - waiting to start
+                _roundEvent.value = null
+            }
         }
     }
 
@@ -156,8 +161,8 @@ class NetworkRoundTracker(
                                     remaining = remaining,
                                     roundNumber = currentRoundNumber,
                                     totalRounds = totalRounds,
-                                    round = roundInfo!!,
-                                    state = RoundEvent.RoundState.STARTED
+                                    round = roundInfo,
+                                    state = RoundState.STARTED
                                 )
                             }
                         }

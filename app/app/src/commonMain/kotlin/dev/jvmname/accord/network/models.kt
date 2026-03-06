@@ -21,7 +21,7 @@ sealed interface ApiResult<out T> {
 // ============================================================================
 
 @[JvmInline Serializable CommonParcelize]
-value class AuthToken(val token: String)
+value class AuthToken(val token: String) : CommonParcelable
 
 @[JvmInline Serializable CommonParcelize]
 value class UserId(val id: String) : CommonParcelable
@@ -144,7 +144,9 @@ enum class CompetitorColor {
     RED,
 
     @SerialName("blue")
-    BLUE,
+    BLUE;
+
+    val humanName = name.lowercase()
 }
 
 @[Poko Serializable]
