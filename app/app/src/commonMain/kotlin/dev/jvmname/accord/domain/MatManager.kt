@@ -1,5 +1,6 @@
 package dev.jvmname.accord.domain
 
+import com.github.michaelbull.result.map
 import com.github.michaelbull.result.onSuccess
 import dev.jvmname.accord.network.AccordClient
 import dev.jvmname.accord.network.Mat
@@ -38,11 +39,14 @@ class MatManager(
      * Join a mat as judge or viewer (determined by mat code role).
      * Updates cached mat info in Prefs.
      */
-    suspend fun joinMat(matCode: String): NetworkResult<Mat> {
-        return client.joinMat(matCode)
+    suspend fun joinMat(matCode: String, userName: String): NetworkResult<Mat> {
+        return client.joinMat(matCode, userName)
             .onSuccess {
-                prefs.updateMatInfo(it)
+                prefs.updateMatInfo(it.mat)
+                prefs.updateMainUser(it.user)
+                prefs.setAuthToken(it.authToken)
             }
+            .map { it.mat }
     }
 
     /**

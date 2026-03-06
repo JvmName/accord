@@ -21,6 +21,9 @@ sealed interface ApiResult<out T> {
 // ============================================================================
 
 @[JvmInline Serializable CommonParcelize]
+value class AuthToken(val token: String)
+
+@[JvmInline Serializable CommonParcelize]
 value class UserId(val id: String) : CommonParcelable
 
 @[JvmInline Serializable CommonParcelize]
@@ -51,7 +54,7 @@ class CreateUserRequest(
 class CreateUserResponse(
     val user: User,
     @SerialName("api_token")
-    val apiToken: String,
+    val authToken: AuthToken,
 )
 
 // ============================================================================
@@ -102,7 +105,7 @@ class JoinMatRequest(val name: String)
 class JoinMatResult(
     val mat: Mat,
     val user: User,
-    @SerialName("api_token") val apiToken: String,
+    @SerialName("api_token") val authToken: AuthToken,
 )
 
 // ============================================================================

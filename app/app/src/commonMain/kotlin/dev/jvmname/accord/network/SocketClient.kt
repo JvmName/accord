@@ -12,8 +12,7 @@ import kotlinx.serialization.json.Json
 @JvmInline
 value class BaseUrl(val baseUrl: String)
 
-@JvmInline
-value class AuthToken(val token: String)
+
 
 /** Socket.IO client for real-time match updates. */
 @AssistedInject
