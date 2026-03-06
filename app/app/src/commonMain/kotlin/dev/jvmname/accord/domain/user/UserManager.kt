@@ -15,7 +15,7 @@ class UserManager(
 ) {
 
     suspend fun createUser(name: String, email: String): NetworkResult<User> {
-        return apiClient.createUser(name, email)
+        return apiClient.createUser(name)
             .map {
                 prefs.setAuthToken(AuthToken(it.apiToken))
                 it.user

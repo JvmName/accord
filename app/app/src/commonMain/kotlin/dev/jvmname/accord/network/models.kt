@@ -40,13 +40,11 @@ value class RoundId(val id: String) : CommonParcelable
 class User(
     val id: UserId,
     val name: String,
-    val email: String,
 ) : CommonParcelable
 
 @[Poko Serializable]
 class CreateUserRequest(
     val name: String,
-    val email: String,
 )
 
 @[Poko Serializable]
@@ -97,6 +95,16 @@ class CreateMatRequest(
     val judgeCount: Int,
 )
 
+@[Poko Serializable]
+class JoinMatRequest(val name: String)
+
+@[Poko Serializable]
+class JoinMatResult(
+    val mat: Mat,
+    val user: User,
+    @SerialName("api_token") val apiToken: String,
+)
+
 // ============================================================================
 // Match Models
 // ============================================================================
@@ -123,12 +131,10 @@ class Match(
 ) : CommonParcelable
 
 @[Poko Serializable]
-class CreateMatchRequest(
-    @SerialName("red_competitor_id")
-    val redCompetitorId: UserId,
-    @SerialName("blue_competitor_id")
-    val blueCompetitorId: UserId,
-)
+class CompetitorRequest(val id: UserId, val name: String)
+
+@[Poko Serializable]
+class CreateMatchRequest(val red: CompetitorRequest, val blue: CompetitorRequest)
 
 enum class CompetitorColor {
     @SerialName("red")
@@ -138,6 +144,12 @@ enum class CompetitorColor {
     BLUE,
 }
 
+@[Poko Serializable]
+class EndMatchRequest(
+    val submission: String? = null,
+    val submitter: CompetitorColor? = null,
+)
+
 // ============================================================================
 // Round Models
 // ============================================================================
@@ -145,8 +157,6 @@ enum class CompetitorColor {
 @[Poko Serializable CommonParcelize]
 class Round(
     val id: RoundId,
-    @SerialName("round_index") val index: Int,
-    @SerialName("max_points") val pointThreshold: Int,
     @SerialName("max_duration") val maxDuration: Int,
     @SerialName("started_at") val startedAt: Instant,
     @SerialName("ended_at") val endedAt: Instant?,
@@ -192,11 +202,6 @@ class StartRidingTimeVoteRequest(
     val rider: CompetitorColor,
 )
 
-@[Poko Serializable]
-class EndRidingTimeVoteRequest(
-    val rider: CompetitorColor,
-)
-
 // ============================================================================
 // Response Wrappers
 // ============================================================================
@@ -206,6 +211,9 @@ value class CreateUserResponseData(val data: CreateUserResponse)
 
 @[JvmInline Serializable]
 value class MatResponseData(val mat: Mat)
+
+@[JvmInline Serializable]
+value class JoinMatResponseData(val data: JoinMatResult)
 
 @[JvmInline Serializable]
 value class MatchResponseData(val match: Match)

@@ -9,6 +9,7 @@ import co.touchlab.kermit.Logger
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.domain.control.ButtonPressTracker
+import dev.jvmname.accord.domain.control.ScoreHapticFeedbackHelper
 import dev.jvmname.accord.domain.control.rounds.RoundTracker
 import dev.jvmname.accord.domain.control.score.ScoreKeeper
 import dev.jvmname.accord.prefs.Prefs
@@ -30,6 +31,7 @@ class ConsensusControlTimePresenter(
     private val prefs: Prefs,
     private val buttonTracker: ButtonPressTracker,
     private val scoreKeeper: ScoreKeeper,
+    private val hapticFeedbackHelper: ScoreHapticFeedbackHelper,
     private val roundTracker: RoundTracker,
 ) : Presenter<ControlTimeState> {
 
@@ -40,11 +42,12 @@ class ConsensusControlTimePresenter(
         }
 
         val score by remember { scoreKeeper.score }.collectAsState()
+        val hapticEvent by remember { hapticFeedbackHelper.hapticEvents }.collectAsState(null)
         val roundEvent by remember { roundTracker.roundEvent }.collectAsState()
 
         val matchState = MatchState(
             score = score,
-            haptic = null, // TODO: Add haptic feedback in Task 3
+            haptic = hapticEvent,
             roundInfo = roundEvent,
         )
 

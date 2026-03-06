@@ -62,20 +62,20 @@ class RealSoloScoreKeeper(
                     is ButtonEvent.Holding -> {
                         val roundEvent = latestRoundEvent.load()
                         if (roundEvent == null) {
-                            Logger.Companion.d("received button hold before beginning - ignoring")
+                            Logger.d("received button hold before beginning - ignoring")
                             return@onEach
                         }
                         if (roundEvent.round is RoundInfo.Break) {
-                            Logger.Companion.d("received button hold during break - ignoring")
+                            Logger.d("received button hold during break - ignoring")
                             return@onEach
                         }
                         if (roundEvent.state == RoundEvent.RoundState.PAUSED) {
-                            Logger.Companion.d("received button hold during pause - ignoring")
+                            Logger.d("received button hold during pause - ignoring")
                             return@onEach
                         }
 
                         _score.update { prev ->
-                            val previousTime = prev.activeControlTime ?: Duration.Companion.ZERO
+                            val previousTime = prev.activeControlTime ?: Duration.ZERO
                             val totalSessionTime = previousTime + OneSecond
 
                             val previousSessionPoints = (previousTime / PointThreshold).toInt()
@@ -95,7 +95,7 @@ class RealSoloScoreKeeper(
                                 activeCompetitor = event.competitor,
                                 techFallWin = hasTechFallWin(newRedPoints, newBluePoints)
                             ).also {
-                                Logger.Companion.d { "Score: \n$it" }
+                                Logger.d { "Score: \n$it" }
                             }
                         }
                     }
@@ -121,12 +121,12 @@ class RealSoloScoreKeeper(
                 current to new
             }
             .onEach { (previous, current) ->
-                Logger.Companion.d { "State transition: prev=${previous?.state}/${previous?.round} -> curr=${current?.state}/${current?.round}" }
+                Logger.d { "State transition: prev=${previous?.state}/${previous?.round} -> curr=${current?.state}/${current?.round}" }
                 if (previous?.round is RoundInfo.Break
                     && current?.state == RoundEvent.RoundState.STARTED
                     && current.round is RoundInfo.Round
                 ) {
-                    Logger.Companion.d { "Round transitioning from ENDED Break to STARTED Round, resetting scores" }
+                    Logger.d { "Round transitioning from ENDED Break to STARTED Round, resetting scores" }
                     resetScores()
                 }
             }
@@ -139,7 +139,7 @@ class RealSoloScoreKeeper(
     ) {
         //double-check we're paused
         if (latestRoundEvent.load()?.state != RoundEvent.RoundState.PAUSED) {
-            Logger.Companion.d { "ignoring $action because state is not paused, it's ${latestRoundEvent.load()?.state}" }
+            Logger.d { "ignoring $action because state is not paused, it's ${latestRoundEvent.load()?.state}" }
             return
         }
 

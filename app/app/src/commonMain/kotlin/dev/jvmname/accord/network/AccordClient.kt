@@ -9,6 +9,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -25,11 +26,11 @@ class AccordClient(private val httpClient: HttpClient) {
     // Authentication
     // ========================================================================
 
-    suspend fun createUser(name: String, email: String): NetworkResult<CreateUserResponse> {
+    suspend fun createUser(name: String): NetworkResult<CreateUserResponse> {
         return withContext(Dispatchers.IO) {
             catchRunning {
                 httpClient.post("users") {
-                    setBody(CreateUserRequest(name, email))
+                    setBody(CreateUserRequest(name))
                 }.body<ApiResult<CreateUserResponseData>>()
             }
                 .unwrapApiResult()
@@ -64,14 +65,15 @@ class AccordClient(private val httpClient: HttpClient) {
         }
     }
 
-    suspend fun joinMat(matCode: String): NetworkResult<Mat> {
+    suspend fun joinMat(matCode: String, name: String): NetworkResult<JoinMatResult> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.post("mat/$matCode/join")
-                    .body<ApiResult<MatResponseData>>()
+                httpClient.post("mat/$matCode/join") {
+                    setBody(JoinMatRequest(name))
+                }.body<ApiResult<JoinMatResponseData>>()
             }
                 .unwrapApiResult()
-                .map { it.mat }
+                .map { it.data }
         }
     }
 
@@ -114,14 +116,18 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun createMatch(
         matCode: String,
-        redCompetitorId: UserId,
-        blueCompetitorId: UserId
+        redCompetitor: User,
+        blueCompetitor: User,
     ): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
             catchRunning {
                 httpClient.post("mat/$matCode/matches") {
-                    contentType(ContentType.Application.Json)
-                    setBody(CreateMatchRequest(redCompetitorId, blueCompetitorId))
+                    setBody(
+                        CreateMatchRequest(
+                            red = CompetitorRequest(redCompetitor.id, redCompetitor.name),
+                            blue = CompetitorRequest(blueCompetitor.id, blueCompetitor.name),
+                        )
+                    )
                 }.body<ApiResult<MatchResponseData>>()
             }
                 .unwrapApiResult()
@@ -151,11 +157,16 @@ class AccordClient(private val httpClient: HttpClient) {
         }
     }
 
-    suspend fun endMatch(matchId: MatchId): NetworkResult<Match> {
+    suspend fun endMatch(
+        matchId: MatchId,
+        submission: String? = null,
+        submitter: CompetitorColor? = null,
+    ): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
             catchRunning {
-                httpClient.post("match/${matchId.id}/end")
-                    .body<ApiResult<MatchResponseData>>()
+                httpClient.post("match/${matchId.id}/end") {
+                    setBody(EndMatchRequest(submission, submitter))
+                }.body<ApiResult<MatchResponseData>>()
             }
                 .unwrapApiResult()
                 .map { it.match }
@@ -185,7 +196,6 @@ class AccordClient(private val httpClient: HttpClient) {
         return withContext(Dispatchers.IO) {
             catchRunning {
                 httpClient.post("match/${matchId.id}/rounds/end") {
-                    contentType(ContentType.Application.Json)
                     setBody(EndRoundRequest(submission, submitter))
                 }.body<ApiResult<MatchResponseData>>()
             }
@@ -205,7 +215,6 @@ class AccordClient(private val httpClient: HttpClient) {
         return withContext(Dispatchers.IO) {
             catchRunning {
                 httpClient.post("match/${matchId.id}/ridingTime") {
-                    contentType(ContentType.Application.Json)
                     setBody(StartRidingTimeVoteRequest(rider))
                 }.body<ApiResult<MatchResponseData>>()
             }
@@ -218,8 +227,7 @@ class AccordClient(private val httpClient: HttpClient) {
         return withContext(Dispatchers.IO) {
             catchRunning {
                 httpClient.delete("match/${matchId.id}/ridingTime") {
-                    contentType(ContentType.Application.Json)
-                    setBody(EndRidingTimeVoteRequest(rider))
+                    parameter("rider", rider.name.lowercase())
                 }.body<ApiResult<MatchResponseData>>()
             }
                 .unwrapApiResult()
