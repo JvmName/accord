@@ -50,6 +50,42 @@ class RidingTimeVoteController extends ServerController {
     }
 
 
+    static get openapi() {
+        return {
+            postStartRidingTime: {
+                description: 'Start the riding time clock for the specified rider in the current round.',
+                tags: ['match/ridingTime'],
+                request: {
+                    params: {
+                        matchId: { type: 'string', required: true }
+                    },
+                    body: {
+                        rider: { type: 'string', enum: ['red', 'blue'], required: true }
+                    }
+                },
+                response: {
+                    match: { $ref: 'Match' }
+                }
+            },
+            deleteEndRidingTime: {
+                description: 'End the riding time clock for the specified rider in the current round.',
+                tags: ['match/ridingTime'],
+                request: {
+                    params: {
+                        matchId: { type: 'string', required: true }
+                    },
+                    query: {
+                        rider: { type: 'string', enum: ['red', 'blue'], required: true }
+                    }
+                },
+                response: {
+                    match: { $ref: 'Match' }
+                }
+            }
+        };
+    }
+
+
     /***********************************************************************************************
     * HELPERS
     ***********************************************************************************************/

@@ -104,6 +104,13 @@ class ServerController {
     }
 
 
+    async renderHtml(html) {
+        this._response.set('Content-Type', 'text/html');
+        this._response.send(html);
+        this.#rendered = true;
+    }
+
+
     async formatJSONBody(body, options) {
         body = await this._formatJSONBody(body, options);
         return {data: body, status: this.statusText};

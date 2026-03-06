@@ -21,7 +21,7 @@ class MatchesController extends ServerController {
         await this.authorize('assign',         this.currentMat);
         await this.validateCreation();
 
-        const { red, blue } = await this.getCompetitors();
+        const { red, blue } = await this.fetchCompetitors();
 
         await this.authorize('assign', red);
         await this.authorize('assign', blue);
@@ -84,6 +84,68 @@ class MatchesController extends ServerController {
     }
 
 
+    static get openapi() {
+        return {
+            postIndex: {
+                description: 'Create a new match on a mat',
+                tags: ['matches'],
+                request: {
+                    params: {
+                        matCode: { type: 'string', required: true }
+                    },
+                    body: {
+                        red:  { id: { type: 'integer' }, name: { type: 'string' } },
+                        blue: { id: { type: 'integer' }, name: { type: 'string' } }
+                    }
+                },
+                response: {
+                    match: { $ref: 'Match' }
+                }
+            },
+            postStartMatch: {
+                description: 'Start a match, assign judges from the mat, and begin the first round',
+                tags: ['matches'],
+                request: {
+                    params: {
+                        matchId: { type: 'string', required: true }
+                    }
+                },
+                response: {
+                    match: { $ref: 'Match' }
+                }
+            },
+            postEndMatch: {
+                description: 'End a match and its current active round',
+                tags: ['matches'],
+                request: {
+                    params: {
+                        matchId: { type: 'string', required: true }
+                    },
+                    body: {
+                        submission: { type: 'string' },
+                        submitter:  { type: 'string' }
+                    }
+                },
+                response: {
+                    match: { $ref: 'Match' }
+                }
+            },
+            getMatch: {
+                description: 'Get a match by ID',
+                tags: ['matches'],
+                request: {
+                    params: {
+                        matchId: { type: 'string', required: true }
+                    }
+                },
+                response: {
+                    match: { $ref: 'Match' }
+                }
+            }
+        };
+    }
+
+
     async requireMatch() {
         await super.setupRequestState();
         if (!this.currentMatch) await this.renderNotFoundResponse();
@@ -113,7 +175,7 @@ class MatchesController extends ServerController {
     }
 
 
-    async getCompetitors() {
+    async fetchCompetitors() {
         let red, blue;
         if (this.params.red.id) {
             red = await User.find(this.params.red.id);

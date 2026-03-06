@@ -33,6 +33,37 @@ class MatsController extends ServerController {
     }
 
 
+    static get openapi() {
+        return {
+            postIndex: {
+                description: "Create a new mat",
+                tags: ["mats"],
+                request: {
+                    body: {
+                        name:        { type: "string",  required: true },
+                        judge_count: { type: "integer", required: true }
+                    }
+                },
+                response: {
+                    mat: { $ref: "Mat" }
+                }
+            },
+            getMat: {
+                description: "Get a mat by ID or mat code",
+                tags: ["mats"],
+                request: {
+                    params: {
+                        matId: { type: "string", required: true }
+                    }
+                },
+                response: {
+                    mat: { $ref: "Mat" }
+                }
+            }
+        };
+    }
+
+
     /***********************************************************************************************
     * HELPERS
     ***********************************************************************************************/

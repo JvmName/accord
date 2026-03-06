@@ -41,6 +41,40 @@ class RoundsController extends ServerController {
     }
 
 
+    static get openapi() {
+        return {
+            postStartRound: {
+                description: 'Start a new round for the specified match.',
+                tags: ['match/rounds'],
+                request: {
+                    params: {
+                        matchId: { type: 'string', required: true }
+                    }
+                },
+                response: {
+                    match: { $ref: 'Match' }
+                }
+            },
+            postEndRound: {
+                description: 'End the current round for the specified match, optionally recording a submission and submitter.',
+                tags: ['match/rounds'],
+                request: {
+                    params: {
+                        matchId: { type: 'string', required: true }
+                    },
+                    body: {
+                        submission: { type: 'string' },
+                        submitter:  { type: 'string', enum: ['red', 'blue'] }
+                    }
+                },
+                response: {
+                    match: { $ref: 'Match' }
+                }
+            }
+        };
+    }
+
+
     /***********************************************************************************************
     * HELPERS
     ***********************************************************************************************/

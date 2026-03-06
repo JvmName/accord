@@ -54,6 +54,65 @@ class UsersController extends ServerController {
     }
 
 
+    static get openapi() {
+        return {
+            getViewers: {
+                description: "Get the list of viewers for a mat",
+                tags: ["mat/users"],
+                request: {
+                    params: {
+                        matCode: { type: "string", required: true }
+                    }
+                },
+                response: {
+                    viewers: [{ $ref: "User" }]
+                }
+            },
+            getJudges: {
+                description: "Get the list of judges for a mat",
+                tags: ["mat/users"],
+                request: {
+                    params: {
+                        matCode: { type: "string", required: true }
+                    }
+                },
+                response: {
+                    judges: [{ $ref: "User" }]
+                }
+            },
+            postJoin: {
+                description: "Join a mat as a viewer or judge using a mat code",
+                tags: ["mat/users"],
+                request: {
+                    params: {
+                        matCode: { type: "string", required: true }
+                    },
+                    body: {
+                        name: { type: "string" }
+                    }
+                },
+                response: {
+                    mat:       { $ref: "Mat" },
+                    user:      { $ref: "User" },
+                    api_token: { type: "string" }
+                }
+            },
+            deleteJoin: {
+                description: "Leave a mat (remove self as viewer or judge)",
+                tags: ["mat/users"],
+                request: {
+                    params: {
+                        matCode: { type: "string", required: true }
+                    }
+                },
+                response: {
+                    mat: { $ref: "Mat" }
+                }
+            }
+        };
+    }
+
+
     /***********************************************************************************************
     * HELPERS
     ***********************************************************************************************/
