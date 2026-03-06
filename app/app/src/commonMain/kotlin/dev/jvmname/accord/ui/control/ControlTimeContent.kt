@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.keepScreenOn
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -81,8 +82,13 @@ fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
 
     state.matchState.haptic?.effect?.consume()?.let { vibrator.vibrate(it) }
 
+    state.matchState.audio?.resource?.consume()?.let { resourcePath ->
+//        rememberAudioPlayer(resourcePath)?.play()
+    }
+
     StandardScaffold(
         modifier = modifier
+            .keepScreenOn()
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
         title = "Control Time: ${state.matName}",
@@ -323,6 +329,7 @@ private fun ControlTimeContentPreview() {
                         techFallWin = null
                     ),
                     haptic = null,
+                    audio = null,
                     roundInfo = RoundEvent(
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
@@ -355,6 +362,7 @@ private fun ControlTimeContentPreview_Paused() {
                         techFallWin = null
                     ),
                     haptic = null,
+                    audio = null,
                     roundInfo = RoundEvent(
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
@@ -387,6 +395,7 @@ private fun ControlTimeContentPreview_Holding() {
                         techFallWin = null
                     ),
                     haptic = null,
+                    audio = null,
                     roundInfo = RoundEvent(
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
@@ -401,6 +410,7 @@ private fun ControlTimeContentPreview_Holding() {
         )
     }
 }
+
 
 @Preview
 @Composable
