@@ -64,7 +64,10 @@ class Authorizer {
                 const judges = await scope.getJudges();
                 return judges.some(judge => judge.id == this.#user.id);
             case 'manage':
-                return true;
+                const mat = await scope.getMat();
+                return this.#user?.id === mat.creator_id;
+            case 'pause':
+                return await this.matchPermission('manage', scope) || await this.matchPermission('judge', scope);
             case 'view':
                 return true;
         }

@@ -1,5 +1,6 @@
 const { BaseRecord }          = require('../lib/active_record');
 const { RidingTimeVote }      = require('./ridingTimeVote');
+const { RoundPause }          = require('./roundPause');
 const { RDojoKombatRules }    = require('../lib/rules');
 const { User }                = require('./user');
 
@@ -7,6 +8,7 @@ const { User }                = require('./user');
 class Round extends BaseRecord {
     #blueScore;
     #index;
+    #pauses = null;
     #redScore;
     #winMethod;
     #winner;
@@ -34,6 +36,18 @@ class Round extends BaseRecord {
 
     _cacheMatch(match) {
         this._cacheRecord('match', [match]);
+    }
+
+
+    async getPauses(queryOptions={}) {
+        const results = await this.getCachedAssociation('pauses',
+                                                        RoundPause,
+                                                        {round_id: this.id},
+                                                        queryOptions);
+        // Sort ascending by paused_at and store in private field for sync access
+        const sorted = results.slice().sort((a, b) => new Date(a.paused_at) - new Date(b.paused_at));
+        this.#pauses = sorted;
+        return sorted;
     }
 
 
@@ -72,12 +86,50 @@ class Round extends BaseRecord {
     /***********************************************************************************************
     * STATUS
     ***********************************************************************************************/
+    get paused() {
+        if (!this.#pauses || this.#pauses.length === 0) return false;
+        const last = this.#pauses[this.#pauses.length - 1];
+        return !last.resumed_at;
+    }
+
+
+    async pause() {
+        if (!this.started) throw new Error('Round has not started');
+        if (this.ended)    throw new Error('Round has already ended');
+
+        await this.getPauses();
+        if (this.paused) throw new Error('Round is already paused');
+
+        const roundPause = new RoundPause({round_id: this.id, paused_at: new Date()});
+        await roundPause.save();
+
+        this.clearCachedAssociation('pauses');
+        this.#pauses = null;
+    }
+
+
+    async resume() {
+        await this.getPauses();
+        if (!this.paused) throw new Error('Round is not paused');
+
+        const openPause = this.#pauses.find(p => !p.resumed_at);
+        openPause.resumed_at = new Date();
+        await openPause.save();
+
+        this.clearCachedAssociation('pauses');
+        this.#pauses = null;
+    }
+
+
     async end({submission, submitter}={}) {
         const where = {ended_at: null};
         const ridingTimeVotes = await this.getRidingTimeVotes({ where });
         for (const vote of ridingTimeVotes) {
             await vote.end();
         }
+
+        await this.getPauses();
+        if (this.paused) await this.resume();
 
         const match = await this.getMatch();
         if (submission) {
@@ -145,8 +197,9 @@ class Round extends BaseRecord {
 
 
     async #getScore(red, blue, judges) {
-        const votes = await this.getRidingTimeVotes();
-        return this.rules.scoreRound(red, blue, judges, votes);
+        const votes  = await this.getRidingTimeVotes();
+        const pauses = await this.getPauses();
+        return this.rules.scoreRound(red, blue, judges, votes, pauses);
     }
 
 
@@ -178,6 +231,7 @@ class Round extends BaseRecord {
             started_at:   this.started_at,
             ended_at:     this.ended_at,
             max_duration: maxDuration,
+            paused:       this.paused,
             score,
             result,
         }

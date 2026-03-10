@@ -214,27 +214,53 @@ describe('Authorizer', () =>  {
 
 
         describe('manage', () => {
-/*
-            it ('allows admins to manage', async () => {
-                const can   = await authorizer1.can('judge', match);
-                expect(judgeCan).toBeTruthy();
+            const master    = new User({id: TestHelpers.Faker.Text.randomString(10)});
+            const nonMaster = new User({id: TestHelpers.Faker.Text.randomString(10)});
+            const manageMatch = new Match();
+            const mockMat     = { creator_id: master.id };
+            manageMatch.getMat    = async () => mockMat;
+            manageMatch.getJudges = async () => [];
+
+            it ('allows the mat creator (master) to manage', async () => {
+                const can = await new Authorizer(master).can('manage', manageMatch);
+                expect(can).toBeTruthy();
             });
 
-            it ('allows the red competitor to manage', async () => {
-                const redCan    = await authorizer2.can('judge', match);
-                expect(redCan).toBeFalsy();
+            it ('does not allow a non-master user to manage', async () => {
+                const can = await new Authorizer(nonMaster).can('manage', manageMatch);
+                expect(can).toBeFalsy();
             });
 
-            it ('allows the blue competitor to manage', async () => {
-                const blueCan   = await authorizer3.can('judge', match);
-                expect(blueCan).toBeFalsy();
+            it ('does not allow a null user to manage', async () => {
+                const can = await new Authorizer(null).can('manage', manageMatch);
+                expect(can).toBeFalsy();
+            });
+        });
+
+
+        describe('pause', () => {
+            const master    = new User({id: TestHelpers.Faker.Text.randomString(10)});
+            const judgeUser = new User({id: TestHelpers.Faker.Text.randomString(10)});
+            const other     = new User({id: TestHelpers.Faker.Text.randomString(10)});
+            const pauseMatch = new Match();
+            const pauseMockMat = { creator_id: master.id };
+            pauseMatch.getMat    = async () => pauseMockMat;
+            pauseMatch.getJudges = async () => [judgeUser];
+
+            it ('allows the mat creator to pause', async () => {
+                const can = await new Authorizer(master).can('pause', pauseMatch);
+                expect(can).toBeTruthy();
             });
 
-            it ('allows others to manage', async () => {
-                const viewerCan = await authorizer4.can('judge', match);
-                expect(viewerCan).toBeFalsy();
+            it ('allows a judge (non-creator) to pause', async () => {
+                const can = await new Authorizer(judgeUser).can('pause', pauseMatch);
+                expect(can).toBeTruthy();
             });
-*/
+
+            it ('does not allow a non-judge non-creator to pause', async () => {
+                const can = await new Authorizer(other).can('pause', pauseMatch);
+                expect(can).toBeFalsy();
+            });
         });
 
 
