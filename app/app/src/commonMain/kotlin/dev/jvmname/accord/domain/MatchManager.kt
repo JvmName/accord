@@ -41,6 +41,7 @@ class MatchManager(
         }
     }
 
+    fun observeCurrentMatch(): Flow<Match?> = prefs.observeCurrentMatch()
 
     suspend fun createMatch(
         matCode: String,
@@ -134,6 +135,16 @@ class MatchManager(
             }
     }
 
+    suspend fun pauseRound(matchId: MatchId): NetworkResult<Match> {
+        return client.pauseRound(matchId)
+            .onSuccess { match -> cacheMatch(match) }
+    }
+
+    suspend fun resumeRound(matchId: MatchId): NetworkResult<Match> {
+        return client.resumeRound(matchId)
+            .onSuccess { match -> cacheMatch(match) }
+    }
+
     suspend fun startRidingTimeVote(
         matchId: MatchId,
         competitor: CompetitorColor
@@ -156,7 +167,6 @@ class MatchManager(
             }
     }
 
-    fun observeCurrentMatch(): Flow<Match?> = prefs.observeCurrentMatch()
 
     private fun cacheMatch(match: Match) {
         activeMatch.store(match)

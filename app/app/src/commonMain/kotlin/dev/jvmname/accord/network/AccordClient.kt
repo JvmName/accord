@@ -202,6 +202,24 @@ class AccordClient(private val httpClient: HttpClient) {
         }
     }
 
+    suspend fun pauseRound(matchId: MatchId): NetworkResult<Match> {
+        return withContext(Dispatchers.IO) {
+            catchRunning {
+                httpClient.post("match/${matchId.id}/rounds/pause")
+                    .body<ApiResult<MatchResponseData>>()
+            }.unwrapApiResult().map { it.match }
+        }
+    }
+
+    suspend fun resumeRound(matchId: MatchId): NetworkResult<Match> {
+        return withContext(Dispatchers.IO) {
+            catchRunning {
+                httpClient.post("match/${matchId.id}/rounds/resume")
+                    .body<ApiResult<MatchResponseData>>()
+            }.unwrapApiResult().map { it.match }
+        }
+    }
+
     // ========================================================================
     // Riding Time Votes
     // ========================================================================

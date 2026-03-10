@@ -1,15 +1,15 @@
 package dev.jvmname.accord.di
 
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
-import dev.jvmname.accord.domain.control.rounds.RoundTracker
-import dev.jvmname.accord.domain.control.score.ScoreKeeper
-import dev.jvmname.accord.network.MatchId
+import dev.jvmname.accord.domain.session.JudgingSession
+import dev.jvmname.accord.domain.session.NetworkJudgeSession
+import dev.jvmname.accord.domain.session.SoloMatchSession
+import dev.jvmname.accord.domain.session.SoloSession
 import dev.jvmname.accord.ui.control.ConsensusControlTimePresenter
 import dev.jvmname.accord.ui.control.ControlTimeType
 import dev.jvmname.accord.ui.control.SoloControlTimePresenter
 import dev.zacsweers.metro.GraphExtension
 import dev.zacsweers.metro.Provides
-import dev.zacsweers.metro.Qualifier
 
 /**
  * Dependency graph for a single match session.
@@ -27,32 +27,23 @@ interface MatchGraph {
         operator fun invoke(
             @Provides config: MatchConfig,
             @Provides controlType: ControlTimeType,
-            @Provides matchId: MatchId? = null
         ): MatchGraph
     }
 
     companion object {
         @Provides
-        fun provideScoreKeeper(
-            controlType: ControlTimeType,
-                @ForControlType(ControlTimeType.SOLO) solo: Lazy<RoundTracker>,
-                @ForControlType(ControlTimeType.CONSENSUS) consensus: Lazy<RoundTracker>,
-        ): RoundTracker = when (controlType) {
-            ControlTimeType.SOLO -> solo.value
-            ControlTimeType.CONSENSUS -> consensus.value
-        }
+        fun provideSoloSession(
+            solo: SoloMatchSession,
+        ): SoloSession = solo
 
         @Provides
-        fun provideRoundTracker(
+        fun provideJudgingSession(
             controlType: ControlTimeType,
-            @ForControlType(ControlTimeType.SOLO) solo: Lazy<ScoreKeeper>,
-            @ForControlType(ControlTimeType.CONSENSUS) consensus: Lazy<ScoreKeeper>,
-        ): ScoreKeeper = when (controlType) {
+            solo: Lazy<SoloMatchSession>,
+            judge: Lazy<NetworkJudgeSession>,
+        ): JudgingSession = when (controlType) {
             ControlTimeType.SOLO -> solo.value
-            ControlTimeType.CONSENSUS -> consensus.value
+            ControlTimeType.CONSENSUS -> judge.value
         }
     }
 }
-
-@Qualifier
-annotation class ForControlType(val type: ControlTimeType)

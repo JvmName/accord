@@ -8,10 +8,7 @@ import androidx.compose.runtime.remember
 import co.touchlab.kermit.Logger
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
-import dev.jvmname.accord.domain.control.ButtonPressTracker
-import dev.jvmname.accord.domain.control.ScoreHapticFeedbackHelper
-import dev.jvmname.accord.domain.control.rounds.RoundTracker
-import dev.jvmname.accord.domain.control.score.ScoreKeeper
+import dev.jvmname.accord.domain.session.JudgingSession
 import dev.jvmname.accord.prefs.Prefs
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
@@ -29,10 +26,7 @@ class ConsensusControlTimePresenter(
     @Assisted private val screen: ControlTimeScreen,
     @Assisted private val navigator: Navigator,
     private val prefs: Prefs,
-    private val buttonTracker: ButtonPressTracker,
-    private val scoreKeeper: ScoreKeeper,
-    private val hapticFeedbackHelper: ScoreHapticFeedbackHelper,
-    private val roundTracker: RoundTracker,
+    private val session: JudgingSession,
 ) : Presenter<ControlTimeState> {
 
     @Composable
@@ -41,9 +35,9 @@ class ConsensusControlTimePresenter(
             value = prefs.observeMatInfo().filterNotNull().first().name
         }
 
-        val score by remember { scoreKeeper.score }.collectAsState()
-        val hapticEvent by remember { hapticFeedbackHelper.hapticEvents }.collectAsState(null)
-        val roundEvent by remember { roundTracker.roundEvent }.collectAsState()
+        val score by remember { session.score }.collectAsState()
+        val hapticEvent by remember { session.hapticEvents }.collectAsState(null)
+        val roundEvent by remember { session.roundEvent }.collectAsState()
 
         val matchState = MatchState(
             score = score,
@@ -61,25 +55,24 @@ class ConsensusControlTimePresenter(
 
                     is ControlTimeEvent.ButtonPress -> {
                         Logger.d { "Presenter press ${it.competitor}" }
-                        buttonTracker.recordPress(it.competitor)
+                        session.recordPress(it.competitor)
                     }
 
                     is ControlTimeEvent.ButtonRelease -> {
                         Logger.d { "Presenter release ${it.competitor}" }
-                        buttonTracker.recordRelease(it.competitor)
+                        session.recordRelease(it.competitor)
                     }
 
                     is ControlTimeEvent.ManualPointEdit -> {
-                        scoreKeeper.manualEdit(it.competitor, it.action)
+                        Logger.d { "ManualPointEdit not available for judges" }
                     }
 
                     ControlTimeEvent.BeginNextRound -> {
-                        roundTracker.endRound()
-                        roundTracker.startRound()
+                        Logger.d { "BeginNextRound not available for judges" }
                     }
 
                     ControlTimeEvent.Pause -> {
-                        roundTracker.pause()
+                        session.pause()
                     }
 
                     ControlTimeEvent.Reset -> {
@@ -87,11 +80,11 @@ class ConsensusControlTimePresenter(
                     }
 
                     ControlTimeEvent.Resume -> {
-                        roundTracker.resume()
+                        session.resume()
                     }
 
                     ControlTimeEvent.Submission -> {
-                        roundTracker.endRound()
+                        Logger.d { "Submission not available for judges" }
                     }
                 }
             }

@@ -5,6 +5,8 @@ import dev.jvmname.accord.parcel.CommonParcelable
 import dev.jvmname.accord.parcel.CommonParcelize
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 @[Serializable(with = ApiResultSerializer::class)]
@@ -166,6 +168,7 @@ class Round(
     @SerialName("started_at") val startedAt: Instant,
     @SerialName("ended_at") val endedAt: Instant?,
     val score: Map<UserId, Int>,
+    @SerialName("time_remaining") val timeRemaining: Int?,
     val result: RoundResult,
 ) : CommonParcelable
 
@@ -228,3 +231,6 @@ value class JudgesResponseData(val judges: List<User>)
 
 @[JvmInline Serializable]
 value class ViewersResponseData(val viewers: List<User>)
+
+val Round.remainingDuration: Duration?
+    get() = timeRemaining?.seconds

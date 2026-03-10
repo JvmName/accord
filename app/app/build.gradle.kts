@@ -87,6 +87,13 @@ kotlin {
             }
         }
 
+        commonTest {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation(libs.kotlinx.coroutines.test)
+            }
+        }
+
         configureEach {
             @OptIn(ExperimentalKotlinGradlePluginApi::class)
             compilerOptions {

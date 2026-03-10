@@ -3,16 +3,17 @@ package dev.jvmname.accord.domain.control
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import dev.drewhamilton.poko.Poko
-import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.control.ButtonEvent.SteadyState.SteadyStateError
-import dev.jvmname.accord.domain.control.score.ScoreKeeper
+import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.ui.common.Consumable
-import dev.zacsweers.metro.Inject
-import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.Assisted
+import dev.zacsweers.metro.AssistedFactory
+import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
@@ -24,17 +25,25 @@ import top.ltfan.multihaptic.DelayType
 import top.ltfan.multihaptic.HapticEffect
 import kotlin.time.Duration.Companion.milliseconds
 
-@[Inject SingleIn(MatchScope::class)]
+@AssistedInject
 class ScoreHapticFeedbackHelper(
-    buttonPressTracker: ButtonPressTracker,
-    scoreKeeper: ScoreKeeper,
+    @Assisted val buttonEvents: SharedFlow<ButtonEvent>,
+    @Assisted val score: StateFlow<Score>,
     scope: CoroutineScope,
 ) {
     private val _hapticEvents = MutableSharedFlow<HapticEvent>()
     val hapticEvents: SharedFlow<HapticEvent> = _hapticEvents.asSharedFlow()
 
+    @AssistedFactory
+    fun interface Factory {
+        fun create(
+            buttonEvents: SharedFlow<ButtonEvent>,
+            score: StateFlow<Score>,
+        ): ScoreHapticFeedbackHelper
+    }
+
     init {
-        val buttonHapticTriggers: Flow<HapticTrigger> = buttonPressTracker.buttonEvents
+        val buttonHapticTriggers: Flow<HapticTrigger> = buttonEvents
             .mapNotNull { event ->
                 when (event) {
                     is ButtonEvent.Press -> HapticTrigger.ButtonPress
@@ -48,8 +57,8 @@ class ScoreHapticFeedbackHelper(
                 }
             }
 
-        val scoreHapticTriggers: Flow<HapticTrigger> = scoreKeeper.score
-            .runningFold(scoreKeeper.score.value to null as HapticTrigger?) { (prev, _), current ->
+        val scoreHapticTriggers: Flow<HapticTrigger> = score
+            .runningFold(score.value to null as HapticTrigger?) { (prev, _), current ->
                 current to when {
                     // Check for technical superiority first (higher priority)
                     prev.techFallWin == null && current.techFallWin != null -> HapticTrigger.TechFallWin
@@ -138,6 +147,16 @@ sealed interface HapticTrigger {
             }
             spin {
                 delay = ms
+                delayType = DelayType.Pause
+            }
+        }
+    }
+
+    data object TimeExpired : HapticTrigger {
+        override val effect = HapticEffect {
+            thud
+            spin {
+                delay = 80.milliseconds
                 delayType = DelayType.Pause
             }
         }

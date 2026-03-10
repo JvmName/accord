@@ -1,54 +1,63 @@
-package dev.jvmname.accord.domain.control.score
+package dev.jvmname.accord.domain.session
 
 import co.touchlab.kermit.Logger
-import dev.jvmname.accord.di.ForControlType
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.ButtonEvent
 import dev.jvmname.accord.domain.control.ButtonPressTracker
+import dev.jvmname.accord.domain.control.HapticEvent
+import dev.jvmname.accord.domain.control.ScoreHapticFeedbackHelper
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
-import dev.jvmname.accord.domain.control.rounds.RoundTracker
+import dev.jvmname.accord.domain.control.rounds.Timer
+import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.ui.control.ControlTimeEvent
-import dev.jvmname.accord.ui.control.ControlTimeType
-import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @Inject
 @SingleIn(MatchScope::class)
-@ContributesBinding(MatchScope::class)
-@ForControlType(ControlTimeType.SOLO)
-class RealSoloScoreKeeper(
-    tracker: ButtonPressTracker,
-    roundTracker: RoundTracker,
-    scope: CoroutineScope,
+class SoloMatchSession(
+    private val buttonPressTracker: ButtonPressTracker,
+    private val timer: Timer,
+    private val scope: CoroutineScope,
     private val config: MatchConfig,
-) : ScoreKeeper {
+    private val hapticFactory: ScoreHapticFeedbackHelper.Factory,
+) : SoloSession {
+
+    private var roundNumber: Int = 1
+    private var overallIndex: Int = 0
+    private val totalRounds: Int = config.rounds.count { it is RoundInfo.Round }
+    private val _roundEvent = MutableStateFlow<RoundEvent?>(null)
+    override val roundEvent: StateFlow<RoundEvent?> = _roundEvent.asStateFlow()
 
     private var latestRoundEvent = AtomicReference<RoundEvent?>(null)
-    private val _score = MutableStateFlow(
-        Score(
-            redPoints = 0,
-            bluePoints = 0,
-            activeControlTime = null,
-            activeCompetitor = null,
-            techFallWin = null
-        )
-    )
+    private val _score = MutableStateFlow(Score(0, 0, null, null, null))
     override val score: StateFlow<Score> = _score.asStateFlow()
+
+    private val hapticHelper = hapticFactory.create(
+        buttonEvents = buttonPressTracker.buttonEvents,
+        score = _score,
+    )
+    override val hapticEvents: SharedFlow<HapticEvent> = hapticHelper.hapticEvents
 
     companion object {
         private val OneSecond = 1.seconds
@@ -56,7 +65,7 @@ class RealSoloScoreKeeper(
     }
 
     init {
-        tracker.buttonEvents
+        buttonPressTracker.buttonEvents
             .onEach { event ->
                 when (event) {
                     is ButtonEvent.Holding -> {
@@ -79,8 +88,7 @@ class RealSoloScoreKeeper(
                             val totalSessionTime = previousTime + OneSecond
 
                             val previousSessionPoints = (previousTime / PointThreshold).toInt()
-                            val currentSessionPoints =
-                                (totalSessionTime / PointThreshold).toInt()
+                            val currentSessionPoints = (totalSessionTime / PointThreshold).toInt()
                             val newPointsThisTick = currentSessionPoints - previousSessionPoints
 
                             val (newRedPoints, newBluePoints) = when (event.competitor) {
@@ -114,30 +122,143 @@ class RealSoloScoreKeeper(
             }
             .launchIn(scope)
 
-        // Auto-reset scores on transition from ENDED to STARTED
-        roundTracker.roundEvent
+        // Auto-reset scores on transition from Break ENDED to Round STARTED
+        _roundEvent
             .onEach { latestRoundEvent.exchange(it) }
             .scan(Pair<RoundEvent?, RoundEvent?>(null, null)) { (_, current), new ->
                 current to new
             }
             .onEach { (previous, current) ->
-                Logger.d { "State transition: prev=${previous?.state}/${previous?.round} -> curr=${current?.state}/${current?.round}" }
                 if (previous?.round is RoundInfo.Break
                     && current?.state == RoundEvent.RoundState.STARTED
                     && current.round is RoundInfo.Round
                 ) {
-                    Logger.d { "Round transitioning from ENDED Break to STARTED Round, resetting scores" }
                     resetScores()
                 }
             }
             .launchIn(scope)
+
+        // Auto-end round on tech fall win
+        scope.launch {
+            _score
+                .runningFold(null as Competitor? to null as Competitor?) { (_, prev), current ->
+                    prev to current.techFallWin
+                }
+                .drop(1)
+                .collect { (prev, current) ->
+                    if (prev == null && current != null) {
+                        endRound()
+                    }
+                }
+        }
+    }
+
+    override fun recordPress(competitor: Competitor) {
+        buttonPressTracker.recordPress(competitor)
+    }
+
+    override fun recordRelease(competitor: Competitor) {
+        buttonPressTracker.recordRelease(competitor)
+    }
+
+    override fun startRound() {
+        if (_roundEvent.value != null) {
+            nextRound()
+        }
+
+        if (overallIndex >= config.rounds.size) return
+
+        val round = config[overallIndex]
+        _roundEvent.value = RoundEvent(
+            remaining = round.duration,
+            roundNumber = roundNumber,
+            totalRounds = totalRounds,
+            round = round,
+            state = RoundEvent.RoundState.STARTED
+        )
+        runTimer(round)
+    }
+
+    override fun pause() {
+        timer.pause()
+        _roundEvent.update {
+            it?.copy(state = RoundEvent.RoundState.PAUSED)
+        }
+    }
+
+    override fun resume() {
+        timer.resume()
+    }
+
+    override fun endRound() {
+        timer.cancel()
+
+        _roundEvent.update {
+            it ?: return@update null
+            RoundEvent(
+                remaining = it.remaining,
+                roundNumber = it.roundNumber,
+                totalRounds = totalRounds,
+                round = it.round,
+                state = RoundEvent.RoundState.ENDED
+            )
+        }
+    }
+
+    private fun nextRound() {
+        overallIndex++
+
+        // Increment round number only for actual Rounds, not Breaks
+        if (overallIndex < config.rounds.size && config[overallIndex] is RoundInfo.Round) {
+            roundNumber++
+        }
+
+        if (overallIndex >= config.rounds.size) {
+            // No more rounds - emit final End event
+            _roundEvent.update {
+                RoundEvent(
+                    remaining = Duration.ZERO,
+                    roundNumber = roundNumber,
+                    totalRounds = totalRounds,
+                    round = it!!.round,
+                    state = RoundEvent.RoundState.MATCH_ENDED
+                )
+            }
+        }
+    }
+
+    private fun runTimer(baseRound: RoundInfo) {
+        scope.launch {
+            timer.start(baseRound.duration, 500.milliseconds)
+                .dropWhile { it == Duration.ZERO }
+                .collect { remaining ->
+                    when (remaining) {
+                        Duration.ZERO -> {
+                            endRound()
+                            startRound()
+                        }
+
+                        else -> {
+                            _roundEvent.update {
+                                RoundEvent(
+                                    remaining = remaining,
+                                    roundNumber = roundNumber,
+                                    totalRounds = totalRounds,
+                                    round = config[overallIndex],
+                                    state = RoundEvent.RoundState.STARTED
+                                )
+                            }
+                        }
+                    }
+                }
+        }
     }
 
     override fun manualEdit(
         competitor: Competitor,
         action: ControlTimeEvent.ManualPointEdit.Action
     ) {
-        //double-check we're paused
+        // Guard: only allow edits when paused
         if (latestRoundEvent.load()?.state != RoundEvent.RoundState.PAUSED) {
             Logger.d { "ignoring $action because state is not paused, it's ${latestRoundEvent.load()?.state}" }
             return
@@ -156,14 +277,8 @@ class RealSoloScoreKeeper(
         }
     }
 
-    override fun resetScores() {
-        _score.value = Score(
-            redPoints = 0,
-            bluePoints = 0,
-            activeControlTime = null,
-            activeCompetitor = null,
-            techFallWin = null
-        )
+    private fun resetScores() {
+        _score.value = Score(0, 0, null, null, null)
     }
 
     private fun hasTechFallWin(redPoints: Int, bluePoints: Int): Competitor? {

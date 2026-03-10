@@ -2,16 +2,7 @@ package dev.jvmname.accord.domain.control.score
 
 import androidx.compose.runtime.Immutable
 import dev.jvmname.accord.domain.Competitor
-import dev.jvmname.accord.ui.control.ControlTimeEvent.ManualPointEdit
-import kotlinx.coroutines.flow.StateFlow
 import kotlin.time.Duration
-
-
-interface ScoreKeeper {
-    val score: StateFlow<Score>
-    fun resetScores()
-    fun manualEdit(competitor: Competitor, action: ManualPointEdit.Action)
-}
 
 @Immutable
 data class Score(

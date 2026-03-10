@@ -223,7 +223,6 @@ WebSocket authentication uses `socket.handshake.auth.apiToken`.
 
 
 ## Build Queue
-
 For expensive operations, ALWAYS use the `run_task` MCP tool instead of Bash.
 
 **Commands that MUST use run_task:**
@@ -237,3 +236,7 @@ For expensive operations, ALWAYS use the `run_task` MCP tool instead of Bash.
 - env_vars: Optional like "KEY=value,KEY2=value2"
 
 NEVER run these via Bash. Always use run_task MCP tool.
+
+## Plans
+
+All plans will always be written into `.ai/plans/<name-of-feature>`. Never put any plans in any folder within `/app` or `/server`
