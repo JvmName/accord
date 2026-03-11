@@ -19,4 +19,5 @@ class Consumable<T>(private val value: T) {
     override fun toString(): String = value.toString()
 }
 
+@Suppress("NOTHING_TO_INLINE")
 inline fun <T> consumableOf(value: T) = Consumable(value)

@@ -8,11 +8,11 @@ import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.screen.Screen
 import dev.drewhamilton.poko.Poko
 import dev.jvmname.accord.domain.Competitor
-import dev.jvmname.accord.domain.control.BaseRound
 import dev.jvmname.accord.domain.control.HapticEvent
-import dev.jvmname.accord.domain.control.RoundEvent
-import dev.jvmname.accord.domain.control.RoundEvent.RoundState
-import dev.jvmname.accord.domain.control.Score
+import dev.jvmname.accord.domain.control.rounds.RoundEvent
+import dev.jvmname.accord.domain.control.rounds.RoundEvent.RoundState
+import dev.jvmname.accord.domain.control.rounds.RoundInfo
+import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.parcel.CommonParcelize
 
 
@@ -67,7 +67,7 @@ fun ControlTimeState.rememberControlActions(): RoundControlActions {
     return remember(event?.roundNumber, event?.totalRounds, state, event?.round) {
 
         val isPaused = state == RoundState.PAUSED
-        val isActive = state == RoundState.STARTED && event.round is BaseRound.Round
+        val isActive = state == RoundState.STARTED && event.round is RoundInfo.Round
 
         RoundControlActions(
             beginNextRound = { eventSink(ControlTimeEvent.BeginNextRound) },

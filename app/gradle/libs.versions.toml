@@ -3,20 +3,22 @@ agp = "8.13.2"
 android-compileSdk = "36"
 android-minSdk = "24"
 android-targetSdk = "36"
-androidx-activity = "1.12.2"
-circuit = "0.31.0"
-composeHotReload = "1.1.0-alpha03"
-composeMultiplatform = "1.10.0-rc02"
+androidx-activity = "1.12.4"
+circuit = "0.33.1"
+composeHotReload = "1.1.0-alpha05"
+composeMultiplatform = "1.10.2"
 coroutines = "1.10.2"
 datastore = "1.2.0"
-kermit = "2.0.8"
-kotlin = "2.3.0"
+kermit = "2.1.0"
+kotlin = "2.3.10"
+ksp = "2.3.5"
 kotlinResult = "2.1.0"
-ktor = "3.3.3"
+ktor = "3.4.1"
 material3 = "1.10.0-alpha05"
 materialIconsExtended = "1.7.3"
-serialization = "1.10.0-RC"
-multihaptic = "0.2.2"
+serialization = "1.10.0"
+multihaptic = "0.3.0"
+socketio = "2.1.2"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
@@ -43,18 +45,19 @@ ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", v
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 
 ktor-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 ktor-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
-ktor-websockets = { module = "io.ktor:ktor-client-websockets", version.ref = "ktor" }
 serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 
 multihaptic = { module = "top.ltfan.multihaptic:multihaptic-compose", version.ref = "multihaptic" }
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 kotlin-result = { module = "com.michael-bull.kotlin-result:kotlin-result", version.ref = "kotlinResult" }
 kotlin-result-coroutines = { module = "com.michael-bull.kotlin-result:kotlin-result-coroutines", version.ref = "kotlinResult" }
+socketio-client = { module = "io.socket:socket.io-client", version.ref = "socketio" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
@@ -66,6 +69,6 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 kotlinParcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
 serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
-metro = "dev.zacsweers.metro:0.9.3"
-poko = "dev.drewhamilton.poko:0.21.0"
-ksp = { id = "com.google.devtools.ksp", version = "2.3.3" }
+metro = "dev.zacsweers.metro:0.11.2"
+poko = "dev.drewhamilton.poko:0.21.3"
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

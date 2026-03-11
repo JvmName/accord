@@ -48,7 +48,6 @@ kotlin {
                 implementation(libs.ktor.core)
                 implementation(libs.ktor.negotiation)
                 implementation(libs.ktor.json)
-                implementation(libs.ktor.websockets)
                 implementation(libs.serialization.json)
                 implementation(libs.androidx.datastore)
 
@@ -60,18 +59,39 @@ kotlin {
             }
         }
 
-        androidMain.dependencies {
-            implementation(libs.ui.tooling.preview)
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.compose.ui.tooling)
-            implementation(libs.kotlinx.coroutines.android)
-            implementation(libs.ktor.client.okhttp)
-            implementation(libs.circuitx.android)
+        val commonJvm by creating {
+            dependsOn(commonMain.get())
+
+            dependencies {
+                implementation(libs.socketio.client)
+                implementation(libs.ktor.client.okhttp)
+                implementation(libs.ui.tooling.preview)
+                implementation(libs.compose.ui.tooling)
+            }
         }
-        jvmMain.dependencies {
-            implementation(compose.desktop.currentOs)
-            implementation(libs.kotlinx.coroutines.swing)
-            implementation(libs.ktor.client.okhttp)
+
+        androidMain {
+            dependsOn(commonJvm)
+            dependencies {
+                implementation(libs.androidx.activity.compose)
+                implementation(libs.kotlinx.coroutines.android)
+                implementation(libs.circuitx.android)
+            }
+        }
+
+        jvmMain {
+            dependsOn(commonJvm)
+            dependencies {
+                implementation(compose.desktop.currentOs)
+                implementation(libs.kotlinx.coroutines.swing)
+            }
+        }
+
+        commonTest {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation(libs.kotlinx.coroutines.test)
+            }
         }
 
         configureEach {
@@ -85,6 +105,7 @@ kotlin {
                     "androidx.compose.ui.ExperimentalComposeUiApi",
                     "kotlinx.serialization.ExperimentalSerializationApi",
                     "kotlin.concurrent.atomics.ExperimentalAtomicApi",
+                    "kotlinx.serialization.InternalSerializationApi",
                     "androidx.compose.material.ExperimentalMaterial3ExpressiveApi",
                     "androidx.compose.material3.ExperimentalMaterial3ExpressiveApi",
                 )

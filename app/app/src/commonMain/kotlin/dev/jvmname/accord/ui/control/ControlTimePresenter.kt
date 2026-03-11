@@ -1,7 +1,6 @@
 package dev.jvmname.accord.ui.control
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -11,11 +10,9 @@ import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.di.LocalGraph
-import dev.jvmname.accord.domain.control.ButtonPressTracker
-import dev.jvmname.accord.domain.control.RoundConfig
-import dev.jvmname.accord.domain.control.RoundTracker
-import dev.jvmname.accord.domain.control.ScoreHapticFeedbackHelper
-import dev.jvmname.accord.domain.control.ScoreKeeper
+import dev.jvmname.accord.domain.control.rounds.MatchConfig
+import dev.jvmname.accord.domain.session.JudgingSession
+import dev.jvmname.accord.domain.session.RoundController
 import dev.jvmname.accord.prefs.Prefs
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
@@ -33,14 +30,11 @@ class DelegatingControlTimePresenter(
     override fun present(): ControlTimeState {
         val accordGraph = LocalGraph.current
         val matchGraph = remember(screen) {
-            accordGraph.matchGraphFactory(RoundConfig.RdojoKombat)
+            accordGraph.matchGraphFactory(MatchConfig.RdojoKombat, screen.type)
         }
 
         val delegate: Presenter<ControlTimeState> = remember(screen, navigator, matchGraph) {
-            when (screen.type) {
-                ControlTimeType.SOLO -> matchGraph.soloFactory.create(screen, navigator)
-                ControlTimeType.CONSENSUS -> TODO()
-            }
+            matchGraph.controlTimePresenterFactory(screen, navigator)
         }
 
         return delegate.present()
@@ -55,40 +49,27 @@ class DelegatingControlTimePresenter(
 
 
 @AssistedInject
-class SoloControlTimePresenter(
-    @Suppress("unused")
+class ControlTimePresenter(
     @Assisted private val screen: ControlTimeScreen,
     @Assisted private val navigator: Navigator,
     private val prefs: Prefs,
-    private val buttonTracker: ButtonPressTracker,
-    private val scoreKeeper: ScoreKeeper,
-    private val hapticFeedbackHelper: ScoreHapticFeedbackHelper,
-    private val roundTracker: RoundTracker,
+    private val session: JudgingSession,
 ) : Presenter<ControlTimeState> {
-
     @Composable
     override fun present(): ControlTimeState {
-
         val matName by produceState("") {
             value = prefs.observeMatInfo().filterNotNull().first().name
         }
 
-        val score by remember { scoreKeeper.score }.collectAsState()
-        val hapticEvent by remember { hapticFeedbackHelper.hapticEvents }.collectAsState(null)
-        val roundEvent by remember { roundTracker.roundEvent }.collectAsState()
+        val score by remember { session.score }.collectAsState()
+        val hapticEvent by remember { session.hapticEvents }.collectAsState(null)
+        val roundEvent by remember { session.roundEvent }.collectAsState()
 
         val matchState = MatchState(
             score = score,
             haptic = hapticEvent,
             roundInfo = roundEvent,
         )
-
-        if (score.techFallWin != null) {
-            LaunchedEffect(score.techFallWin) {
-                roundTracker.endRound()
-            }
-        }
-
 
         return ControlTimeState(
             matName = matName,
@@ -99,35 +80,36 @@ class SoloControlTimePresenter(
                     ControlTimeEvent.Back -> navigator.pop()
                     is ControlTimeEvent.ButtonPress -> {
                         Logger.d { "Presenter press ${it.competitor}" }
-                        buttonTracker.recordPress(it.competitor)
+                        session.recordPress(it.competitor)
                     }
 
                     is ControlTimeEvent.ButtonRelease -> {
                         Logger.d { "Presenter release ${it.competitor}" }
-                        buttonTracker.recordRelease(it.competitor)
+                        session.recordRelease(it.competitor)
                     }
 
                     is ControlTimeEvent.ManualPointEdit -> {
-                        scoreKeeper.manualEdit(it.competitor, it.action)
+                        (session as? RoundController)?.manualEdit(it.competitor, it.action)
                     }
 
-
                     ControlTimeEvent.BeginNextRound -> {
-                        roundTracker.endRound()
-                        roundTracker.startRound()
+                        (session as? RoundController)?.let { rc ->
+                            rc.endRound()
+                            rc.startRound()
+                        }
                     }
 
                     ControlTimeEvent.Pause -> {
-                        roundTracker.pause()
+                        session.pause()
                     }
 
                     ControlTimeEvent.Reset -> TODO()
                     ControlTimeEvent.Resume -> {
-                        roundTracker.resume()
+                        session.resume()
                     }
 
                     ControlTimeEvent.Submission -> {
-                        roundTracker.endRound()
+                        (session as? RoundController)?.endRound()
                     }
 
                 }
@@ -137,6 +119,6 @@ class SoloControlTimePresenter(
 
     @AssistedFactory
     fun interface Factory {
-        fun create(screen: ControlTimeScreen, navigator: Navigator): SoloControlTimePresenter
+        operator fun invoke(screen: ControlTimeScreen, navigator: Navigator): ControlTimePresenter
     }
 }
