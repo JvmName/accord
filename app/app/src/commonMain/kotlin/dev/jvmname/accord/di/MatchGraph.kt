@@ -4,10 +4,8 @@ import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.session.JudgingSession
 import dev.jvmname.accord.domain.session.NetworkJudgeSession
 import dev.jvmname.accord.domain.session.SoloMatchSession
-import dev.jvmname.accord.domain.session.SoloSession
-import dev.jvmname.accord.ui.control.ConsensusControlTimePresenter
+import dev.jvmname.accord.ui.control.ControlTimePresenter
 import dev.jvmname.accord.ui.control.ControlTimeType
-import dev.jvmname.accord.ui.control.SoloControlTimePresenter
 import dev.zacsweers.metro.GraphExtension
 import dev.zacsweers.metro.Provides
 
@@ -19,8 +17,7 @@ import dev.zacsweers.metro.Provides
 @GraphExtension(MatchScope::class)
 interface MatchGraph {
 
-    val soloFactory: SoloControlTimePresenter.Factory
-    val consensusFactory: ConsensusControlTimePresenter.Factory
+    val controlTimePresenterFactory: ControlTimePresenter.Factory
 
     @GraphExtension.Factory
     interface Factory {
@@ -31,11 +28,6 @@ interface MatchGraph {
     }
 
     companion object {
-        @Provides
-        fun provideSoloSession(
-            solo: SoloMatchSession,
-        ): SoloSession = solo
-
         @Provides
         fun provideJudgingSession(
             controlType: ControlTimeType,

@@ -11,7 +11,8 @@ import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.di.LocalGraph
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
-import dev.jvmname.accord.domain.session.SoloSession
+import dev.jvmname.accord.domain.session.JudgingSession
+import dev.jvmname.accord.domain.session.RoundController
 import dev.jvmname.accord.prefs.Prefs
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
@@ -33,10 +34,7 @@ class DelegatingControlTimePresenter(
         }
 
         val delegate: Presenter<ControlTimeState> = remember(screen, navigator, matchGraph) {
-            when (screen.type) {
-                ControlTimeType.SOLO -> matchGraph.soloFactory.create(screen, navigator)
-                ControlTimeType.CONSENSUS -> matchGraph.consensusFactory.create(screen, navigator)
-            }
+            matchGraph.controlTimePresenterFactory(screen, navigator)
         }
 
         return delegate.present()
@@ -51,17 +49,14 @@ class DelegatingControlTimePresenter(
 
 
 @AssistedInject
-class SoloControlTimePresenter(
-    @Suppress("unused")
+class ControlTimePresenter(
     @Assisted private val screen: ControlTimeScreen,
     @Assisted private val navigator: Navigator,
     private val prefs: Prefs,
-    private val session: SoloSession,
+    private val session: JudgingSession,
 ) : Presenter<ControlTimeState> {
-
     @Composable
     override fun present(): ControlTimeState {
-
         val matName by produceState("") {
             value = prefs.observeMatInfo().filterNotNull().first().name
         }
@@ -94,13 +89,14 @@ class SoloControlTimePresenter(
                     }
 
                     is ControlTimeEvent.ManualPointEdit -> {
-                        session.manualEdit(it.competitor, it.action)
+                        (session as? RoundController)?.manualEdit(it.competitor, it.action)
                     }
 
-
                     ControlTimeEvent.BeginNextRound -> {
-                        session.endRound()
-                        session.startRound()
+                        (session as? RoundController)?.let { rc ->
+                            rc.endRound()
+                            rc.startRound()
+                        }
                     }
 
                     ControlTimeEvent.Pause -> {
@@ -113,7 +109,7 @@ class SoloControlTimePresenter(
                     }
 
                     ControlTimeEvent.Submission -> {
-                        session.endRound()
+                        (session as? RoundController)?.endRound()
                     }
 
                 }
@@ -123,6 +119,6 @@ class SoloControlTimePresenter(
 
     @AssistedFactory
     fun interface Factory {
-        fun create(screen: ControlTimeScreen, navigator: Navigator): SoloControlTimePresenter
+        operator fun invoke(screen: ControlTimeScreen, navigator: Navigator): ControlTimePresenter
     }
 }

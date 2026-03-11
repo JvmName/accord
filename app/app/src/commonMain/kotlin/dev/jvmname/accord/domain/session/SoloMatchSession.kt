@@ -40,7 +40,7 @@ class SoloMatchSession(
     private val timer: Timer,
     private val scope: CoroutineScope,
     private val config: MatchConfig,
-    private val hapticFactory: ScoreHapticFeedbackHelper.Factory,
+    hapticFactory: ScoreHapticFeedbackHelper.Factory,
 ) : SoloSession {
 
     private var roundNumber: Int = 1
