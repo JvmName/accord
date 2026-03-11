@@ -5,6 +5,7 @@ class RidingTimeCalculator {
     #ridingTime;
     #votes;
     #voteThreshold;
+    #events = [];
     #pendingControlTime = 0;
     #paused = false;
     #pauses;
@@ -26,37 +27,46 @@ class RidingTimeCalculator {
 
     calculate() {
         this.#ridingTime = 0;
+        this.#collectEvents();
+        this.#sortEvents();
+        this.#processEvents();
+    }
 
-        // Build combined event list from votes and pauses
-        const events = [];
+
+    #collectEvents() {
+        this.#events = [];
 
         for (const vote of this.#votes) {
-            events.push({ time: new Date(vote.started_at), type: 'voteStart', vote });
+            this.#events.push({ time: new Date(vote.started_at), type: 'voteStart', vote });
             if (vote.ended_at) {
-                events.push({ time: new Date(vote.ended_at), type: 'voteEnd', vote });
+                this.#events.push({ time: new Date(vote.ended_at), type: 'voteEnd', vote });
             }
         }
 
         for (const pause of this.#pauses) {
             if (pause.paused_at) {
-                events.push({ time: new Date(pause.paused_at), type: 'pausedAt' });
+                this.#events.push({ time: new Date(pause.paused_at), type: 'pausedAt' });
             }
             if (pause.resumed_at) {
-                events.push({ time: new Date(pause.resumed_at), type: 'resumedAt' });
+                this.#events.push({ time: new Date(pause.resumed_at), type: 'resumedAt' });
             }
         }
+    }
 
-        // Sort all events chronologically; for ties, process pauses before votes
-        // so that a pause at the exact same time as a vote is handled in a predictable order
-        events.sort((a, b) => {
+
+    #sortEvents() {
+        // Sort chronologically; for ties, process pause events before vote events
+        this.#events.sort((a, b) => {
             const diff = a.time - b.time;
             if (diff !== 0) return diff;
-            // paused_at / resumed_at before vote events at same timestamp
             const order = { pausedAt: 0, resumedAt: 0, voteStart: 1, voteEnd: 1 };
             return (order[a.type] || 0) - (order[b.type] || 0);
         });
+    }
 
-        for (const event of events) {
+
+    #processEvents() {
+        for (const event of this.#events) {
             if (event.type === 'voteStart') {
                 this.startVote(event.vote);
             } else if (event.type === 'voteEnd') {

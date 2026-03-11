@@ -38,8 +38,7 @@ class RoundsController extends ServerController {
 
         const round = await this.currentMatch.getLastRound();
         if (!round || !round.started || round.ended) {
-            this.statusCode = 422;
-            await this.render({errors: {matchId: ['No active round to pause']}});
+            await this.renderErrors({matchId: ['No active round to pause']}, 422);
             return;
         }
 
@@ -58,8 +57,7 @@ class RoundsController extends ServerController {
 
         const round = await this.currentMatch.getLastRound();
         if (!round || !round.started || round.ended) {
-            this.statusCode = 422;
-            await this.render({errors: {matchId: ['No active round to resume']}});
+            await this.renderErrors({matchId: ['No active round to resume']}, 422);
             return;
         }
 
