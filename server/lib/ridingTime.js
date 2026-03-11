@@ -8,6 +8,7 @@ class RidingTimeCalculator {
     #pendingControlTime = 0;
     #paused = false;
     #pauses;
+    #resumedAt = null;
 
     constructor(votes, judges, endAt, pauses = []) {
         this.#endAt  = endAt || new Date();
@@ -85,10 +86,12 @@ class RidingTimeCalculator {
 
     #handleResume(resumedAt) {
         this.#paused = false;
+        this.#resumedAt = resumedAt;
         if (this.controlActive) {
-            // Shift start back to account for pre-pause accumulated time
+            // Quorum already met on resume: immediately apply pending time
             this.#controlStartedAt = new Date(resumedAt.getTime() - this.#pendingControlTime);
             this.#pendingControlTime = 0;
+            this.#resumedAt = null;
         }
     }
 
@@ -96,19 +99,22 @@ class RidingTimeCalculator {
     startVote(vote) {
         this.#activeVotes[vote.judge_id] = vote;
         if (!this.#paused && !this.#controlStartedAt && this.controlActive) {
-            this.#controlStartedAt = vote.started_at;
+            const voteTime = new Date(vote.started_at).getTime();
+            const withinGrace = this.#resumedAt !== null && (voteTime - this.#resumedAt.getTime()) <= 1500;
+            this.#controlStartedAt = new Date(withinGrace ? voteTime - this.#pendingControlTime : voteTime);
+            this.#pendingControlTime = 0;
+            this.#resumedAt = null;
         }
     }
 
 
     endVote(vote) {
         delete this.#activeVotes[vote.judge_id];
-        if (this.#controlStartedAt && !this.controlActive) {
-            // Quorum lost while NOT paused: discard partial period
+        if (!this.controlActive && !this.#paused) {
+            // Quorum lost outside a pause: discard everything
             this.#controlStartedAt = null;
-        } else if (this.#paused && !this.controlActive) {
-            // Quorum lost while paused: discard pending time
             this.#pendingControlTime = 0;
+            this.#resumedAt = null;
         }
     }
 

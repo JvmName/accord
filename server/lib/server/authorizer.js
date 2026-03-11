@@ -62,7 +62,7 @@ class Authorizer {
         switch(action) {
             case 'judge':
                 const judges = await scope.getJudges();
-                return judges.some(judge => judge.id == this.#user.id);
+                return judges.some(judge => judge.id == this.#user?.id);
             case 'manage':
                 const mat = await scope.getMat();
                 return this.#user?.id === mat.creator_id;
