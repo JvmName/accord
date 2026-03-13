@@ -68,9 +68,10 @@ Mats (training locations with word-based invite codes like "morning.coffee.bicyc
   ↓
 Matches (red vs blue competitor)
   ↓
-Rounds (sequential sub-matches with RidingTimeVotes)
+Rounds (sequential sub-matches with RidingTimeVotes and RoundPauses)
   ↓
-RidingTimeVotes (individual judge votes with started_at/ended_at timestamps)
+RidingTimeVotes (individual judge votes with timestamps)
+RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
 ```
 
 ### Real-Time Updates (WebSocket)
@@ -99,6 +100,7 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 **Authorization Levels** (`/server/lib/server/authorizer.js`):
 - `judge`: User must be in Match's judges list
 - `manage`: Match creator permissions
+- `pause`: Judges or managers can pause/resume a round
 - `view`: Public access
 
 **Key Controllers**:
@@ -137,11 +139,12 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 ### Key Data Models
 
 **Server** (JavaScript with Sequelize):
-- `User`: `id`, `name`, `email`, `api_token`
+- `User`: `id`, `name`, `api_token`
 - `Mat`: `id`, `name`, `judge_count`, `creator_id`
-- `Match`: `id`, `mat_id`, `red_competitor_id`, `blue_competitor_id`, `started_at`, `ended_at`
-- `Round`: `id`, `match_id`, `started_at`, `ended_at`, `submission`, `submission_by`
-- `RidingTimeVote`: `id`, `round_id`, `judge_id`, `competitor_id`, `started_at`, `ended_at`
+- `Match`: `id`, `mat_id`, `creator_id`, `red_competitor_id`, `blue_competitor_id`, `red_score`, `blue_score`, `started_at`, `ended_at`
+- `Round`: `id`, `match_id`, `ended_at`, `submission`, `submission_by`
+- `RidingTimeVote`: `id`, `round_id`, `judge_id`, `competitor_id`, `ended_at`
+- `RoundPause`: `id`, `round_id`, `paused_at`, `resumed_at`
 
 **Client** (Kotlin with kotlinx.serialization):
 - Value classes for type safety: `UserId`, `MatId`, `MatchId`, `RoundId`
