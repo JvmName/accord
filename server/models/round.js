@@ -1,5 +1,6 @@
 const { BaseRecord }          = require('../lib/active_record');
 const { RidingTimeVote }      = require('./ridingTimeVote');
+const { RoundPause }          = require('./roundPause');
 const { RDojoKombatRules }    = require('../lib/rules');
 const { User }                = require('./user');
 
@@ -34,6 +35,25 @@ class Round extends BaseRecord {
 
     _cacheMatch(match) {
         this._cacheRecord('match', [match]);
+    }
+
+
+    async getPauses(queryOptions={}) {
+        return await this.getCachedAssociation('pauses',
+                                               RoundPause,
+                                               {round_id: this.id},
+                                               queryOptions);
+    }
+
+
+    async getCurrentPause() {
+        const pauses = await this.getPauses();
+        return pauses.slice().reverse().find(p => p.isOpen) || null;
+    }
+
+
+    async isPaused() {
+        return !!(await this.getCurrentPause());
     }
 
 
@@ -72,12 +92,35 @@ class Round extends BaseRecord {
     /***********************************************************************************************
     * STATUS
     ***********************************************************************************************/
+    async pause() {
+        if (!this.started) throw new Error('Round has not started');
+        if (this.ended)    throw new Error('Round has already ended');
+        if (await this.isPaused()) throw new Error('Round is already paused');
+
+        const roundPause = new RoundPause({round_id: this.id, paused_at: new Date()});
+        await roundPause.save();
+
+        this.clearCachedAssociation('pauses');
+    }
+
+
+    async resume() {
+        const openPause = await this.getCurrentPause();
+        if (!openPause) throw new Error('Round is not paused');
+
+        openPause.resumed_at = new Date();
+        await openPause.save();
+    }
+
+
     async end({submission, submitter}={}) {
         const where = {ended_at: null};
         const ridingTimeVotes = await this.getRidingTimeVotes({ where });
         for (const vote of ridingTimeVotes) {
             await vote.end();
         }
+
+        if (await this.isPaused()) await this.resume();
 
         const match = await this.getMatch();
         if (submission) {
@@ -145,8 +188,9 @@ class Round extends BaseRecord {
 
 
     async #getScore(red, blue, judges) {
-        const votes = await this.getRidingTimeVotes();
-        return this.rules.scoreRound(red, blue, judges, votes);
+        const votes  = await this.getRidingTimeVotes();
+        const pauses = await this.getPauses();
+        return this.rules.scoreRound(red, blue, judges, votes, pauses);
     }
 
 
@@ -178,6 +222,7 @@ class Round extends BaseRecord {
             started_at:   this.started_at,
             ended_at:     this.ended_at,
             max_duration: maxDuration,
+            paused:       await this.isPaused(),
             score,
             result,
         }

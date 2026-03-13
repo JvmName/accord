@@ -86,8 +86,8 @@ class ServerController {
     }
 
 
-    async renderErrors(errors) {
-        this.statusCode = 400;
+    async renderErrors(errors, statusCode = 400) {
+        this.statusCode = statusCode;
         await this.render({ errors });
     }
 
