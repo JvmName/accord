@@ -65,7 +65,7 @@ class UsersController extends ServerController {
                     }
                 },
                 response: {
-                    viewers: [{ $ref: "User" }]
+                    viewers: { type: "array", items: { $ref: "User" } }
                 }
             },
             getJudges: {
@@ -77,7 +77,7 @@ class UsersController extends ServerController {
                     }
                 },
                 response: {
-                    judges: [{ $ref: "User" }]
+                    judges: { type: "array", items: { $ref: "User" } }
                 }
             },
             postJoin: {

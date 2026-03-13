@@ -94,8 +94,14 @@ class MatchesController extends ServerController {
                         matCode: { type: 'string', required: true }
                     },
                     body: {
-                        red:  { id: { type: 'integer' }, name: { type: 'string' } },
-                        blue: { id: { type: 'integer' }, name: { type: 'string' } }
+                        red: { oneOf: [
+                            { type: 'object', properties: { id:   { type: 'string', format: 'uuid' } }, required: ['id'],   description: 'Existing user by ID' },
+                            { type: 'object', properties: { name: { type: 'string' }                 }, required: ['name'], description: 'New user by name'    },
+                        ]},
+                        blue: { oneOf: [
+                            { type: 'object', properties: { id:   { type: 'string', format: 'uuid' } }, required: ['id'],   description: 'Existing user by ID' },
+                            { type: 'object', properties: { name: { type: 'string' }                 }, required: ['name'], description: 'New user by name'    },
+                        ]},
                     }
                 },
                 response: {
@@ -123,7 +129,7 @@ class MatchesController extends ServerController {
                     },
                     body: {
                         submission: { type: 'string' },
-                        submitter:  { type: 'string' }
+                        submitter:  { type: 'string', enum: ['red', 'blue'] }
                     }
                 },
                 response: {
