@@ -39,12 +39,10 @@ class CreateMatPresenter(
                         loading = true
                         error = null
 
-                        matManager.createMat(event.name, event.count)
+                        matManager.createMatAndMatch(event.name, event.count)
                             .onEither(
-                                success = {
-                                    navigator.pop(
-                                        result = CreateMatScreen.CreateMatResult(it)
-                                    )
+                                success = { (mat, match) ->
+                                    navigator.pop(result = CreateMatScreen.CreateMatResult(mat))
                                 },
                                 failure = { error = "Error creating mat: ${it.message}" }
                             )

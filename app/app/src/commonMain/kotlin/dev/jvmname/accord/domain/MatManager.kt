@@ -1,11 +1,15 @@
 package dev.jvmname.accord.domain
 
+import com.github.michaelbull.result.coroutines.coroutineBinding
 import com.github.michaelbull.result.map
 import com.github.michaelbull.result.onSuccess
 import dev.jvmname.accord.network.AccordClient
+import dev.jvmname.accord.network.CompetitorRequest
 import dev.jvmname.accord.network.Mat
+import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.network.NetworkResult
 import dev.jvmname.accord.network.User
+import dev.jvmname.accord.network.adminCode
 import dev.jvmname.accord.prefs.Prefs
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.flow.Flow
@@ -16,11 +20,18 @@ class MatManager(
     private val client: AccordClient,
 ) {
 
-    suspend fun createMat(name: String, judgeCount: Int): NetworkResult<Mat> {
-        return client.createMat(name, judgeCount)
-            .onSuccess {
-                prefs.updateMatInfo(it)
-            }
+    suspend fun createMatAndMatch(name: String, judgeCount: Int): NetworkResult<Pair<Mat, Match>> {
+        return coroutineBinding {
+            val mat = client.createMat(name, judgeCount).bind()
+            val match = client.createMatch(
+                matCode = mat.adminCode,
+                redCompetitor = CompetitorRequest(name = Competitor.RED.nameStr),
+                blueCompetitor = CompetitorRequest(name = Competitor.BLUE.nameStr),
+            ).bind()
+            prefs.updateMatInfo(mat)
+            prefs.updateCurrentMatch(match)
+            mat to match
+        }
     }
 
     suspend fun getMat(matId: String): NetworkResult<Mat> {

@@ -127,7 +127,7 @@ private fun JudgeCountEditText(judgeCount: Int, onJudgeCountChange: (count: Int)
         }
 
         OutlinedTextField(
-            label = { Text("# Judges") },
+            label = { Text("# Judges (incl. you)") },
             state = textState,
             modifier = Modifier.weight(1f),
             lineLimits = TextFieldLineLimits.SingleLine,
