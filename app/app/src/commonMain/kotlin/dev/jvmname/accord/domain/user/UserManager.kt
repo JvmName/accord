@@ -1,6 +1,7 @@
 package dev.jvmname.accord.domain.user
 
 import com.github.michaelbull.result.map
+import com.github.michaelbull.result.onSuccess
 import dev.jvmname.accord.network.AccordClient
 import dev.jvmname.accord.network.NetworkResult
 import dev.jvmname.accord.network.User
@@ -13,13 +14,16 @@ class UserManager(
     private val apiClient: AccordClient,
 ) {
 
-    suspend fun createUser(name: String, email: String): NetworkResult<User> {
+    suspend fun createUser(name: String): NetworkResult<User> {
         return apiClient.createUser(name)
-            .map {
+            .onSuccess {
                 prefs.setAuthToken(it.authToken)
-                it.user
+                prefs.updateMainUser(it.user)
             }
+            .map { it.user }
     }
 
     suspend fun user() = prefs.getMainUser()
+
+    suspend fun hasUser() = prefs.hasMainUser()
 }

@@ -29,6 +29,7 @@ import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.main.MainEvent.CreateMat
 import dev.jvmname.accord.ui.main.MainEvent.JoinMat
 import dev.jvmname.accord.ui.main.MainEvent.SoloRideTime
+import dev.jvmname.accord.ui.theme.AccordTheme
 import dev.zacsweers.metro.AppScope
 
 @[Composable CircuitInject(MainScreen::class, AppScope::class)]
@@ -48,8 +49,8 @@ fun MainContent(state: MainState, modifier: Modifier) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 ActionCard(
                     icon = Icons.AutoMirrored.Outlined.NoteAdd,
-                    title = "Create Mat",
-                    description = "Start a new mat + match and invite judges",
+                    title = "Create Match",
+                    description = "Start a new mat and invite judges",
                     onClick = { state.eventSink(CreateMat) }
                 )
                 ActionCard(
@@ -106,11 +107,13 @@ private fun ActionCard(
 @Preview
 @Composable
 private fun MainContentPreview() {
-    MainContent(
-        state = MainState(
-            mat = null,
-            eventSink = {}
-        ),
-        modifier = Modifier
-    )
+    AccordTheme {
+        MainContent(
+            state = MainState(
+                mat = null,
+                eventSink = {}
+            ),
+            modifier = Modifier
+        )
+    }
 }

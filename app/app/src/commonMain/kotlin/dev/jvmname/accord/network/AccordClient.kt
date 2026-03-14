@@ -113,7 +113,7 @@ class AccordClient(private val httpClient: HttpClient) {
     // ========================================================================
 
     suspend fun createMatch(
-        matCode: MatCode,
+        matCode: String,
         redCompetitor: CompetitorRequest,
         blueCompetitor: CompetitorRequest,
     ): NetworkResult<Match> {

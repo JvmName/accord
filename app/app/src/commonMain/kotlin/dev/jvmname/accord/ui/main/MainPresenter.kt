@@ -14,7 +14,7 @@ import dev.jvmname.accord.domain.MatManager
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.control.ControlTimeScreen
 import dev.jvmname.accord.ui.control.ControlTimeType
-import dev.jvmname.accord.ui.create_mat.CreateMatScreen
+import dev.jvmname.accord.ui.create.mat.CreateMatMatchScreen
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
@@ -37,13 +37,13 @@ class MainPresenter(
 
         var matInfoResult by remember { mutableStateOf(matInfo) }
 
-        val createMatNav = rememberAnsweringNavigator<CreateMatScreen.CreateMatResult>(navigator) {
+        val createMatNav = rememberAnsweringNavigator<CreateMatMatchScreen.CreateMatResult>(navigator) {
             matInfoResult = it.mat
         }
 
         return MainState(matInfoResult) {
             when (it) {
-                MainEvent.CreateMat -> createMatNav.goTo(CreateMatScreen)
+                MainEvent.CreateMat -> createMatNav.goTo(CreateMatMatchScreen)
 
                 MainEvent.JoinMat -> TODO()
                 MainEvent.SoloRideTime -> {
