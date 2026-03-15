@@ -26,6 +26,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.accord.ui.common.StandardScaffold
+import dev.jvmname.accord.ui.main.MainEvent.ContinueMat
 import dev.jvmname.accord.ui.main.MainEvent.CreateMat
 import dev.jvmname.accord.ui.main.MainEvent.JoinMat
 import dev.jvmname.accord.ui.main.MainEvent.SoloRideTime
@@ -47,6 +48,14 @@ fun MainContent(state: MainState, modifier: Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (state.mat != null) {
+                    ActionCard(
+                        icon = Icons.AutoMirrored.Filled.CallMerge,
+                        title = "New Match",
+                        description = "Start a new match on ${state.mat.name}",
+                        onClick = { state.eventSink(ContinueMat) }
+                    )
+                }
                 ActionCard(
                     icon = Icons.AutoMirrored.Outlined.NoteAdd,
                     title = "Create Match",

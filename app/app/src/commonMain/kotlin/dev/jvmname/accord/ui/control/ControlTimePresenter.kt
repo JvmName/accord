@@ -8,12 +8,15 @@ import androidx.compose.runtime.remember
 import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
+import com.slack.circuit.runtime.popUntil
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.di.LocalGraph
+import dev.jvmname.accord.domain.MatchManager
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.session.JudgingSession
 import dev.jvmname.accord.domain.session.RoundController
 import dev.jvmname.accord.prefs.Prefs
+import dev.jvmname.accord.ui.main.MainScreen
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
@@ -54,6 +57,7 @@ class ControlTimePresenter(
     @Assisted private val navigator: Navigator,
     private val prefs: Prefs,
     private val session: JudgingSession,
+    private val matchManager: MatchManager,
 ) : Presenter<ControlTimeState> {
     @Composable
     override fun present(): ControlTimeState {
@@ -65,6 +69,9 @@ class ControlTimePresenter(
         val hapticEvent by remember { session.hapticEvents }.collectAsState(null)
         val roundEvent by remember { session.roundEvent }.collectAsState()
 
+        val currentMatch by remember { matchManager.observeCurrentMatch() }.collectAsState(null)
+        val isMatchEnded = currentMatch?.endedAt != null
+
         val matchState = MatchState(
             score = score,
             haptic = hapticEvent,
@@ -74,22 +81,24 @@ class ControlTimePresenter(
         return ControlTimeState(
             matName = matName,
             matchState = matchState,
-            eventSink = {
-                Logger.d { "Received event: $it" }
-                when (it) {
-                    ControlTimeEvent.Back -> navigator.pop()
+            isMatchEnded = isMatchEnded,
+            eventSink = { event ->
+                Logger.d { "Received event: $event" }
+                when (event) {
+                    // TODO: verify navigation stack depth — if judge always enters from MainScreen directly, plain pop() is sufficient
+                    ControlTimeEvent.Back -> navigator.popUntil { it is MainScreen }
                     is ControlTimeEvent.ButtonPress -> {
-                        Logger.d { "Presenter press ${it.competitor}" }
-                        session.recordPress(it.competitor)
+                        Logger.d { "Presenter press ${event.competitor}" }
+                        session.recordPress(event.competitor)
                     }
 
                     is ControlTimeEvent.ButtonRelease -> {
-                        Logger.d { "Presenter release ${it.competitor}" }
-                        session.recordRelease(it.competitor)
+                        Logger.d { "Presenter release ${event.competitor}" }
+                        session.recordRelease(event.competitor)
                     }
 
                     is ControlTimeEvent.ManualPointEdit -> {
-                        (session as? RoundController)?.manualEdit(it.competitor, it.action)
+                        (session as? RoundController)?.manualEdit(event.competitor, event.action)
                     }
 
                     ControlTimeEvent.BeginNextRound -> {
@@ -117,7 +126,7 @@ class ControlTimePresenter(
         )
     }
 
-    @AssistedFactory
+    @[AssistedFactory]
     fun interface Factory {
         operator fun invoke(screen: ControlTimeScreen, navigator: Navigator): ControlTimePresenter
     }

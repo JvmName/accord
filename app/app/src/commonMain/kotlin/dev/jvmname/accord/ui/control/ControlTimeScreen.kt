@@ -25,6 +25,7 @@ data class ControlTimeScreen(val type: ControlTimeType) : Screen
 data class ControlTimeState(
     val matName: String,
     val matchState: MatchState,
+    val isMatchEnded: Boolean = false,
     val eventSink: (ControlTimeEvent) -> Unit,
 ) : CircuitUiState
 

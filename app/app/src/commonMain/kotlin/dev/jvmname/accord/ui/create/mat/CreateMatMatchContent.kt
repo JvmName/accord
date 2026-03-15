@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -71,20 +72,36 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
                 .padding(vertical = 32.dp, horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val textState = rememberTextFieldState()
+            val masterNameState = rememberTextFieldState()
+            val matNameState = rememberTextFieldState()
             val redNameState = rememberTextFieldState()
             val blueNameState = rememberTextFieldState()
             var judgeCount by remember { mutableIntStateOf(1) }
             var isJudging by remember { mutableStateOf(false) }
 
             OutlinedTextField(
-                textState,
+                masterNameState,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Jane Smith") },
+                label = { Text("Your Name") },
+                lineLimits = TextFieldLineLimits.SingleLine,
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Next,
+                ),
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            OutlinedTextField(
+                matNameState,
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("Mat #1") },
                 label = { Text("Mat Name (e.g. Mat #1)") },
                 lineLimits = TextFieldLineLimits.SingleLine,
                 keyboardOptions = KeyboardOptions.Default.copy(
-                    capitalization = KeyboardCapitalization.Words
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Next,
                 ),
             )
 
@@ -97,7 +114,8 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
                 label = { Text("Red Competitor") },
                 lineLimits = TextFieldLineLimits.SingleLine,
                 keyboardOptions = KeyboardOptions.Default.copy(
-                    capitalization = KeyboardCapitalization.Words
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Next,
                 ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFFD32F2F),
@@ -116,7 +134,8 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
                 label = { Text("Blue Competitor") },
                 lineLimits = TextFieldLineLimits.SingleLine,
                 keyboardOptions = KeyboardOptions.Default.copy(
-                    capitalization = KeyboardCapitalization.Words
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Done,
                 ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF1565C0),
@@ -128,17 +147,17 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
 
             Spacer(Modifier.height(16.dp))
 
-//            Row(
-//                modifier = Modifier.fillMaxWidth(),
-//                verticalAlignment = Alignment.CenterVertically,
-//                horizontalArrangement = Arrangement.SpaceBetween
-//            ) {
-//                Text("I'm judging", style = AccordTypography.labelLarge)
-//                Switch(
-//                    checked = isJudging,
-//                    onCheckedChange = { isJudging = it }
-//                )
-//            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("I'm also judging", style = MaterialTheme.typography.bodyMedium)
+                Switch(
+                    checked = isJudging,
+                    onCheckedChange = { isJudging = it }
+                )
+            }
 
             Spacer(Modifier.height(16.dp))
 
@@ -162,8 +181,9 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
                 onClick = {
                     state.eventSink(
                         CreateMatMatchEvent.CreateMat(
-                            name = textState.text.toString(),
-                            count = judgeCount,
+                            masterName = masterNameState.text.toString(),
+                            matName = matNameState.text.toString(),
+                            judgeCount = judgeCount,
                             redName = redNameState.text.toString(),
                             blueName = blueNameState.text.toString(),
                             isJudging = isJudging,
@@ -193,7 +213,7 @@ private fun JudgeCountEditText(judgeCount: Int, onJudgeCountChange: (count: Int)
         }
 
         OutlinedTextField(
-            label = { Text("# Judges (incl. you)") },
+            label = { Text("# Judges") },
             state = textState,
             modifier = Modifier.weight(1f),
             lineLimits = TextFieldLineLimits.SingleLine,

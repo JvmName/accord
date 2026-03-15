@@ -14,6 +14,7 @@ import dev.jvmname.accord.network.adminCode
 import dev.jvmname.accord.prefs.Prefs
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 @Inject
 class MatManager(
@@ -23,25 +24,42 @@ class MatManager(
 ) {
 
     suspend fun createMatAndMatch(
-        name: String,
+        masterName: String,
+        matName: String,
         judgeCount: Int,
         redName: String,
         blueName: String,
-    ): NetworkResult<Pair<Mat, Match>> {
-        return coroutineBinding {
-            val user = when {
-                userManager.hasUser() -> userManager.user()
-                else -> userManager.createUser(name).bind()
-            }
-            val mat = client.createMat(name, judgeCount).bind()
-            val match = client.createMatch(
-                matCode = mat.adminCode.code,
-                redCompetitor = CompetitorRequest(name = redName),
-                blueCompetitor = CompetitorRequest(name = blueName),
-            ).bind()
-            prefs.updateMatInfo(mat)
+        isJudging: Boolean,
+    ): NetworkResult<Pair<Mat, Match>> = coroutineBinding {
+        val user = when {
+            // TODO("consider re-using existing user identity vs always creating new")
+            userManager.hasUser() -> userManager.user()
+            else -> userManager.createUser(masterName).bind()
+        }
+        val mat = client.createMat(matName, judgeCount).bind()
+        val match = client.createMatch(
+            matCode = mat.adminCode.code,
+            redCompetitor = CompetitorRequest(name = redName),
+            blueCompetitor = CompetitorRequest(name = blueName),
+        ).bind()
+        prefs.updateMatInfo(mat)
+        prefs.updateCurrentMatch(match)
+        // TODO: if isJudging == true, call matManager.joinMat(adminCode, masterName) to add master as a judge
+        mat to match
+    }
+
+    suspend fun createMatch(
+        redName: String,
+        blueName: String,
+    ): NetworkResult<Match> {
+        val mat = prefs.observeMatInfo().first()!! //TODO
+//            ?: return Err(IllegalStateException("No active mat"))
+        return client.createMatch(
+            matCode = mat.adminCode.code,
+            redCompetitor = CompetitorRequest(name = redName),
+            blueCompetitor = CompetitorRequest(name = blueName),
+        ).onSuccess { match ->
             prefs.updateCurrentMatch(match)
-            mat to match
         }
     }
 

@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.filled.MoveUp
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -49,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
+import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.color
 import dev.jvmname.accord.domain.control.buttonHold
@@ -64,7 +67,6 @@ import dev.jvmname.accord.ui.control.ControlTimeEvent.ButtonPress
 import dev.jvmname.accord.ui.control.ControlTimeEvent.ButtonRelease
 import dev.jvmname.accord.ui.control.ControlTimeEvent.ManualPointEdit
 import dev.jvmname.accord.ui.theme.AccordTheme
-import dev.zacsweers.metro.AppScope
 import top.ltfan.multihaptic.compose.rememberVibrator
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -72,7 +74,7 @@ import kotlin.time.Duration.Companion.seconds
 private typealias EventSink = (ControlTimeEvent) -> Unit
 
 
-@[Composable CircuitInject(ControlTimeScreen::class, AppScope::class)]
+@[Composable CircuitInject(ControlTimeScreen::class, MatchScope::class)]
 fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
     val vibrator = when {
         LocalInspectionMode.current -> remember { StubVibrator }
@@ -81,82 +83,109 @@ fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
 
     state.matchState.haptic?.effect?.consume()?.let { vibrator.vibrate(it) }
 
-    StandardScaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        title = "Control Time: ${state.matName}",
-        onBackClick = { state.eventSink(ControlTimeEvent.Back) },
-        topBarActions = {
-            //TODO
+    Box(modifier = modifier.fillMaxSize()) {
+        StandardScaffold(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            title = "Control Time: ${state.matName}",
+            onBackClick = { state.eventSink(ControlTimeEvent.Back) },
+            topBarActions = {
+                //TODO
 //            IconButton(onClick = { TODO() }) {
 //                Icon(
 //                    imageVector = Icons.Default.Settings,
 //                    contentDescription = ""
 //                )
 //            }
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(32.dp))
-
-            val remainingTime = remember(state.matchState.roundInfo) {
-                state.matchState
-                    .roundInfo
-                    ?.remainingHumanTime()
-                    ?: "0:00"
             }
-            Text(
-                remainingTime,
-                style = MaterialTheme.typography.displayLargeEmphasized,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(32.dp))
 
-            val roundNumber = remember(state.matchState.roundInfo) {
-                val roundInfo = state.matchState.roundInfo
-                when (val round = roundInfo?.round) {
-                    null -> null
-                    is RoundInfo.Break -> "Break"
-                    is RoundInfo.Round -> "Round ${round.index} of ${roundInfo.totalRounds}"
+                val remainingTime = remember(state.matchState.roundInfo) {
+                    state.matchState
+                        .roundInfo
+                        ?.remainingHumanTime()
+                        ?: "0:00"
                 }
-            }
-            roundNumber?.let {
                 Text(
-                    text = it,
+                    remainingTime,
+                    style = MaterialTheme.typography.displayLargeEmphasized,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-            }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth().weight(3f),
-                horizontalArrangement = spacedBy(8.dp)
-            ) {
-                Competitor.entries.forEach { competitor ->
-                    PlayerControl(
-                        modifier = Modifier.weight(1f),
-                        points = state.matchState.score.getPoints(competitor),
-                        controlDuration = state.matchState.score.controlTimeHumanReadable(competitor),
-                        color = competitor.color,
-                        playerName = competitor.nameStr,
-                        shouldShowPointControls = state.matchState.roundInfo?.state == RoundEvent.RoundState.PAUSED
-                                && state.matchState.score.techFallWin == null,
-                        eventSink = state.eventSink,
-                        player = competitor
+                val roundNumber = remember(state.matchState.roundInfo) {
+                    val roundInfo = state.matchState.roundInfo
+                    when (val round = roundInfo?.round) {
+                        null -> null
+                        is RoundInfo.Break -> "Break"
+                        is RoundInfo.Round -> "Round ${round.index} of ${roundInfo.totalRounds}"
+                    }
+                }
+                roundNumber?.let {
+                    Text(
+                        text = it,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-            }
 
-            Spacer(modifier.weight(0.15f))
-            RoundControlsSheet(actions = state.rememberControlActions())
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().weight(3f),
+                    horizontalArrangement = spacedBy(8.dp)
+                ) {
+                    Competitor.entries.forEach { competitor ->
+                        PlayerControl(
+                            modifier = Modifier.weight(1f),
+                            points = state.matchState.score.getPoints(competitor),
+                            controlDuration = state.matchState.score.controlTimeHumanReadable(competitor),
+                            color = competitor.color,
+                            playerName = competitor.nameStr,
+                            shouldShowPointControls = state.matchState.roundInfo?.state == RoundEvent.RoundState.PAUSED
+                                    && state.matchState.score.techFallWin == null,
+                            eventSink = state.eventSink,
+                            player = competitor
+                        )
+                    }
+                }
+
+                Spacer(modifier.weight(0.15f))
+                RoundControlsSheet(actions = state.rememberControlActions())
+            }
+        }
+
+        if (state.isMatchEnded) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(modifier = Modifier.padding(32.dp)) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text("Match Over", style = MaterialTheme.typography.headlineMedium)
+                        Button(
+                            onClick = { state.eventSink(ControlTimeEvent.Back) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Return to Main Screen")
+                        }
+                    }
+                }
+            }
         }
     }
 }
