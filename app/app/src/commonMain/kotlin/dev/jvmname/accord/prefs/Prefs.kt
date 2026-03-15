@@ -68,6 +68,8 @@ class Prefs(
         }
     }
 
+    suspend fun hasMainUser(): Boolean = datastore.data.first()[MAIN_USER] != null
+
     suspend fun getMainUser(): User {
         return json.decodeFromString(datastore.data.first()[MAIN_USER]!!)
     }

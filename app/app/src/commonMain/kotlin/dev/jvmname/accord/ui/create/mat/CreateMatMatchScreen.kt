@@ -1,4 +1,4 @@
-package dev.jvmname.accord.ui.create_mat
+package dev.jvmname.accord.ui.create.mat
 
 import androidx.compose.runtime.Immutable
 import com.slack.circuit.runtime.CircuitUiEvent
@@ -9,20 +9,26 @@ import dev.jvmname.accord.network.Mat
 import dev.jvmname.accord.parcel.CommonParcelize
 
 @CommonParcelize
-data object CreateMatScreen : Screen {
+data object CreateMatMatchScreen : Screen {
     @CommonParcelize
     data class CreateMatResult(val mat: Mat) : PopResult
 }
 
 @Immutable
-data class CreateMatState(
+data class CreateMatMatchState(
     val loading: Boolean = false,
     val error: String? = null,
-    val eventSink: (CreateMatEvent) -> Unit
+    val eventSink: (CreateMatMatchEvent) -> Unit
 ) : CircuitUiState
 
-sealed interface CreateMatEvent : CircuitUiEvent {
-    data class CreateMat(val name: String, val count: Int) : CreateMatEvent
-    data object Back : CreateMatEvent
+sealed interface CreateMatMatchEvent : CircuitUiEvent {
+    data class CreateMat(
+        val name: String,
+        val count: Int,
+        val redName: String,
+        val blueName: String,
+        val isJudging: Boolean,
+    ) : CreateMatMatchEvent
+    data object Back : CreateMatMatchEvent
 
 }

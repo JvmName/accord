@@ -1,4 +1,4 @@
-package dev.jvmname.accord.ui.create_mat
+package dev.jvmname.accord.ui.create.mat
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -19,32 +19,37 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @AssistedInject
-class CreateMatPresenter(
+class CreateMatMatchPresenter(
     @Assisted private val navigator: Navigator,
     private val scope: CoroutineScope,
-    private val matManager: MatManager
-) : Presenter<CreateMatState> {
+    private val matManager: MatManager,
+) : Presenter<CreateMatMatchState> {
     @Composable
-    override fun present(): CreateMatState {
+    override fun present(): CreateMatMatchState {
         var loading by remember { mutableStateOf(false) }
         var error by remember { mutableStateOf<String?>(null) }
 
-        return CreateMatState(loading, error) { event ->
+        return CreateMatMatchState(loading, error) { event ->
             when (event) {
-                CreateMatEvent.Back -> navigator.pop(result = null)
+                CreateMatMatchEvent.Back -> navigator.pop(result = null)
 
-                is CreateMatEvent.CreateMat -> {
-                    if (loading) return@CreateMatState
+                is CreateMatMatchEvent.CreateMat -> {
+                    if (loading) return@CreateMatMatchState
                     scope.launch {
                         loading = true
                         error = null
 
-                        matManager.createMat(event.name, event.count)
+
+                        matManager.createMatAndMatch(
+                            name = event.name,
+                            redName = event.redName,
+                            blueName = event.blueName,
+                            judgeCount = event.count,
+                            //TODO isjudging
+                        )
                             .onEither(
-                                success = {
-                                    navigator.pop(
-                                        result = CreateMatScreen.CreateMatResult(it)
-                                    )
+                                success = { (mat, match) ->
+                                    navigator.pop(result = CreateMatMatchScreen.CreateMatResult(mat))
                                 },
                                 failure = { error = "Error creating mat: ${it.message}" }
                             )
@@ -55,8 +60,8 @@ class CreateMatPresenter(
         }
     }
 
-    @[AssistedFactory CircuitInject(CreateMatScreen::class, AppScope::class)]
+    @[AssistedFactory CircuitInject(CreateMatMatchScreen::class, AppScope::class)]
     fun interface Factory {
-        fun create(navigator: Navigator): CreateMatPresenter
+        fun create(navigator: Navigator): CreateMatMatchPresenter
     }
 }
