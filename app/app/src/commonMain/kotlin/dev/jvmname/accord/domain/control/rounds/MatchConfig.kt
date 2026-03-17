@@ -3,10 +3,15 @@ package dev.jvmname.accord.domain.control.rounds
 import dev.drewhamilton.poko.Poko
 import dev.jvmname.accord.domain.control.rounds.RoundInfo.Break
 import dev.jvmname.accord.domain.control.rounds.RoundInfo.Round
+import dev.jvmname.accord.parcel.CommonParcelable
+import dev.jvmname.accord.parcel.CommonParcelize
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.DurationUnit
 
-data class MatchConfig(val rounds: List<RoundInfo>) {
+@CommonParcelize
+data class MatchConfig(val rounds: List<RoundInfo>) : CommonParcelable {
     operator fun get(index: Int): RoundInfo = rounds[index]
     fun getRound(roundIndex: Int): Round? = rounds.firstNotNullOfOrNull { br ->
         (br as? Round)?.takeIf { it.index == roundIndex }
@@ -25,19 +30,39 @@ data class MatchConfig(val rounds: List<RoundInfo>) {
     }
 }
 
-sealed interface RoundInfo {
+sealed interface RoundInfo : CommonParcelable {
     val duration: Duration
 
-    @Poko
+    @[Poko CommonParcelize]
     class Round(
         val index: Int,
         val maxPoints: Int,
-        override val duration: Duration,
+        val durationMs: Long,
         val optional: Boolean = false,
-    ) : RoundInfo
+    ) : RoundInfo {
+        override val duration: Duration get() = durationMs.milliseconds
 
-    @Poko
-    class Break(override val duration: Duration) : RoundInfo
+        constructor(
+            index: Int,
+            maxPoints: Int,
+            duration: Duration,
+            optional: Boolean = false,
+        ) : this(
+            index = index,
+            maxPoints = maxPoints,
+            durationMs = duration.toLong(DurationUnit.MILLISECONDS),
+            optional = optional,
+        )
+    }
+
+    @[Poko CommonParcelize]
+    class Break(val durationMs: Long) : RoundInfo {
+        override val duration: Duration get() = durationMs.milliseconds
+
+        constructor(duration: Duration) : this(
+            durationMs = duration.toLong(DurationUnit.MILLISECONDS),
+        )
+    }
 }
 
 data class RoundEvent(
