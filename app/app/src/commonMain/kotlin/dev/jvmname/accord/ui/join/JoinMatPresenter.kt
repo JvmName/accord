@@ -13,9 +13,9 @@ import dev.jvmname.accord.domain.MatManager
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.network.Role
 import dev.jvmname.accord.network.message
-import dev.jvmname.accord.ui.control.ControlTimeScreen
-import dev.jvmname.accord.ui.control.ControlTimeType
 import dev.jvmname.accord.ui.onEither
+import dev.jvmname.accord.ui.session.judging.ControlTimeType
+import dev.jvmname.accord.ui.session.judging.JudgeSessionScreen
 import dev.jvmname.accord.ui.session.viewer.ViewerScreen
 import dev.jvmname.accord.ui.trampoline.TrampolineMatchGraphScreen
 import dev.zacsweers.metro.AppScope
@@ -56,7 +56,7 @@ class JoinMatPresenter(
                                     when (mat.codes.find { c -> c.code == it.code }?.role) {
                                         Role.ADMIN -> navigator.goTo(
                                             TrampolineMatchGraphScreen(
-                                                innerRoot = ControlTimeScreen(ControlTimeType.CONSENSUS),
+                                                innerRoot = JudgeSessionScreen(ControlTimeType.CONSENSUS),
                                                 match = currentMatch,
                                                 matchConfig = MatchConfig.RdojoKombat,
                                                 matchRole = MatchRole.JUDGE,

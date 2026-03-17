@@ -1,4 +1,4 @@
-package dev.jvmname.accord.ui.control
+package dev.jvmname.accord.ui.session.judging
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -19,14 +19,14 @@ import dev.jvmname.accord.parcel.ParcelableScreen
 enum class ControlTimeType { SOLO, CONSENSUS }
 
 @CommonParcelize
-data class ControlTimeScreen(val type: ControlTimeType) : ParcelableScreen
+data class JudgeSessionScreen(val type: ControlTimeType) : ParcelableScreen
 
 @Stable
-data class ControlTimeState(
+data class JudgeSessionState(
     val matName: String,
     val matchState: MatchState,
     val isMatchEnded: Boolean = false,
-    val eventSink: (ControlTimeEvent) -> Unit,
+    val eventSink: (JudgeSessionEvent) -> Unit,
 ) : CircuitUiState
 
 @Poko
@@ -36,20 +36,20 @@ class MatchState(
     val roundInfo: RoundEvent?,
 )
 
-sealed interface ControlTimeEvent : CircuitUiEvent {
-    data object Back : ControlTimeEvent
-    data class ButtonPress(val competitor: Competitor) : ControlTimeEvent
-    data class ButtonRelease(val competitor: Competitor) : ControlTimeEvent
+sealed interface JudgeSessionEvent : CircuitUiEvent {
+    data object Back : JudgeSessionEvent
+    data class ButtonPress(val competitor: Competitor) : JudgeSessionEvent
+    data class ButtonRelease(val competitor: Competitor) : JudgeSessionEvent
 
-    data class ManualPointEdit(val competitor: Competitor, val action: Action) : ControlTimeEvent {
+    data class ManualPointEdit(val competitor: Competitor, val action: Action) : JudgeSessionEvent {
         enum class Action { INCREMENT, DECREMENT }
     }
 
-    data object BeginNextRound : ControlTimeEvent
-    data object Resume : ControlTimeEvent
-    data object Pause : ControlTimeEvent
-    data object Submission : ControlTimeEvent
-    data object Reset : ControlTimeEvent
+    data object BeginNextRound : JudgeSessionEvent
+    data object Resume : JudgeSessionEvent
+    data object Pause : JudgeSessionEvent
+    data object Submission : JudgeSessionEvent
+    data object Reset : JudgeSessionEvent
 }
 
 @Poko
@@ -62,7 +62,7 @@ class RoundControlActions(
 )
 
 @Composable
-fun ControlTimeState.rememberControlActions(): RoundControlActions {
+fun JudgeSessionState.rememberControlActions(): RoundControlActions {
     val event = matchState.roundInfo
     val state = event?.state
     return remember(event?.roundNumber, event?.totalRounds, state, event?.round) {
@@ -71,11 +71,11 @@ fun ControlTimeState.rememberControlActions(): RoundControlActions {
         val isActive = state == RoundState.STARTED && event.round is RoundInfo.Round
 
         RoundControlActions(
-            beginNextRound = { eventSink(ControlTimeEvent.BeginNextRound) },
-            resume = { eventSink(ControlTimeEvent.Resume) }.takeIf { isPaused },
-            pause = { eventSink(ControlTimeEvent.Pause) }.takeIf { isActive },
-            submission = { eventSink(ControlTimeEvent.Submission) }.takeIf { isActive },
-            reset = { eventSink(ControlTimeEvent.Reset) }.takeIf { event != null }
+            beginNextRound = { eventSink(JudgeSessionEvent.BeginNextRound) },
+            resume = { eventSink(JudgeSessionEvent.Resume) }.takeIf { isPaused },
+            pause = { eventSink(JudgeSessionEvent.Pause) }.takeIf { isActive },
+            submission = { eventSink(JudgeSessionEvent.Submission) }.takeIf { isActive },
+            reset = { eventSink(JudgeSessionEvent.Reset) }.takeIf { event != null }
         )
     }
 }

@@ -12,7 +12,7 @@ import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.rounds.Timer
 import dev.jvmname.accord.domain.control.score.Score
-import dev.jvmname.accord.ui.control.ControlTimeEvent
+import dev.jvmname.accord.ui.session.judging.JudgeSessionEvent
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
@@ -256,7 +256,7 @@ class SoloMatchSession(
 
     override fun manualEdit(
         competitor: Competitor,
-        action: ControlTimeEvent.ManualPointEdit.Action
+        action: JudgeSessionEvent.ManualPointEdit.Action
     ) {
         // Guard: only allow edits when paused
         if (latestRoundEvent.load()?.state != RoundEvent.RoundState.PAUSED) {
@@ -265,8 +265,8 @@ class SoloMatchSession(
         }
 
         val actionFun = when (action) {
-            ControlTimeEvent.ManualPointEdit.Action.INCREMENT -> { p: Int -> p + 1 }
-            ControlTimeEvent.ManualPointEdit.Action.DECREMENT -> { p: Int -> p - 1 }
+            JudgeSessionEvent.ManualPointEdit.Action.INCREMENT -> { p: Int -> p + 1 }
+            JudgeSessionEvent.ManualPointEdit.Action.DECREMENT -> { p: Int -> p - 1 }
         }
 
         _score.update {

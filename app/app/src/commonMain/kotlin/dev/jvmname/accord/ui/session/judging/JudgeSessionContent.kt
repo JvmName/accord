@@ -1,10 +1,9 @@
-package dev.jvmname.accord.ui.control
+package dev.jvmname.accord.ui.session.judging
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,19 +62,19 @@ import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.StubVibrator
 import dev.jvmname.accord.ui.common.IconTextButton
 import dev.jvmname.accord.ui.common.StandardScaffold
-import dev.jvmname.accord.ui.control.ControlTimeEvent.ButtonPress
-import dev.jvmname.accord.ui.control.ControlTimeEvent.ButtonRelease
-import dev.jvmname.accord.ui.control.ControlTimeEvent.ManualPointEdit
+import dev.jvmname.accord.ui.session.judging.JudgeSessionEvent.ButtonPress
+import dev.jvmname.accord.ui.session.judging.JudgeSessionEvent.ButtonRelease
+import dev.jvmname.accord.ui.session.judging.JudgeSessionEvent.ManualPointEdit
 import dev.jvmname.accord.ui.theme.AccordTheme
 import top.ltfan.multihaptic.compose.rememberVibrator
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-private typealias EventSink = (ControlTimeEvent) -> Unit
+private typealias EventSink = (JudgeSessionEvent) -> Unit
 
 
-@[Composable CircuitInject(ControlTimeScreen::class, MatchScope::class)]
-fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
+@[Composable CircuitInject(JudgeSessionScreen::class, MatchScope::class)]
+fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
     val vibrator = when {
         LocalInspectionMode.current -> remember { StubVibrator }
         else -> rememberVibrator()
@@ -89,7 +88,7 @@ fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background),
             title = "Control Time: ${state.matName}",
-            onBackClick = { state.eventSink(ControlTimeEvent.Back) },
+            onBackClick = { state.eventSink(JudgeSessionEvent.Back) },
             topBarActions = {
                 //TODO
 //            IconButton(onClick = { TODO() }) {
@@ -174,11 +173,11 @@ fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
                     Column(
                         modifier = Modifier.padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = spacedBy(16.dp)
                     ) {
                         Text("Match Over", style = MaterialTheme.typography.headlineMedium)
                         Button(
-                            onClick = { state.eventSink(ControlTimeEvent.Back) },
+                            onClick = { state.eventSink(JudgeSessionEvent.Back) },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("Return to Main Screen")
@@ -210,7 +209,7 @@ private fun PlayerControl(
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = spacedBy(6.dp)
         ) {
             AnimatedVisibility(shouldShowPointControls) {
                 CompositionLocalProvider(LocalContentColor provides color) {
@@ -338,10 +337,10 @@ fun RoundControlsSheet(modifier: Modifier = Modifier, actions: RoundControlActio
 
 @Preview
 @Composable
-private fun ControlTimeContentPreview() {
+private fun JudgeSessionContentPreview() {
     AccordTheme {
-        ControlTimeContent(
-            state = ControlTimeState(
+        JudgeSessionContent(
+            state = JudgeSessionState(
                 matName = "Bay JJ",
                 matchState = MatchState(
                     score = Score(
@@ -370,10 +369,10 @@ private fun ControlTimeContentPreview() {
 
 @Preview
 @Composable
-private fun ControlTimeContentPreview_Paused() {
+private fun JudgeSessionContentPreview_Paused() {
     AccordTheme {
-        ControlTimeContent(
-            state = ControlTimeState(
+        JudgeSessionContent(
+            state = JudgeSessionState(
                 matName = "Bay JJ",
                 matchState = MatchState(
                     score = Score(
@@ -402,10 +401,10 @@ private fun ControlTimeContentPreview_Paused() {
 
 @Preview
 @Composable
-private fun ControlTimeContentPreview_Holding() {
+private fun JudgeSessionContentPreview_Holding() {
     AccordTheme {
-        ControlTimeContent(
-            state = ControlTimeState(
+        JudgeSessionContent(
+            state = JudgeSessionState(
                 matName = "Bay JJ",
                 matchState = MatchState(
                     score = Score(

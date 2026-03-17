@@ -29,7 +29,6 @@ class MatManager(
         judgeCount: Int,
         redName: String,
         blueName: String,
-        isJudging: Boolean,
     ): NetworkResult<Pair<Mat, Match>> = coroutineBinding {
         val user = when {
             // TODO("consider re-using existing user identity vs always creating new")
@@ -44,7 +43,6 @@ class MatManager(
         ).bind()
         prefs.updateMatInfo(mat)
         prefs.updateCurrentMatch(match)
-        // TODO: if isJudging == true, call matManager.joinMat(adminCode, masterName) to add master as a judge
         mat to match
     }
 

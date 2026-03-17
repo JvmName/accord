@@ -1,4 +1,4 @@
-package dev.jvmname.accord.ui.control
+package dev.jvmname.accord.ui.session.judging
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -21,15 +21,15 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 
 @AssistedInject
-class ControlTimePresenter(
-    @Assisted private val screen: ControlTimeScreen,
+class JudgeSessionPresenter(
+    @Assisted private val screen: JudgeSessionScreen,
     @Assisted private val navigator: Navigator,
     private val prefs: Prefs,
     private val session: JudgingSession,
     private val matchManager: MatchManager,
-) : Presenter<ControlTimeState> {
+) : Presenter<JudgeSessionState> {
     @Composable
-    override fun present(): ControlTimeState {
+    override fun present(): JudgeSessionState {
         val matName by produceState("") {
             value = prefs.observeMatInfo().filterNotNull().first().name
         }
@@ -47,45 +47,45 @@ class ControlTimePresenter(
             roundInfo = roundEvent,
         )
 
-        return ControlTimeState(
+        return JudgeSessionState(
             matName = matName,
             matchState = matchState,
             isMatchEnded = isMatchEnded,
             eventSink = { event ->
                 Logger.d { "Received event: $event" }
                 when (event) {
-                    ControlTimeEvent.Back -> navigator.pop()
-                    is ControlTimeEvent.ButtonPress -> {
+                    JudgeSessionEvent.Back -> navigator.pop()
+                    is JudgeSessionEvent.ButtonPress -> {
                         Logger.d { "Presenter press ${event.competitor}" }
                         session.recordPress(event.competitor)
                     }
 
-                    is ControlTimeEvent.ButtonRelease -> {
+                    is JudgeSessionEvent.ButtonRelease -> {
                         Logger.d { "Presenter release ${event.competitor}" }
                         session.recordRelease(event.competitor)
                     }
 
-                    is ControlTimeEvent.ManualPointEdit -> {
+                    is JudgeSessionEvent.ManualPointEdit -> {
                         (session as? RoundController)?.manualEdit(event.competitor, event.action)
                     }
 
-                    ControlTimeEvent.BeginNextRound -> {
+                    JudgeSessionEvent.BeginNextRound -> {
                         (session as? RoundController)?.let { rc ->
                             rc.endRound()
                             rc.startRound()
                         }
                     }
 
-                    ControlTimeEvent.Pause -> {
+                    JudgeSessionEvent.Pause -> {
                         session.pause()
                     }
 
-                    ControlTimeEvent.Reset -> TODO()
-                    ControlTimeEvent.Resume -> {
+                    JudgeSessionEvent.Reset -> TODO()
+                    JudgeSessionEvent.Resume -> {
                         session.resume()
                     }
 
-                    ControlTimeEvent.Submission -> {
+                    JudgeSessionEvent.Submission -> {
                         (session as? RoundController)?.endRound()
                     }
 
@@ -94,8 +94,8 @@ class ControlTimePresenter(
         )
     }
 
-    @[AssistedFactory CircuitInject(ControlTimeScreen::class, MatchScope::class)]
+    @[AssistedFactory CircuitInject(JudgeSessionScreen::class, MatchScope::class)]
     fun interface Factory {
-        operator fun invoke(screen: ControlTimeScreen, navigator: Navigator): ControlTimePresenter
+        operator fun invoke(screen: JudgeSessionScreen, navigator: Navigator): JudgeSessionPresenter
     }
 }

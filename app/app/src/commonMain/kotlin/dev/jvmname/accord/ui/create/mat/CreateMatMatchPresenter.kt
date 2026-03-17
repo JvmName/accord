@@ -5,10 +5,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.github.michaelbull.result.flatMap
+import com.github.michaelbull.result.map
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.domain.MatManager
+import dev.jvmname.accord.network.adminCode
 import dev.jvmname.accord.network.message
 import dev.jvmname.accord.ui.onEither
 import dev.jvmname.accord.ui.showcodes.ShowCodesScreen
@@ -46,12 +49,13 @@ class CreateMatMatchPresenter(
                             judgeCount = event.judgeCount,
                             redName = event.redName,
                             blueName = event.blueName,
-                            isJudging = event.isJudging,
                         )
+                            .flatMap { (mat, match) ->
+                                matManager.joinMat(mat.adminCode.code, event.masterName)
+                                    .map { it to match }
+                            }
                             .onEither(
                                 success = { (mat, match) ->
-                                    // TODO: if event.isJudging, call matManager.joinMat(adminCode, event.masterName) before joinMatch
-                                    //TODO: put this further down the callstack: matchManager.joinMatch(match)
                                     navigator.goTo(ShowCodesScreen(mat = mat, match = match))
                                 },
                                 failure = { error = "Error creating mat: ${it.message}" }

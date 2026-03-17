@@ -1,7 +1,7 @@
 package dev.jvmname.accord.ui.trampoline
 
+import androidx.compose.runtime.Immutable
 import com.slack.circuit.runtime.CircuitUiState
-import com.slack.circuit.runtime.screen.PopResult
 import dev.jvmname.accord.di.MatchGraph
 import dev.jvmname.accord.di.MatchRole
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
@@ -17,8 +17,9 @@ data class TrampolineMatchGraphScreen(
     val matchRole: MatchRole,
 ) : ParcelableScreen
 
+@Immutable
 data class TrampolineMatchGraphState(
     val matchGraph: MatchGraph,
     val innerRoot: ParcelableScreen,
-    val onRootPop: (PopResult?) -> Unit,
+    val onRootPop: () -> Unit,
 ) : CircuitUiState
