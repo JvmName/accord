@@ -5,6 +5,7 @@ import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import dev.jvmname.accord.network.Mat
 import dev.jvmname.accord.network.Match
+import dev.jvmname.accord.network.User
 import dev.jvmname.accord.parcel.CommonParcelize
 import dev.jvmname.accord.parcel.ParcelableScreen
 
@@ -13,8 +14,9 @@ data class ShowCodesScreen(val mat: Mat, val match: Match) : ParcelableScreen
 
 @Immutable
 data class ShowCodesState(
-    val mat: Mat,
-    val match: Match,
+    val adminCode: String,
+    val viewerCode: String,
+    val joinedJudges: List<User>,
     val eventSink: (ShowCodesEvent) -> Unit,
 ) : CircuitUiState
 
