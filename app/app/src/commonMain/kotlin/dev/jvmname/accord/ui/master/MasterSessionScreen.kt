@@ -3,13 +3,13 @@ package dev.jvmname.accord.ui.master
 import androidx.compose.runtime.Immutable
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
-import com.slack.circuit.runtime.screen.Screen
 import dev.jvmname.accord.network.CompetitorColor
 import dev.jvmname.accord.network.MatchId
 import dev.jvmname.accord.parcel.CommonParcelize
+import dev.jvmname.accord.parcel.ParcelableScreen
 
 @CommonParcelize
-data class MasterSessionScreen(val matchId: MatchId) : Screen
+data class MasterSessionScreen(val matchId: MatchId) : ParcelableScreen
 
 @Immutable
 data class MasterSessionState(

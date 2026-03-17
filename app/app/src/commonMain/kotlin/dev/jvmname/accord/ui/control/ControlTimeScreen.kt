@@ -5,7 +5,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
-import com.slack.circuit.runtime.screen.Screen
 import dev.drewhamilton.poko.Poko
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.HapticEvent
@@ -14,12 +13,13 @@ import dev.jvmname.accord.domain.control.rounds.RoundEvent.RoundState
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.parcel.CommonParcelize
+import dev.jvmname.accord.parcel.ParcelableScreen
 
 
 enum class ControlTimeType { SOLO, CONSENSUS }
 
 @CommonParcelize
-data class ControlTimeScreen(val type: ControlTimeType) : Screen
+data class ControlTimeScreen(val type: ControlTimeType) : ParcelableScreen
 
 @Stable
 data class ControlTimeState(

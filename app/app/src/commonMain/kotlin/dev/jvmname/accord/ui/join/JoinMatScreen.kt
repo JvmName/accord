@@ -3,12 +3,12 @@ package dev.jvmname.accord.ui.join
 import androidx.compose.runtime.Immutable
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
-import com.slack.circuit.runtime.screen.Screen
 import dev.jvmname.accord.network.MatCode
 import dev.jvmname.accord.parcel.CommonParcelize
+import dev.jvmname.accord.parcel.ParcelableScreen
 
 @CommonParcelize
-data class JoinMatScreen(val joinCode: MatCode? = null) : Screen
+data class JoinMatScreen(val joinCode: MatCode? = null) : ParcelableScreen
 
 @Immutable
 data class JoinMatState(

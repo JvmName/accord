@@ -3,12 +3,12 @@ package dev.jvmname.accord.ui.viewer
 import androidx.compose.runtime.Immutable
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
-import com.slack.circuit.runtime.screen.Screen
 import dev.jvmname.accord.network.MatId
 import dev.jvmname.accord.parcel.CommonParcelize
+import dev.jvmname.accord.parcel.ParcelableScreen
 
 @CommonParcelize
-data class ViewerScreen(val matId: MatId) : Screen
+data class ViewerScreen(val matId: MatId) : ParcelableScreen
 
 @Immutable
 data class ViewerState(

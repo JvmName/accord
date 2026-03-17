@@ -3,13 +3,13 @@ package dev.jvmname.accord.ui.showcodes
 import androidx.compose.runtime.Immutable
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
-import com.slack.circuit.runtime.screen.Screen
 import dev.jvmname.accord.network.Mat
 import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.parcel.CommonParcelize
+import dev.jvmname.accord.parcel.ParcelableScreen
 
 @CommonParcelize
-data class ShowCodesScreen(val mat: Mat, val match: Match) : Screen
+data class ShowCodesScreen(val mat: Mat, val match: Match) : ParcelableScreen
 
 @Immutable
 data class ShowCodesState(
