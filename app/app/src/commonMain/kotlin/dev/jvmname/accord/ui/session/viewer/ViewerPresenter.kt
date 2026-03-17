@@ -1,4 +1,4 @@
-package dev.jvmname.accord.ui.viewer
+package dev.jvmname.accord.ui.session.viewer
 
 import androidx.compose.runtime.Composable
 import com.slack.circuit.codegen.annotations.CircuitInject

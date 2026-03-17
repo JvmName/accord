@@ -1,6 +1,7 @@
 package dev.jvmname.accord.ui.trampoline
 
 import com.slack.circuit.runtime.CircuitUiState
+import com.slack.circuit.runtime.screen.PopResult
 import dev.jvmname.accord.di.MatchGraph
 import dev.jvmname.accord.di.MatchRole
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
@@ -19,5 +20,5 @@ data class TrampolineMatchGraphScreen(
 data class TrampolineMatchGraphState(
     val matchGraph: MatchGraph,
     val innerRoot: ParcelableScreen,
-    val onRootPop: () -> Unit,
+    val onRootPop: (PopResult?) -> Unit,
 ) : CircuitUiState

@@ -1,4 +1,4 @@
-package dev.jvmname.accord.ui.master
+package dev.jvmname.accord.ui.session.master
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

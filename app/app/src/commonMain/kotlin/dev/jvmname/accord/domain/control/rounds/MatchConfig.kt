@@ -6,9 +6,7 @@ import dev.jvmname.accord.domain.control.rounds.RoundInfo.Round
 import dev.jvmname.accord.parcel.CommonParcelable
 import dev.jvmname.accord.parcel.CommonParcelize
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.DurationUnit
 
 @CommonParcelize
 data class MatchConfig(val rounds: List<RoundInfo>) : CommonParcelable {
@@ -37,32 +35,12 @@ sealed interface RoundInfo : CommonParcelable {
     class Round(
         val index: Int,
         val maxPoints: Int,
-        val durationMs: Long,
+        override val duration: Duration,
         val optional: Boolean = false,
-    ) : RoundInfo {
-        override val duration: Duration get() = durationMs.milliseconds
-
-        constructor(
-            index: Int,
-            maxPoints: Int,
-            duration: Duration,
-            optional: Boolean = false,
-        ) : this(
-            index = index,
-            maxPoints = maxPoints,
-            durationMs = duration.toLong(DurationUnit.MILLISECONDS),
-            optional = optional,
-        )
-    }
+    ) : RoundInfo
 
     @[Poko CommonParcelize]
-    class Break(val durationMs: Long) : RoundInfo {
-        override val duration: Duration get() = durationMs.milliseconds
-
-        constructor(duration: Duration) : this(
-            durationMs = duration.toLong(DurationUnit.MILLISECONDS),
-        )
-    }
+    class Break(override val duration: Duration) : RoundInfo
 }
 
 data class RoundEvent(

@@ -1,4 +1,4 @@
-package dev.jvmname.accord.ui.viewer
+package dev.jvmname.accord.ui.session.viewer
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize

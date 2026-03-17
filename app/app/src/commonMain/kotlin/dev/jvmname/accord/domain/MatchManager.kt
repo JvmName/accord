@@ -29,6 +29,7 @@ class MatchManager(
     private val client: AccordClient,
     private val socketFactory: SocketClient.Factory,
     private val scope: CoroutineScope,
+    private val match: Match?,
 ) {
     private var activeMatch = AtomicReference<Match?>(null)
     private lateinit var socket: SocketClient
@@ -38,6 +39,10 @@ class MatchManager(
         scope.launch {
             val token = requireNotNull(prefs.getAuthToken())
             socket = socketFactory.create(token)
+            match?.let {
+                cacheMatch(it)
+                connectAndObserve(it)
+            }
         }
     }
 
