@@ -3,11 +3,11 @@ package dev.jvmname.accord.ui.create.mat
 import androidx.compose.runtime.Immutable
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
-import com.slack.circuit.runtime.screen.Screen
 import dev.jvmname.accord.parcel.CommonParcelize
+import dev.jvmname.accord.parcel.ParcelableScreen
 
 @CommonParcelize
-data object CreateMatMatchScreen : Screen
+data object CreateMatMatchScreen : ParcelableScreen
 
 @Immutable
 data class CreateMatMatchState(

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
+import dev.jvmname.accord.di.MatchExitSignal
 import dev.jvmname.accord.di.MatchScope
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
@@ -14,6 +15,7 @@ class ViewerPresenter(
     @Assisted private val screen: ViewerScreen,
     @Assisted private val navigator: Navigator,
     // TODO: inject MatchManager for socket observation
+    private val exitSignal: MatchExitSignal,
 ) : Presenter<ViewerState> {
 
     @Composable

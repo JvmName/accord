@@ -7,7 +7,9 @@ import androidx.compose.runtime.remember
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
+import dev.jvmname.accord.di.MatchRole
 import dev.jvmname.accord.domain.MatManager
+import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.control.ControlTimeScreen
 import dev.jvmname.accord.ui.control.ControlTimeType
@@ -15,6 +17,7 @@ import dev.jvmname.accord.ui.create.mat.CreateMatMatchScreen
 import dev.jvmname.accord.ui.create.newmatch.NewMatchScreen
 import dev.jvmname.accord.ui.join.JoinMatScreen
 import dev.jvmname.accord.ui.main.MainEvent.ContinueMat
+import dev.jvmname.accord.ui.trampoline.TrampolineMatchGraphScreen
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
@@ -44,7 +47,14 @@ class MainPresenter(
                 ContinueMat -> navigator.goTo(NewMatchScreen) // TODO: NewMatchScreen built in task 10
 
                 MainEvent.SoloRideTime -> {
-                    navigator.goTo(ControlTimeScreen(ControlTimeType.SOLO))
+                    navigator.goTo(
+                        TrampolineMatchGraphScreen(
+                            innerRoot = ControlTimeScreen(ControlTimeType.SOLO),
+                            match = null,
+                            matchConfig = MatchConfig.RdojoKombat,
+                            matchRole = MatchRole.SOLO,
+                        )
+                    )
                 }
             }
         }

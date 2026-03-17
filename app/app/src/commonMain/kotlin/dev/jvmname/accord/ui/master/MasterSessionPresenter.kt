@@ -10,15 +10,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
-import com.slack.circuit.runtime.popUntil
 import com.slack.circuit.runtime.presenter.Presenter
+import dev.jvmname.accord.di.MatchExitSignal
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.MatchManager
 import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.network.UserId
 import dev.jvmname.accord.network.message
 import dev.jvmname.accord.prefs.Prefs
-import dev.jvmname.accord.ui.main.MainScreen
 import dev.jvmname.accord.ui.onEither
 import dev.jvmname.accord.ui.showcodes.ShowCodesScreen
 import dev.zacsweers.metro.Assisted
@@ -33,9 +32,9 @@ import kotlinx.coroutines.launch
 class MasterSessionPresenter(
     @Assisted private val screen: MasterSessionScreen,
     @Assisted private val navigator: Navigator,
-    // TODO: MatchManager is SingleIn(MatchScope) — verify this injection works from AppScope presenter
     private val matchManager: MatchManager,
     private val prefs: Prefs,
+    private val exitSignal: MatchExitSignal,
     private val scope: CoroutineScope,
 ) : Presenter<MasterSessionState> {
 
@@ -123,7 +122,7 @@ class MasterSessionPresenter(
                 MasterSessionEvent.EndMatch -> scope.launch {
                     matchManager.endMatch()
                         .onEither(
-                            success = { /* match updated via flow */ },
+                            success = { exitSignal.requestExitToMain() },
                             failure = { error = it.message }
                         )
                 }
@@ -132,7 +131,7 @@ class MasterSessionPresenter(
                     val currentMatch = match ?: return@launch
                     navigator.goTo(ShowCodesScreen(mat = mat, match = currentMatch))
                 }
-                MasterSessionEvent.ReturnToMain -> navigator.popUntil { it is MainScreen }
+                MasterSessionEvent.ReturnToMain -> exitSignal.requestExitToMain()
             }
         }
     }

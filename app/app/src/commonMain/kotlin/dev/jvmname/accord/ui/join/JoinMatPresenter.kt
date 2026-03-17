@@ -8,12 +8,16 @@ import androidx.compose.runtime.setValue
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
+import dev.jvmname.accord.di.MatchRole
 import dev.jvmname.accord.domain.MatManager
+import dev.jvmname.accord.domain.MatchManager
+import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.network.Role
 import dev.jvmname.accord.network.message
 import dev.jvmname.accord.ui.control.ControlTimeScreen
 import dev.jvmname.accord.ui.control.ControlTimeType
 import dev.jvmname.accord.ui.onEither
+import dev.jvmname.accord.ui.trampoline.TrampolineMatchGraphScreen
 import dev.jvmname.accord.ui.viewer.ViewerScreen
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
@@ -27,7 +31,7 @@ class JoinMatPresenter(
     @Assisted private val screen: JoinMatScreen,
     @Assisted private val navigator: Navigator,
     private val matManager: MatManager,
-//    private val matchManager: MatchManager, //todo matchmanager
+    private val matchManager: MatchManager,
     private val scope: CoroutineScope,
 ) : Presenter<JoinMatState> {
 
@@ -47,17 +51,26 @@ class JoinMatPresenter(
                         matManager.joinMat(it.code, it.name)
                             .onEither(
                                 success = { mat ->
-                                    val currentMatch = mat.currentMatch
-                                    if (currentMatch != null) {
-//                                        matchManager.joinMatch(currentMatch)
-                                        val role = mat.codes.find { c -> c.code == it.code }?.role
-                                        if (role == Role.ADMIN) {
-                                            navigator.goTo(ControlTimeScreen(ControlTimeType.CONSENSUS))
-                                        } else {
-                                            navigator.goTo(ViewerScreen(mat.id))
-                                        }
-                                    } else {
+                                    val currentMatch = mat.currentMatch ?: run {
                                         error = "No active match on this mat yet"
+                                        return@onEither
+                                    }
+                                    matchManager.joinMatch(currentMatch)
+                                    val role = mat.codes.find { c -> c.code == it.code }?.role
+                                    if (role == Role.ADMIN) {
+                                        navigator.goTo(TrampolineMatchGraphScreen(
+                                            innerRoot = ControlTimeScreen(ControlTimeType.CONSENSUS),
+                                            match = currentMatch,
+                                            matchConfig = MatchConfig.RdojoKombat,
+                                            matchRole = MatchRole.JUDGE,
+                                        ))
+                                    } else {
+                                        navigator.goTo(TrampolineMatchGraphScreen(
+                                            innerRoot = ViewerScreen(mat.id),
+                                            match = currentMatch,
+                                            matchConfig = MatchConfig.RdojoKombat,
+                                            matchRole = MatchRole.VIEWER,
+                                        ))
                                     }
                                 },
                                 failure = { error = it.message ?: "Failed to join mat" }

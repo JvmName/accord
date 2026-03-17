@@ -8,48 +8,17 @@ import androidx.compose.runtime.remember
 import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
-import com.slack.circuit.runtime.popUntil
 import com.slack.circuit.runtime.presenter.Presenter
-import dev.jvmname.accord.di.LocalGraph
+import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.MatchManager
-import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.session.JudgingSession
 import dev.jvmname.accord.domain.session.RoundController
 import dev.jvmname.accord.prefs.Prefs
-import dev.jvmname.accord.ui.main.MainScreen
-import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-
-@AssistedInject
-class DelegatingControlTimePresenter(
-    @Assisted private val screen: ControlTimeScreen,
-    @Assisted private val navigator: Navigator,
-) : Presenter<ControlTimeState> {
-    @Composable
-    override fun present(): ControlTimeState {
-        val accordGraph = LocalGraph.current
-        val matchGraph = remember(screen) {
-            accordGraph.matchGraphFactory(MatchConfig.RdojoKombat, screen.type)
-        }
-
-        val delegate: Presenter<ControlTimeState> = remember(screen, navigator, matchGraph) {
-            matchGraph.controlTimePresenterFactory(screen, navigator)
-        }
-
-        return delegate.present()
-    }
-
-
-    @[AssistedFactory CircuitInject(ControlTimeScreen::class, AppScope::class)]
-    fun interface Factory {
-        fun create(screen: ControlTimeScreen, navigator: Navigator): DelegatingControlTimePresenter
-    }
-}
-
 
 @AssistedInject
 class ControlTimePresenter(
@@ -85,8 +54,7 @@ class ControlTimePresenter(
             eventSink = { event ->
                 Logger.d { "Received event: $event" }
                 when (event) {
-                    // TODO: verify navigation stack depth — if judge always enters from MainScreen directly, plain pop() is sufficient
-                    ControlTimeEvent.Back -> navigator.popUntil { it is MainScreen }
+                    ControlTimeEvent.Back -> navigator.pop()
                     is ControlTimeEvent.ButtonPress -> {
                         Logger.d { "Presenter press ${event.competitor}" }
                         session.recordPress(event.competitor)
@@ -126,7 +94,7 @@ class ControlTimePresenter(
         )
     }
 
-    @[AssistedFactory]
+    @[AssistedFactory CircuitInject(ControlTimeScreen::class, MatchScope::class)]
     fun interface Factory {
         operator fun invoke(screen: ControlTimeScreen, navigator: Navigator): ControlTimePresenter
     }
