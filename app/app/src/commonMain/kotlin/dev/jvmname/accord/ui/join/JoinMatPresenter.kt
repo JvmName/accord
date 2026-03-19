@@ -14,7 +14,6 @@ import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.network.Role
 import dev.jvmname.accord.network.message
 import dev.jvmname.accord.ui.onEither
-import dev.jvmname.accord.ui.session.judging.ControlTimeType
 import dev.jvmname.accord.ui.session.judging.JudgeSessionScreen
 import dev.jvmname.accord.ui.session.viewer.ViewerScreen
 import dev.jvmname.accord.ui.trampoline.TrampolineMatchGraphScreen
@@ -53,25 +52,23 @@ class JoinMatPresenter(
                                         error = "No active match on this mat yet"
                                         return@onEither
                                     }
-                                    when (mat.codes.find { c -> c.code == it.code }?.role) {
-                                        Role.ADMIN -> navigator.goTo(
-                                            TrampolineMatchGraphScreen(
-                                                innerRoot = JudgeSessionScreen(ControlTimeType.CONSENSUS),
+                                    val next =
+                                        when (mat.codes.find { c -> c.code == it.code }?.role) {
+                                            Role.ADMIN -> TrampolineMatchGraphScreen(
+                                                innerRoot = JudgeSessionScreen,
                                                 match = currentMatch,
                                                 matchConfig = MatchConfig.RdojoKombat,
                                                 matchRole = MatchRole.JUDGE,
                                             )
-                                        )
 
-                                        else -> navigator.goTo(
-                                            TrampolineMatchGraphScreen(
+                                            else -> TrampolineMatchGraphScreen(
                                                 innerRoot = ViewerScreen(mat.id),
                                                 match = currentMatch,
                                                 matchConfig = MatchConfig.RdojoKombat,
                                                 matchRole = MatchRole.VIEWER,
                                             )
-                                        )
-                                    }
+                                        }
+                                    navigator.goTo(next)
                                 },
                                 failure = { error = it.message ?: "Failed to join mat" }
                             )

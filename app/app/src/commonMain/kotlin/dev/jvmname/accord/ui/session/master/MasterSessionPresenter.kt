@@ -14,11 +14,13 @@ import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.di.MatchExitSignal
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.MatchManager
+import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.network.UserId
 import dev.jvmname.accord.network.message
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.onEither
+import dev.jvmname.accord.ui.session.MasterSessionEvent
 import dev.jvmname.accord.ui.showcodes.ShowCodesScreen
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
@@ -45,7 +47,7 @@ class MasterSessionPresenter(
         var elapsedSeconds by remember { mutableLongStateOf(0L) }
         var isPaused by remember { mutableStateOf(false) }
         // Note: isPaused is managed as local optimistic state — the server Round model does not
-        // expose pause state, so we toggle it on button press and let PauseRound/ResumeRound
+        // expose pause state, so we toggle it on button press and let Pause/Resume
         // confirm server-side. State resets on recomposition if navigated away.
 
         val isMatchStarted = match?.startedAt != null
@@ -60,16 +62,20 @@ class MasterSessionPresenter(
             }
         }
 
-        val redScore = match?.let { scoreForCompetitor(it, it.red.id) } ?: 0
-        val blueScore = match?.let { scoreForCompetitor(it, it.blue.id) } ?: 0
+        val score = Score(
+            redPoints = match?.let { scoreForCompetitor(it, it.red.id) } ?: 0,
+            bluePoints = match?.let { scoreForCompetitor(it, it.blue.id) } ?: 0,
+            activeControlTime = null,
+            activeCompetitor = null,
+            techFallWin = null,
+        )
         val roundNumber = match?.rounds?.size ?: 0
 
         return MasterSessionState(
             matchId = screen.matchId,
             redName = match?.red?.name ?: "Red",
             blueName = match?.blue?.name ?: "Blue",
-            redScore = redScore,
-            blueScore = blueScore,
+            score = score,
             elapsedSeconds = elapsedSeconds,
             roundNumber = roundNumber,
             isMatchStarted = isMatchStarted,
@@ -85,7 +91,7 @@ class MasterSessionPresenter(
                             failure = { error = it.message }
                         )
                 }
-                MasterSessionEvent.PauseRound -> {
+                MasterSessionEvent.Pause -> {
                     isPaused = true
                     scope.launch {
                         matchManager.pauseRound(screen.matchId)
@@ -95,7 +101,7 @@ class MasterSessionPresenter(
                             )
                     }
                 }
-                MasterSessionEvent.ResumeRound -> {
+                MasterSessionEvent.Resume -> {
                     isPaused = false
                     scope.launch {
                         matchManager.resumeRound(screen.matchId)
@@ -112,7 +118,7 @@ class MasterSessionPresenter(
                             failure = { error = it.message }
                         )
                 }
-                MasterSessionEvent.StartNextRound -> scope.launch {
+                MasterSessionEvent.StartRound -> scope.launch {
                     matchManager.startRound()
                         .onEither(
                             success = { /* match updated via flow */ },
@@ -132,6 +138,7 @@ class MasterSessionPresenter(
                     navigator.goTo(ShowCodesScreen(mat = mat, match = currentMatch))
                 }
                 MasterSessionEvent.ReturnToMain -> exitSignal.requestExitToMain()
+                MasterSessionEvent.Back -> navigator.pop()
             }
         }
     }

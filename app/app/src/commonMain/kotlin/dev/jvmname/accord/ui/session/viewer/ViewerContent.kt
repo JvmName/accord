@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.ui.common.StandardScaffold
+import dev.jvmname.accord.ui.session.ViewerEvent
 
 @[Composable CircuitInject(ViewerScreen::class, MatchScope::class)]
 fun ViewerContent(state: ViewerState, modifier: Modifier = Modifier) {

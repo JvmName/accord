@@ -14,6 +14,7 @@ import dev.jvmname.accord.domain.MatchManager
 import dev.jvmname.accord.domain.session.JudgingSession
 import dev.jvmname.accord.domain.session.RoundController
 import dev.jvmname.accord.prefs.Prefs
+import dev.jvmname.accord.ui.session.JudgeSessionEvent
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
@@ -43,13 +44,13 @@ class JudgeSessionPresenter(
 
         val matchState = MatchState(
             score = score,
-            haptic = hapticEvent,
             roundInfo = roundEvent,
         )
 
         return JudgeSessionState(
             matName = matName,
             matchState = matchState,
+            hapticEvent = hapticEvent,
             isMatchEnded = isMatchEnded,
             eventSink = { event ->
                 Logger.d { "Received event: $event" }
@@ -65,11 +66,11 @@ class JudgeSessionPresenter(
                         session.recordRelease(event.competitor)
                     }
 
-                    is JudgeSessionEvent.ManualPointEdit -> {
+                    is JudgeSessionEvent.ManualEdit -> {
                         (session as? RoundController)?.manualEdit(event.competitor, event.action)
                     }
 
-                    JudgeSessionEvent.BeginNextRound -> {
+                    JudgeSessionEvent.StartRound -> {
                         (session as? RoundController)?.let { rc ->
                             rc.endRound()
                             rc.startRound()
@@ -85,7 +86,7 @@ class JudgeSessionPresenter(
                         session.resume()
                     }
 
-                    JudgeSessionEvent.Submission -> {
+                    is JudgeSessionEvent.EndRound -> {
                         (session as? RoundController)?.endRound()
                     }
 

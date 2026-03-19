@@ -4,7 +4,7 @@ import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.HapticEvent
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.score.Score
-import dev.jvmname.accord.ui.session.judging.JudgeSessionEvent
+import dev.jvmname.accord.ui.session.ManualEditAction
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -27,7 +27,7 @@ interface JudgingSession : PausableSession {
 interface RoundController : PausableSession {
     fun startRound()
     fun endRound()
-    fun manualEdit(competitor: Competitor, action: JudgeSessionEvent.ManualPointEdit.Action)
+    fun manualEdit(competitor: Competitor, action: ManualEditAction)
 }
 
 interface SoloSession : JudgingSession, RoundController

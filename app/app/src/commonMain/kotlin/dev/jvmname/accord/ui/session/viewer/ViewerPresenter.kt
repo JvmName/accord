@@ -6,6 +6,7 @@ import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.di.MatchExitSignal
 import dev.jvmname.accord.di.MatchScope
+import dev.jvmname.accord.ui.session.ViewerEvent
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject

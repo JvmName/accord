@@ -13,7 +13,7 @@ import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.network.MatchId
 import dev.jvmname.accord.network.NetworkResult
 import dev.jvmname.accord.ui.common.Consumable
-import dev.jvmname.accord.ui.session.judging.JudgeSessionEvent
+import dev.jvmname.accord.ui.session.ManualEditAction
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
@@ -98,7 +98,7 @@ class NetworkMasterSession(
 
     override fun manualEdit(
         competitor: Competitor,
-        action: JudgeSessionEvent.ManualPointEdit.Action
+        action: ManualEditAction
     ) {
         Logger.d { "manualEdit: API not yet defined — TODO" }
     }

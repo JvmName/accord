@@ -28,9 +28,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.accord.di.MatchScope
+import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.network.CompetitorColor
 import dev.jvmname.accord.network.MatchId
 import dev.jvmname.accord.ui.common.StandardScaffold
+import dev.jvmname.accord.ui.session.MasterSessionEvent
 import dev.jvmname.accord.ui.theme.AccordTheme
 
 @[Composable CircuitInject(MasterSessionScreen::class, MatchScope::class)]
@@ -73,12 +75,12 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("RED", color = Color.Red, style = MaterialTheme.typography.labelLarge)
                     Text(state.redName, style = MaterialTheme.typography.bodyMedium)
-                    Text("${state.redScore}", style = MaterialTheme.typography.displayLarge)
+                    Text("${state.score.redPoints}", style = MaterialTheme.typography.displayLarge)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("BLUE", color = Color.Blue, style = MaterialTheme.typography.labelLarge)
                     Text(state.blueName, style = MaterialTheme.typography.bodyMedium)
-                    Text("${state.blueScore}", style = MaterialTheme.typography.displayLarge)
+                    Text("${state.score.bluePoints}", style = MaterialTheme.typography.displayLarge)
                 }
             }
 
@@ -103,7 +105,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             if (state.isMatchStarted && !state.isMatchEnded) {
                 if (!state.isPaused) {
                     Button(
-                        onClick = { state.eventSink(MasterSessionEvent.PauseRound) },
+                        onClick = { state.eventSink(MasterSessionEvent.Pause) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Pause")
@@ -116,7 +118,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                     }
                 } else {
                     Button(
-                        onClick = { state.eventSink(MasterSessionEvent.ResumeRound) },
+                        onClick = { state.eventSink(MasterSessionEvent.Resume) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Resume")
@@ -215,8 +217,13 @@ private fun MasterSessionContentPreview() {
                 matchId = MatchId("preview-match-1"),
                 redName = "Alice",
                 blueName = "Bob",
-                redScore = 3,
-                blueScore = 1,
+                score = Score(
+                    redPoints = 3,
+                    bluePoints = 1,
+                    activeControlTime = null,
+                    activeCompetitor = null,
+                    techFallWin = null,
+                ),
                 elapsedSeconds = 127L,
                 roundNumber = 2,
                 isMatchStarted = true,

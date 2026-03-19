@@ -38,6 +38,7 @@ import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,9 +63,11 @@ import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.StubVibrator
 import dev.jvmname.accord.ui.common.IconTextButton
 import dev.jvmname.accord.ui.common.StandardScaffold
-import dev.jvmname.accord.ui.session.judging.JudgeSessionEvent.ButtonPress
-import dev.jvmname.accord.ui.session.judging.JudgeSessionEvent.ButtonRelease
-import dev.jvmname.accord.ui.session.judging.JudgeSessionEvent.ManualPointEdit
+import dev.jvmname.accord.ui.session.JudgeSessionEvent
+import dev.jvmname.accord.ui.session.JudgeSessionEvent.ButtonPress
+import dev.jvmname.accord.ui.session.JudgeSessionEvent.ButtonRelease
+import dev.jvmname.accord.ui.session.JudgeSessionEvent.ManualEdit
+import dev.jvmname.accord.ui.session.ManualEditAction
 import dev.jvmname.accord.ui.theme.AccordTheme
 import top.ltfan.multihaptic.compose.rememberVibrator
 import kotlin.time.Duration.Companion.minutes
@@ -80,14 +83,16 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
         else -> rememberVibrator()
     }
 
-    state.matchState.haptic?.effect?.consume()?.let { vibrator.vibrate(it) }
+    LaunchedEffect(state.hapticEvent) {
+        state.hapticEvent?.effect?.consume()?.let { vibrator.vibrate(it) }
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         StandardScaffold(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background),
-            title = "Control Time: ${state.matName}",
+            title = "Judging: ${state.matName}",
             onBackClick = { state.eventSink(JudgeSessionEvent.Back) },
             topBarActions = {
                 //TODO
@@ -216,7 +221,7 @@ private fun PlayerControl(
                     OutlinedIconButton(
                         onClick = {
                             if (points > 0) eventSink(
-                                ManualPointEdit(player, ManualPointEdit.Action.DECREMENT)
+                                ManualEdit(player, ManualEditAction.DECREMENT)
                             )
                         },
                         enabled = points > 0
@@ -240,7 +245,7 @@ private fun PlayerControl(
                 AnimatedVisibility(shouldShowPointControls) {
                     OutlinedIconButton(
                         onClick = {
-                            eventSink(ManualPointEdit(player, ManualPointEdit.Action.INCREMENT))
+                            eventSink(ManualEdit(player, ManualEditAction.INCREMENT))
                         },
                     ) {
                         Icon(
@@ -298,7 +303,7 @@ private fun PlayerControl(
 }
 
 @Composable
-fun RoundControlsSheet(modifier: Modifier = Modifier, actions: RoundControlActions) {
+fun RoundControlsSheet(modifier: Modifier = Modifier, actions: MatchActions) {
     Card(
         modifier = modifier.fillMaxWidth().wrapContentHeight(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -310,10 +315,10 @@ fun RoundControlsSheet(modifier: Modifier = Modifier, actions: RoundControlActio
 
             val actionsList = remember(actions) {
                 listOf(
-                    actions.beginNextRound to Icons.AutoMirrored.Outlined.NextPlan,
+                    actions.startRound to Icons.AutoMirrored.Outlined.NextPlan,
                     actions.resume to Icons.Outlined.PlayArrow,
                     actions.pause to Icons.Outlined.PauseCircle,
-                    actions.submission to Icons.Default.HeartBroken,
+                    actions.endRound to Icons.Default.HeartBroken,
 //                    actions.reset to Icons.Default.Replay,
                 )
             }
@@ -350,7 +355,6 @@ private fun JudgeSessionContentPreview() {
                         activeCompetitor = null,
                         techFallWin = null
                     ),
-                    haptic = null,
                     roundInfo = RoundEvent(
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
@@ -382,7 +386,6 @@ private fun JudgeSessionContentPreview_Paused() {
                         activeCompetitor = null,
                         techFallWin = null
                     ),
-                    haptic = null,
                     roundInfo = RoundEvent(
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
@@ -414,7 +417,6 @@ private fun JudgeSessionContentPreview_Holding() {
                         activeCompetitor = Competitor.BLUE,
                         techFallWin = null
                     ),
-                    haptic = null,
                     roundInfo = RoundEvent(
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
@@ -437,11 +439,11 @@ private fun RoundControlsSheetPreview() {
 
         RoundControlsSheet(
             modifier = Modifier,
-            actions = RoundControlActions(
-                beginNextRound = {},
+            actions = MatchActions(
+                startRound = {},
                 resume = {},
                 pause = {},
-                submission = {},
+                endRound = {},
                 reset = {},
             )
         )

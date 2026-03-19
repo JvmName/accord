@@ -15,7 +15,6 @@ import dev.jvmname.accord.ui.create.mat.CreateMatMatchScreen
 import dev.jvmname.accord.ui.create.newmatch.NewMatchScreen
 import dev.jvmname.accord.ui.join.JoinMatScreen
 import dev.jvmname.accord.ui.main.MainEvent.ContinueMat
-import dev.jvmname.accord.ui.session.judging.ControlTimeType
 import dev.jvmname.accord.ui.session.judging.JudgeSessionScreen
 import dev.jvmname.accord.ui.trampoline.TrampolineMatchGraphScreen
 import dev.zacsweers.metro.AppScope
@@ -49,7 +48,7 @@ class MainPresenter(
                 MainEvent.SoloRideTime -> {
                     navigator.goTo(
                         TrampolineMatchGraphScreen(
-                            innerRoot = JudgeSessionScreen(ControlTimeType.SOLO),
+                            innerRoot = JudgeSessionScreen,
                             match = null,
                             matchConfig = MatchConfig.RdojoKombat,
                             matchRole = MatchRole.SOLO,
