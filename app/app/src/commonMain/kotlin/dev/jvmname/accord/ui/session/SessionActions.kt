@@ -1,0 +1,45 @@
+package dev.jvmname.accord.ui.session
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+
+typealias MatchAction = () -> Unit
+
+@Stable
+class MatchActions(
+    val startRound: MatchAction? = null,
+    val resume: MatchAction? = null,
+    val pause: MatchAction? = null,
+    val endRound: MatchAction? = null,
+    val reset: MatchAction? = null,
+)
+
+@Composable
+fun rememberMatchActions(
+    isActive: Boolean,
+    isPaused: Boolean,
+    hasRound: Boolean,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onStartRound: () -> Unit,
+    onEndRound: () -> Unit,
+    onReset: (() -> Unit)? = null,
+): MatchActions {
+    val onPauseState = rememberUpdatedState(onPause)
+    val onResumeState = rememberUpdatedState(onResume)
+    val onStartState = rememberUpdatedState(onStartRound)
+    val onEndState = rememberUpdatedState(onEndRound)
+    val onResetState = rememberUpdatedState(onReset)
+
+    return remember(isActive, isPaused, hasRound) {
+        MatchActions(
+            startRound = { onStartState.value() },
+            resume = { onResumeState.value() }.takeIf { isPaused },
+            pause = { onPauseState.value() }.takeIf { isActive },
+            endRound = { onEndState.value() }.takeIf { isActive },
+            reset = { onResetState.value?.invoke() ?: Unit }.takeIf { hasRound },
+        )
+    }
+}

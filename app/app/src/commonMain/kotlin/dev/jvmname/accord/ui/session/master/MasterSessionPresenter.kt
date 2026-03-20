@@ -21,6 +21,7 @@ import dev.jvmname.accord.network.message
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.onEither
 import dev.jvmname.accord.ui.session.MasterSessionEvent
+import dev.jvmname.accord.ui.session.rememberMatchActions
 import dev.jvmname.accord.ui.showcodes.ShowCodesScreen
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
@@ -46,6 +47,7 @@ class MasterSessionPresenter(
         var error by remember { mutableStateOf<String?>(null) }
         var elapsedSeconds by remember { mutableLongStateOf(0L) }
         var isPaused by remember { mutableStateOf(false) }
+        var showEndRoundDialog by remember { mutableStateOf(false) }
         // Note: isPaused is managed as local optimistic state — the server Round model does not
         // expose pause state, so we toggle it on button press and let Pause/Resume
         // confirm server-side. State resets on recomposition if navigated away.
@@ -71,19 +73,13 @@ class MasterSessionPresenter(
         )
         val roundNumber = match?.rounds?.size ?: 0
 
-        return MasterSessionState(
-            matchId = screen.matchId,
-            redName = match?.red?.name ?: "Red",
-            blueName = match?.blue?.name ?: "Blue",
-            score = score,
-            elapsedSeconds = elapsedSeconds,
-            roundNumber = roundNumber,
-            isMatchStarted = isMatchStarted,
-            isMatchEnded = isMatchEnded,
-            isPaused = isPaused,
-            error = error,
-        ) { event ->
+        val isSessionActive = isMatchStarted && !isMatchEnded && !isPaused
+
+        val eventSink: (MasterSessionEvent) -> Unit = remember {
+            { event ->
             when (event) {
+                MasterSessionEvent.ShowEndRoundDialog -> showEndRoundDialog = true
+                MasterSessionEvent.DismissEndRoundDialog -> showEndRoundDialog = false
                 MasterSessionEvent.StartMatch -> scope.launch {
                     matchManager.startMatch()
                         .onEither(
@@ -111,12 +107,15 @@ class MasterSessionPresenter(
                             )
                     }
                 }
-                is MasterSessionEvent.EndRound -> scope.launch {
-                    matchManager.endRound(screen.matchId, event.submission, event.submitter)
-                        .onEither(
-                            success = { /* match updated via flow */ },
-                            failure = { error = it.message }
-                        )
+                is MasterSessionEvent.EndRound -> {
+                    showEndRoundDialog = false
+                    scope.launch {
+                        matchManager.endRound(screen.matchId, event.submission, event.submitter)
+                            .onEither(
+                                success = { /* match updated via flow */ },
+                                failure = { error = it.message }
+                            )
+                    }
                 }
                 MasterSessionEvent.StartRound -> scope.launch {
                     matchManager.startRound()
@@ -140,7 +139,34 @@ class MasterSessionPresenter(
                 MasterSessionEvent.ReturnToMain -> exitSignal.requestExitToMain()
                 MasterSessionEvent.Back -> navigator.pop()
             }
+            }
         }
+
+        val actions = rememberMatchActions(
+            isActive = isSessionActive,
+            isPaused = isPaused,
+            hasRound = roundNumber > 0,
+            onPause = { eventSink(MasterSessionEvent.Pause) },
+            onResume = { eventSink(MasterSessionEvent.Resume) },
+            onStartRound = { eventSink(MasterSessionEvent.StartRound) },
+            onEndRound = { eventSink(MasterSessionEvent.ShowEndRoundDialog) },
+        )
+
+        return MasterSessionState(
+            matchId = screen.matchId,
+            redName = match?.red?.name ?: "Red",
+            blueName = match?.blue?.name ?: "Blue",
+            score = score,
+            elapsedSeconds = elapsedSeconds,
+            roundNumber = roundNumber,
+            isMatchStarted = isMatchStarted,
+            isMatchEnded = isMatchEnded,
+            isPaused = isPaused,
+            actions = actions,
+            showEndRoundDialog = showEndRoundDialog,
+            error = error,
+            eventSink = eventSink,
+        )
     }
 
     @[AssistedFactory CircuitInject(MasterSessionScreen::class, MatchScope::class)]

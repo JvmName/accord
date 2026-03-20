@@ -68,6 +68,7 @@ import dev.jvmname.accord.ui.session.JudgeSessionEvent.ButtonPress
 import dev.jvmname.accord.ui.session.JudgeSessionEvent.ButtonRelease
 import dev.jvmname.accord.ui.session.JudgeSessionEvent.ManualEdit
 import dev.jvmname.accord.ui.session.ManualEditAction
+import dev.jvmname.accord.ui.session.MatchActions
 import dev.jvmname.accord.ui.theme.AccordTheme
 import top.ltfan.multihaptic.compose.rememberVibrator
 import kotlin.time.Duration.Companion.minutes
@@ -163,7 +164,7 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
                 }
 
                 Spacer(modifier.weight(0.15f))
-                RoundControlsSheet(actions = state.rememberControlActions())
+                RoundControlsSheet(actions = state.actions)
             }
         }
 
@@ -363,6 +364,7 @@ private fun JudgeSessionContentPreview() {
                         state = RoundEvent.RoundState.STARTED
                     )
                 ),
+                actions = MatchActions(),
                 eventSink = { },
             ),
             modifier = Modifier
@@ -394,6 +396,7 @@ private fun JudgeSessionContentPreview_Paused() {
                         state = RoundEvent.RoundState.PAUSED
                     )
                 ),
+                actions = MatchActions(),
                 eventSink = { },
             ),
             modifier = Modifier
@@ -425,6 +428,7 @@ private fun JudgeSessionContentPreview_Holding() {
                         state = RoundEvent.RoundState.STARTED
                     ),
                 ),
+                actions = MatchActions(),
                 eventSink = { },
             ),
             modifier = Modifier

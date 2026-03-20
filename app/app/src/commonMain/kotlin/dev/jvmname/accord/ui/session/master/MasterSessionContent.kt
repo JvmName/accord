@@ -33,19 +33,17 @@ import dev.jvmname.accord.network.CompetitorColor
 import dev.jvmname.accord.network.MatchId
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.MasterSessionEvent
+import dev.jvmname.accord.ui.session.MatchActions
 import dev.jvmname.accord.ui.theme.AccordTheme
 
 @[Composable CircuitInject(MasterSessionScreen::class, MatchScope::class)]
 fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifier) {
-    var showSubmissionDialog by remember { mutableStateOf(false) }
-
-    if (showSubmissionDialog) {
+    if (state.showEndRoundDialog) {
         SubmissionDialog(
             onConfirm = { submission, submitter ->
-                showSubmissionDialog = false
                 state.eventSink(MasterSessionEvent.EndRound(submission, submitter))
             },
-            onDismiss = { showSubmissionDialog = false }
+            onDismiss = { state.eventSink(MasterSessionEvent.DismissEndRoundDialog) }
         )
     }
 
@@ -105,20 +103,20 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             if (state.isMatchStarted && !state.isMatchEnded) {
                 if (!state.isPaused) {
                     Button(
-                        onClick = { state.eventSink(MasterSessionEvent.Pause) },
+                        onClick = { state.actions.pause?.invoke() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Pause")
                     }
                     Button(
-                        onClick = { showSubmissionDialog = true },
+                        onClick = { state.actions.endRound?.invoke() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("End Round")
                     }
                 } else {
                     Button(
-                        onClick = { state.eventSink(MasterSessionEvent.Resume) },
+                        onClick = { state.actions.resume?.invoke() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Resume")
@@ -229,6 +227,8 @@ private fun MasterSessionContentPreview() {
                 isMatchStarted = true,
                 isMatchEnded = false,
                 isPaused = false,
+                actions = MatchActions(),
+                showEndRoundDialog = false,
                 error = null,
                 eventSink = {},
             )

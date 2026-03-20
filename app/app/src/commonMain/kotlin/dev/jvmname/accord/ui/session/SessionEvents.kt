@@ -42,6 +42,8 @@ sealed interface MasterSessionEvent : SessionEvent {
         val submission: String? = null,
         val submitter: CompetitorColor? = null,
     ) : MasterSessionEvent, RoundControlEvent
+    data object ShowEndRoundDialog : MasterSessionEvent
+    data object DismissEndRoundDialog : MasterSessionEvent
     data object StartMatch : MasterSessionEvent
     data object EndMatch : MasterSessionEvent
 }

@@ -7,6 +7,7 @@ import dev.jvmname.accord.network.MatchId
 import dev.jvmname.accord.parcel.CommonParcelize
 import dev.jvmname.accord.parcel.ParcelableScreen
 import dev.jvmname.accord.ui.session.MasterSessionEvent
+import dev.jvmname.accord.ui.session.MatchActions
 
 @CommonParcelize
 data class MasterSessionScreen(val matchId: MatchId) : ParcelableScreen
@@ -22,6 +23,8 @@ data class MasterSessionState(
     val isMatchStarted: Boolean,
     val isMatchEnded: Boolean,
     val isPaused: Boolean,
+    val actions: MatchActions,
+    val showEndRoundDialog: Boolean,
     val error: String?,
     val eventSink: (MasterSessionEvent) -> Unit,
 ) : CircuitUiState
