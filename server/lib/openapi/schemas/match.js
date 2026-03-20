@@ -24,13 +24,11 @@ const Match = {
             description: "UUID of the mat this match belongs to"
         },
         started_at: {
-            type: "integer",
-            nullable: true,
+            type: ["integer", "null"],
             description: "Timestamp (ms since epoch) when the match started, or null if not yet started"
         },
         ended_at: {
-            type: "integer",
-            nullable: true,
+            type: ["integer", "null"],
             description: "Timestamp (ms since epoch) when the match ended, or null if still ongoing"
         },
         red_competitor: {

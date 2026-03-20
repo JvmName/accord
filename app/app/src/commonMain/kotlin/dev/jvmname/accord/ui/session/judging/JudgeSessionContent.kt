@@ -1,11 +1,11 @@
-package dev.jvmname.accord.ui.control
+package dev.jvmname.accord.ui.session.judging
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.MoveUp
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -37,6 +38,7 @@ import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
+import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.color
 import dev.jvmname.accord.domain.control.buttonHold
@@ -60,103 +63,134 @@ import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.StubVibrator
 import dev.jvmname.accord.ui.common.IconTextButton
 import dev.jvmname.accord.ui.common.StandardScaffold
-import dev.jvmname.accord.ui.control.ControlTimeEvent.ButtonPress
-import dev.jvmname.accord.ui.control.ControlTimeEvent.ButtonRelease
-import dev.jvmname.accord.ui.control.ControlTimeEvent.ManualPointEdit
+import dev.jvmname.accord.ui.session.JudgeSessionEvent
+import dev.jvmname.accord.ui.session.JudgeSessionEvent.ButtonPress
+import dev.jvmname.accord.ui.session.JudgeSessionEvent.ButtonRelease
+import dev.jvmname.accord.ui.session.JudgeSessionEvent.ManualEdit
+import dev.jvmname.accord.ui.session.ManualEditAction
+import dev.jvmname.accord.ui.session.MatchActions
 import dev.jvmname.accord.ui.theme.AccordTheme
-import dev.zacsweers.metro.AppScope
 import top.ltfan.multihaptic.compose.rememberVibrator
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-private typealias EventSink = (ControlTimeEvent) -> Unit
+private typealias EventSink = (JudgeSessionEvent) -> Unit
 
 
-@[Composable CircuitInject(ControlTimeScreen::class, AppScope::class)]
-fun ControlTimeContent(state: ControlTimeState, modifier: Modifier) {
+@[Composable CircuitInject(JudgeSessionScreen::class, MatchScope::class)]
+fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
     val vibrator = when {
         LocalInspectionMode.current -> remember { StubVibrator }
         else -> rememberVibrator()
     }
 
-    state.matchState.haptic?.effect?.consume()?.let { vibrator.vibrate(it) }
+    LaunchedEffect(state.hapticEvent) {
+        state.hapticEvent?.effect?.consume()?.let { vibrator.vibrate(it) }
+    }
 
-    StandardScaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        title = "Control Time: ${state.matName}",
-        onBackClick = { state.eventSink(ControlTimeEvent.Back) },
-        topBarActions = {
-            //TODO
+    Box(modifier = modifier.fillMaxSize()) {
+        StandardScaffold(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            title = "Judging: ${state.matName}",
+            onBackClick = { state.eventSink(JudgeSessionEvent.Back) },
+            topBarActions = {
+                //TODO
 //            IconButton(onClick = { TODO() }) {
 //                Icon(
 //                    imageVector = Icons.Default.Settings,
 //                    contentDescription = ""
 //                )
 //            }
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(32.dp))
-
-            val remainingTime = remember(state.matchState.roundInfo) {
-                state.matchState
-                    .roundInfo
-                    ?.remainingHumanTime()
-                    ?: "0:00"
             }
-            Text(
-                remainingTime,
-                style = MaterialTheme.typography.displayLargeEmphasized,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(32.dp))
 
-            val roundNumber = remember(state.matchState.roundInfo) {
-                val roundInfo = state.matchState.roundInfo
-                when (val round = roundInfo?.round) {
-                    null -> null
-                    is RoundInfo.Break -> "Break"
-                    is RoundInfo.Round -> "Round ${round.index} of ${roundInfo.totalRounds}"
+                val remainingTime = remember(state.matchState.roundInfo) {
+                    state.matchState
+                        .roundInfo
+                        ?.remainingHumanTime()
+                        ?: "0:00"
                 }
-            }
-            roundNumber?.let {
                 Text(
-                    text = it,
+                    remainingTime,
+                    style = MaterialTheme.typography.displayLargeEmphasized,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-            }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth().weight(3f),
-                horizontalArrangement = spacedBy(8.dp)
-            ) {
-                Competitor.entries.forEach { competitor ->
-                    PlayerControl(
-                        modifier = Modifier.weight(1f),
-                        points = state.matchState.score.getPoints(competitor),
-                        controlDuration = state.matchState.score.controlTimeHumanReadable(competitor),
-                        color = competitor.color,
-                        playerName = competitor.nameStr,
-                        shouldShowPointControls = state.matchState.roundInfo?.state == RoundEvent.RoundState.PAUSED
-                                && state.matchState.score.techFallWin == null,
-                        eventSink = state.eventSink,
-                        player = competitor
+                val roundNumber = remember(state.matchState.roundInfo) {
+                    val roundInfo = state.matchState.roundInfo
+                    when (val round = roundInfo?.round) {
+                        null -> null
+                        is RoundInfo.Break -> "Break"
+                        is RoundInfo.Round -> "Round ${round.index} of ${roundInfo.totalRounds}"
+                    }
+                }
+                roundNumber?.let {
+                    Text(
+                        text = it,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-            }
 
-            Spacer(modifier.weight(0.15f))
-            RoundControlsSheet(actions = state.rememberControlActions())
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().weight(3f),
+                    horizontalArrangement = spacedBy(8.dp)
+                ) {
+                    Competitor.entries.forEach { competitor ->
+                        PlayerControl(
+                            modifier = Modifier.weight(1f),
+                            points = state.matchState.score.getPoints(competitor),
+                            controlDuration = state.matchState.score.controlTimeHumanReadable(competitor),
+                            color = competitor.color,
+                            playerName = competitor.nameStr,
+                            shouldShowPointControls = state.matchState.roundInfo?.state == RoundEvent.RoundState.PAUSED
+                                    && state.matchState.score.techFallWin == null,
+                            eventSink = state.eventSink,
+                            player = competitor
+                        )
+                    }
+                }
+
+                Spacer(modifier.weight(0.15f))
+                RoundControlsSheet(actions = state.actions)
+            }
+        }
+
+        if (state.isMatchEnded) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(modifier = Modifier.padding(32.dp)) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = spacedBy(16.dp)
+                    ) {
+                        Text("Match Over", style = MaterialTheme.typography.headlineMedium)
+                        Button(
+                            onClick = { state.eventSink(JudgeSessionEvent.Back) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Return to Main Screen")
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -181,14 +215,14 @@ private fun PlayerControl(
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = spacedBy(6.dp)
         ) {
             AnimatedVisibility(shouldShowPointControls) {
                 CompositionLocalProvider(LocalContentColor provides color) {
                     OutlinedIconButton(
                         onClick = {
                             if (points > 0) eventSink(
-                                ManualPointEdit(player, ManualPointEdit.Action.DECREMENT)
+                                ManualEdit(player, ManualEditAction.DECREMENT)
                             )
                         },
                         enabled = points > 0
@@ -212,7 +246,7 @@ private fun PlayerControl(
                 AnimatedVisibility(shouldShowPointControls) {
                     OutlinedIconButton(
                         onClick = {
-                            eventSink(ManualPointEdit(player, ManualPointEdit.Action.INCREMENT))
+                            eventSink(ManualEdit(player, ManualEditAction.INCREMENT))
                         },
                     ) {
                         Icon(
@@ -270,7 +304,7 @@ private fun PlayerControl(
 }
 
 @Composable
-fun RoundControlsSheet(modifier: Modifier = Modifier, actions: RoundControlActions) {
+fun RoundControlsSheet(modifier: Modifier = Modifier, actions: MatchActions) {
     Card(
         modifier = modifier.fillMaxWidth().wrapContentHeight(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -282,10 +316,10 @@ fun RoundControlsSheet(modifier: Modifier = Modifier, actions: RoundControlActio
 
             val actionsList = remember(actions) {
                 listOf(
-                    actions.beginNextRound to Icons.AutoMirrored.Outlined.NextPlan,
+                    actions.startRound to Icons.AutoMirrored.Outlined.NextPlan,
                     actions.resume to Icons.Outlined.PlayArrow,
                     actions.pause to Icons.Outlined.PauseCircle,
-                    actions.submission to Icons.Default.HeartBroken,
+                    actions.endRound to Icons.Default.HeartBroken,
 //                    actions.reset to Icons.Default.Replay,
                 )
             }
@@ -309,10 +343,10 @@ fun RoundControlsSheet(modifier: Modifier = Modifier, actions: RoundControlActio
 
 @Preview
 @Composable
-private fun ControlTimeContentPreview() {
+private fun JudgeSessionContentPreview() {
     AccordTheme {
-        ControlTimeContent(
-            state = ControlTimeState(
+        JudgeSessionContent(
+            state = JudgeSessionState(
                 matName = "Bay JJ",
                 matchState = MatchState(
                     score = Score(
@@ -322,7 +356,6 @@ private fun ControlTimeContentPreview() {
                         activeCompetitor = null,
                         techFallWin = null
                     ),
-                    haptic = null,
                     roundInfo = RoundEvent(
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
@@ -331,6 +364,7 @@ private fun ControlTimeContentPreview() {
                         state = RoundEvent.RoundState.STARTED
                     )
                 ),
+                actions = MatchActions(),
                 eventSink = { },
             ),
             modifier = Modifier
@@ -341,10 +375,10 @@ private fun ControlTimeContentPreview() {
 
 @Preview
 @Composable
-private fun ControlTimeContentPreview_Paused() {
+private fun JudgeSessionContentPreview_Paused() {
     AccordTheme {
-        ControlTimeContent(
-            state = ControlTimeState(
+        JudgeSessionContent(
+            state = JudgeSessionState(
                 matName = "Bay JJ",
                 matchState = MatchState(
                     score = Score(
@@ -354,7 +388,6 @@ private fun ControlTimeContentPreview_Paused() {
                         activeCompetitor = null,
                         techFallWin = null
                     ),
-                    haptic = null,
                     roundInfo = RoundEvent(
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
@@ -363,6 +396,7 @@ private fun ControlTimeContentPreview_Paused() {
                         state = RoundEvent.RoundState.PAUSED
                     )
                 ),
+                actions = MatchActions(),
                 eventSink = { },
             ),
             modifier = Modifier
@@ -373,10 +407,10 @@ private fun ControlTimeContentPreview_Paused() {
 
 @Preview
 @Composable
-private fun ControlTimeContentPreview_Holding() {
+private fun JudgeSessionContentPreview_Holding() {
     AccordTheme {
-        ControlTimeContent(
-            state = ControlTimeState(
+        JudgeSessionContent(
+            state = JudgeSessionState(
                 matName = "Bay JJ",
                 matchState = MatchState(
                     score = Score(
@@ -386,7 +420,6 @@ private fun ControlTimeContentPreview_Holding() {
                         activeCompetitor = Competitor.BLUE,
                         techFallWin = null
                     ),
-                    haptic = null,
                     roundInfo = RoundEvent(
                         remaining = 2.minutes + 30.seconds,
                         roundNumber = 1,
@@ -395,6 +428,7 @@ private fun ControlTimeContentPreview_Holding() {
                         state = RoundEvent.RoundState.STARTED
                     ),
                 ),
+                actions = MatchActions(),
                 eventSink = { },
             ),
             modifier = Modifier
@@ -409,11 +443,11 @@ private fun RoundControlsSheetPreview() {
 
         RoundControlsSheet(
             modifier = Modifier,
-            actions = RoundControlActions(
-                beginNextRound = {},
+            actions = MatchActions(
+                startRound = {},
                 resume = {},
                 pause = {},
-                submission = {},
+                endRound = {},
                 reset = {},
             )
         )

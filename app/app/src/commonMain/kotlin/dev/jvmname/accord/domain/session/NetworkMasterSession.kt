@@ -12,9 +12,8 @@ import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.network.MatchId
 import dev.jvmname.accord.network.NetworkResult
-import dev.jvmname.accord.network.UserId
 import dev.jvmname.accord.ui.common.Consumable
-import dev.jvmname.accord.ui.control.ControlTimeEvent
+import dev.jvmname.accord.ui.session.ManualEditAction
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
@@ -81,15 +80,30 @@ class NetworkMasterSession(
         }
     }
 
-    override fun startRound() { scope.launch { matchManager.startRound() } }
-    override fun endRound() { scope.launch { currentMatchId?.let { matchManager.endRound(it) } } }
-    override fun pause() { scope.launch { currentMatchId?.let { matchManager.pauseRound(it) } } }
-    override fun resume() { scope.launch { currentMatchId?.let { matchManager.resumeRound(it) } } }
-    override fun manualEdit(competitor: Competitor, action: ControlTimeEvent.ManualPointEdit.Action) {
+    override fun startRound() {
+        scope.launch { matchManager.startRound() }
+    }
+
+    override fun endRound() {
+        scope.launch { currentMatchId?.let { matchManager.endRound(it) } }
+    }
+
+    override fun pause() {
+        scope.launch { currentMatchId?.let { matchManager.pauseRound(it) } }
+    }
+
+    override fun resume() {
+        scope.launch { currentMatchId?.let { matchManager.resumeRound(it) } }
+    }
+
+    override fun manualEdit(
+        competitor: Competitor,
+        action: ManualEditAction
+    ) {
         Logger.d { "manualEdit: API not yet defined — TODO" }
     }
 
-    suspend fun createMatch(matCode: String, red: UserId, blue: UserId): NetworkResult<Match> =
+    suspend fun createMatch(matCode: String, red: String, blue: String): NetworkResult<Match> =
         matchManager.createMatch(matCode, red, blue)
 
     suspend fun endMatch(): NetworkResult<Match> =

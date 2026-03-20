@@ -22,8 +22,7 @@ const Round = {
             description: "Timestamp (ms since epoch) when the round started (mapped from created_at)"
         },
         ended_at: {
-            type: "integer",
-            nullable: true,
+            type: ["integer", "null"],
             description: "Timestamp (ms since epoch) when the round ended, or null if still ongoing"
         },
         max_duration: {
@@ -48,17 +47,15 @@ const Round = {
                     description: "The winning competitor for this round, or null"
                 },
                 method: {
-                    type: "object",
-                    nullable: true,
+                    type: ["object", "null"],
                     properties: {
                         type: {
-                            type: "string",
-                            nullable: true,
+                            type: ["string", "null"],
                             enum: ["submission", "points", "tie", null],
                             description: "How the round was won"
                         },
                         value: {
-                            nullable: true,
+                            type: ["string", "integer", "null"],
                             description: "The submission name or point score; null if round is ongoing"
                         }
                     },

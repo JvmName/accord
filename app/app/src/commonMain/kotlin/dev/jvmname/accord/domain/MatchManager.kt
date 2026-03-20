@@ -7,11 +7,11 @@ import com.github.michaelbull.result.onSuccess
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.network.AccordClient
 import dev.jvmname.accord.network.CompetitorColor
+import dev.jvmname.accord.network.CompetitorRequest
 import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.network.MatchId
 import dev.jvmname.accord.network.NetworkResult
 import dev.jvmname.accord.network.SocketClient
-import dev.jvmname.accord.network.UserId
 import dev.jvmname.accord.network.flatMapping
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.catchRunning
@@ -29,6 +29,7 @@ class MatchManager(
     private val client: AccordClient,
     private val socketFactory: SocketClient.Factory,
     private val scope: CoroutineScope,
+    private val match: Match?,
 ) {
     private var activeMatch = AtomicReference<Match?>(null)
     private lateinit var socket: SocketClient
@@ -38,6 +39,10 @@ class MatchManager(
         scope.launch {
             val token = requireNotNull(prefs.getAuthToken())
             socket = socketFactory.create(token)
+            match?.let {
+                cacheMatch(it)
+                connectAndObserve(it)
+            }
         }
     }
 
@@ -45,22 +50,19 @@ class MatchManager(
 
     suspend fun createMatch(
         matCode: String,
-        redCompetitorId: UserId,
-        blueCompetitorId: UserId
+        redCompetitor: String,
+        blueCompetitor: String,
     ): NetworkResult<Match> {
-        return client.createMatch(matCode, redCompetitorId, blueCompetitorId)
-            .onSuccess { match ->
-                cacheMatch(match)
-                socket.connect()
-                // Subscribe to match updates and pipe them into prefs
-                observationJob?.cancel()
-                observationJob = scope.launch {
-                    socket.observeMatch(match.id).collect { updatedMatch ->
-                        cacheMatch(updatedMatch)
-                        prefs.updateCurrentMatch(updatedMatch)
-                    }
-                }
-            }
+        return client.createMatch(
+            matCode = matCode,
+            redCompetitor = CompetitorRequest(name = redCompetitor),
+            blueCompetitor = CompetitorRequest(name = blueCompetitor)
+        ).onSuccess { match -> cacheMatch(match) }
+    }
+
+    fun joinMatch(match: Match) {
+        cacheMatch(match)
+        connectAndObserve(match)
     }
 
     suspend fun getMatch(matchId: MatchId, useCache: Boolean = true): NetworkResult<Match> {
@@ -167,6 +169,17 @@ class MatchManager(
             }
     }
 
+
+    private fun connectAndObserve(match: Match) {
+        socket.connect()
+        observationJob?.cancel()
+        observationJob = scope.launch {
+            socket.observeMatch(match.id).collect { updatedMatch ->
+                cacheMatch(updatedMatch)
+                prefs.updateCurrentMatch(updatedMatch)
+            }
+        }
+    }
 
     private fun cacheMatch(match: Match) {
         activeMatch.store(match)

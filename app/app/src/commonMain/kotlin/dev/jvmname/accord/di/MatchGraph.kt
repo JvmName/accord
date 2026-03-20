@@ -1,41 +1,52 @@
 package dev.jvmname.accord.di
 
+import com.slack.circuit.foundation.Circuit
+import com.slack.circuit.runtime.presenter.Presenter
+import com.slack.circuit.runtime.ui.Ui
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.session.JudgingSession
 import dev.jvmname.accord.domain.session.NetworkJudgeSession
 import dev.jvmname.accord.domain.session.SoloMatchSession
-import dev.jvmname.accord.ui.control.ControlTimePresenter
-import dev.jvmname.accord.ui.control.ControlTimeType
+import dev.jvmname.accord.network.Match
 import dev.zacsweers.metro.GraphExtension
 import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 
-/**
- * Dependency graph for a single match session.
- * Provides match-scoped dependencies that are shared across components
- * during a match.
- */
 @GraphExtension(MatchScope::class)
 interface MatchGraph {
 
-    val controlTimePresenterFactory: ControlTimePresenter.Factory
+    val circuit: Circuit
+    val exitSignal: MatchExitSignal
 
     @GraphExtension.Factory
     interface Factory {
         operator fun invoke(
+            @Provides match: Match?,
             @Provides config: MatchConfig,
-            @Provides controlType: ControlTimeType,
+            @Provides role: MatchRole,
         ): MatchGraph
     }
 
     companion object {
         @Provides
+        @SingleIn(MatchScope::class)
+        fun circuit(
+            presenterFactories: Set<Presenter.Factory>,
+            uiFactories: Set<Ui.Factory>,
+        ): Circuit = Circuit.Builder()
+            .addPresenterFactories(presenterFactories)
+            .addUiFactories(uiFactories)
+            .build()
+
+        @Provides
         fun provideJudgingSession(
-            controlType: ControlTimeType,
+            role: MatchRole,
             solo: Lazy<SoloMatchSession>,
             judge: Lazy<NetworkJudgeSession>,
-        ): JudgingSession = when (controlType) {
-            ControlTimeType.SOLO -> solo.value
-            ControlTimeType.CONSENSUS -> judge.value
+        ): JudgingSession = when (role) {
+            MatchRole.SOLO -> solo.value
+            MatchRole.JUDGE -> judge.value
+            MatchRole.MASTER, MatchRole.VIEWER -> judge.value
         }
     }
 }

@@ -22,9 +22,8 @@ const Mat = {
             description: "Number of judges required for this mat"
         },
         creator_id: {
-            type: "string",
+            type: ["string", "null"],
             format: "uuid",
-            nullable: true,
             description: "UUID of the user who created the mat"
         },
         judges: {

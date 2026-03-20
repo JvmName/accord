@@ -18,7 +18,7 @@ data class Score(
     }
 
     fun controlTimeHumanReadable(competitor: Competitor) = when (activeCompetitor) {
-        competitor -> ((activeControlTime!!.inWholeSeconds % 3) + 1).toString()
+        competitor -> (((activeControlTime ?: Duration.ZERO).inWholeSeconds % 3) + 1).toString()
         else -> null
     }
 }

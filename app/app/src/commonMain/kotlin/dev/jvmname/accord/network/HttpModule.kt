@@ -42,7 +42,6 @@ interface HttpModule {
             prettyPrint = true
 //        isLenient = true
             useAlternativeNames = false
-
         }
     }
 }

@@ -114,16 +114,16 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun createMatch(
         matCode: String,
-        redCompetitor: UserId,
-        blueCompetitor: UserId,
+        redCompetitor: CompetitorRequest,
+        blueCompetitor: CompetitorRequest,
     ): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
             catchRunning {
                 httpClient.post("mat/$matCode/matches") {
                     setBody(
                         CreateMatchRequest(
-                            red = CompetitorRequest(redCompetitor, CompetitorColor.RED.humanName),
-                            blue = CompetitorRequest(blueCompetitor, CompetitorColor.BLUE.humanName),
+                            red = redCompetitor,
+                            blue = blueCompetitor,
                         )
                     )
                 }.body<ApiResult<MatchResponseData>>()

@@ -136,7 +136,11 @@ class Match(
 ) : CommonParcelable
 
 @[Poko Serializable]
-class CompetitorRequest(val id: UserId, val name: String)
+class CompetitorRequest(val id: UserId?=null, val name: String?=null) {
+    init {
+        require(id != null || name != null) { "one of id/name must be non-null" }
+    }
+}
 
 @[Poko Serializable]
 class CreateMatchRequest(val red: CompetitorRequest, val blue: CompetitorRequest)

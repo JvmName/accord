@@ -1,4 +1,7 @@
 package dev.jvmname.accord.ui.theme
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 val primaryLight = Color(0xFF415F91)
@@ -218,7 +221,12 @@ val surfaceContainerHighDarkHighContrast = Color(0xFF393B41)
 val surfaceContainerHighestDarkHighContrast = Color(0xFF45474C)
 
 
-
+@Composable
+fun wordChipColors(): List<Color> = listOf(
+    MaterialTheme.colorScheme.primaryContainer,
+    MaterialTheme.colorScheme.secondaryContainer,
+    MaterialTheme.colorScheme.tertiaryContainer,
+)
 
 
 

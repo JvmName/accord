@@ -70,12 +70,22 @@ function buildParameters(requestAnnotation) {
 function buildRequestBody(requestAnnotation) {
     if (!requestAnnotation || !requestAnnotation.body) return undefined;
 
+    const properties = resolveRefs(requestAnnotation.body);
+    const required   = [];
+    for (const [key, schema] of Object.entries(properties)) {
+        if (schema.required === true) {
+            required.push(key);
+            delete schema.required;
+        }
+    }
+
+    const schema = { type: 'object', properties };
+    if (required.length > 0) schema.required = required;
+
     return {
         required: true,
         content:  {
-            'application/json': {
-                schema: resolveRefs(requestAnnotation.body),
-            },
+            'application/json': { schema },
         },
     };
 }
@@ -89,7 +99,7 @@ function buildRequestBody(requestAnnotation) {
 function buildSuccessResponse(responseAnnotation) {
     const dataSchema = responseAnnotation
         ? { type: 'object', properties: resolveRefs(responseAnnotation) }
-        : { type: 'object', nullable: true };
+        : { type: ['object', 'null'] };
 
     return {
         description: 'Success',
@@ -151,7 +161,7 @@ function buildComponentsResponses() {
             description: 'Unauthorized',
             content:     {
                 'application/json': {
-                    schema: envelope({ type: 'object', nullable: true }, 'unauthorized'),
+                    schema: envelope({ type: ['object', 'null'] }, 'unauthorized'),
                 },
             },
         },
@@ -159,7 +169,7 @@ function buildComponentsResponses() {
             description: 'Not Found',
             content:     {
                 'application/json': {
-                    schema: envelope({ type: 'object', nullable: true }, 'not found'),
+                    schema: envelope({ type: ['object', 'null'] }, 'not found'),
                 },
             },
         },

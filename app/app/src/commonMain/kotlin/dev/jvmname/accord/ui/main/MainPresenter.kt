@@ -3,18 +3,20 @@ package dev.jvmname.accord.ui.main
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import com.slack.circuit.codegen.annotations.CircuitInject
-import com.slack.circuit.foundation.rememberAnsweringNavigator
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
+import dev.jvmname.accord.di.MatchRole
 import dev.jvmname.accord.domain.MatManager
+import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.prefs.Prefs
-import dev.jvmname.accord.ui.control.ControlTimeScreen
-import dev.jvmname.accord.ui.control.ControlTimeType
-import dev.jvmname.accord.ui.create_mat.CreateMatScreen
+import dev.jvmname.accord.ui.create.mat.CreateMatMatchScreen
+import dev.jvmname.accord.ui.create.newmatch.NewMatchScreen
+import dev.jvmname.accord.ui.join.JoinMatScreen
+import dev.jvmname.accord.ui.main.MainEvent.ContinueMat
+import dev.jvmname.accord.ui.session.judging.JudgeSessionScreen
+import dev.jvmname.accord.ui.trampoline.TrampolineMatchGraphScreen
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
@@ -35,19 +37,23 @@ class MainPresenter(
         val matInfo by remember { prefs.observeMatInfo() }
             .collectAsState(null, Dispatchers.IO)
 
-        var matInfoResult by remember { mutableStateOf(matInfo) }
-
-        val createMatNav = rememberAnsweringNavigator<CreateMatScreen.CreateMatResult>(navigator) {
-            matInfoResult = it.mat
-        }
-
-        return MainState(matInfoResult) {
+        return MainState(matInfo) {
             when (it) {
-                MainEvent.CreateMat -> createMatNav.goTo(CreateMatScreen)
+                MainEvent.CreateMat -> navigator.goTo(CreateMatMatchScreen)
 
-                MainEvent.JoinMat -> TODO()
+                MainEvent.JoinMat -> navigator.goTo(JoinMatScreen())
+
+                ContinueMat -> navigator.goTo(NewMatchScreen) // TODO: NewMatchScreen built in task 10
+
                 MainEvent.SoloRideTime -> {
-                    navigator.goTo(ControlTimeScreen(ControlTimeType.SOLO))
+                    navigator.goTo(
+                        TrampolineMatchGraphScreen(
+                            innerRoot = JudgeSessionScreen,
+                            match = null,
+                            matchConfig = MatchConfig.RdojoKombat,
+                            matchRole = MatchRole.SOLO,
+                        )
+                    )
                 }
             }
         }
