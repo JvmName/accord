@@ -10,6 +10,7 @@ import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.di.MatchScope
+import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.MatchManager
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
@@ -17,6 +18,7 @@ import dev.jvmname.accord.domain.session.JudgingSession
 import dev.jvmname.accord.domain.session.RoundController
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.session.JudgeSessionEvent
+import dev.jvmname.accord.ui.session.MatchState
 import dev.jvmname.accord.ui.session.rememberMatchActions
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
@@ -45,9 +47,25 @@ class JudgeSessionPresenter(
         val currentMatch by remember { matchManager.observeCurrentMatch() }.collectAsState(null)
         val isMatchEnded = currentMatch?.endedAt != null
 
+        val timerDisplay = roundEvent?.remainingHumanTime() ?: "0:00"
+        val roundLabel = when (val round = roundEvent?.round) {
+            null -> null
+            is RoundInfo.Break -> "Break"
+            is RoundInfo.Round -> "Round ${round.index} of ${roundEvent!!.totalRounds}"
+        }
+        val showPointControls = roundEvent?.state == RoundEvent.RoundState.PAUSED
+            && score.techFallWin == null
+        val controlDurations = Competitor.entries.associateWith { competitor ->
+            score.controlTimeHumanReadable(competitor)
+        }
+
         val matchState = MatchState(
             score = score,
             roundInfo = roundEvent,
+            timerDisplay = timerDisplay,
+            roundLabel = roundLabel,
+            showPointControls = showPointControls,
+            controlDurations = controlDurations,
         )
 
         val roundState = roundEvent?.state

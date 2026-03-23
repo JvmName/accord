@@ -4,15 +4,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Create
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,11 +28,11 @@ fun IconTextButton(
     modifier: Modifier = Modifier,
     icon: ImageVector?,
     text: String,
-    colors: ButtonColors = ButtonDefaults.filledTonalButtonColors(),
+    colors: ButtonColors = ButtonDefaults.buttonColors(),
     onClick: () -> Unit,
 ) {
-    FilledTonalButton(
-        modifier = Modifier.size(250.dp, ButtonDefaults.MinHeight + 15.dp) then modifier,
+    Button(
+        modifier = Modifier.height(ButtonDefaults.MinHeight + 15.dp) then modifier,
         onClick = onClick,
         colors = colors,
         shape = RoundedCornerShape(10.dp)

@@ -40,7 +40,7 @@ sealed interface MasterSessionEvent : SessionEvent {
     data object StartRound : MasterSessionEvent, RoundControlEvent
     data class EndRound(
         val submission: String? = null,
-        val submitter: CompetitorColor? = null,
+        val submitter: Competitor? = null,
     ) : MasterSessionEvent, RoundControlEvent
     data object ShowEndRoundDialog : MasterSessionEvent
     data object DismissEndRoundDialog : MasterSessionEvent

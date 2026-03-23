@@ -3,17 +3,27 @@ package dev.jvmname.accord.ui.session.master
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Password
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.StopCircle
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -24,16 +34,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.accord.di.MatchScope
+import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.domain.color
 import dev.jvmname.accord.domain.control.score.Score
-import dev.jvmname.accord.network.CompetitorColor
-import dev.jvmname.accord.network.MatchId
+import dev.jvmname.accord.domain.nameStr
+import dev.jvmname.accord.ui.common.IconTextButton
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.MasterSessionEvent
 import dev.jvmname.accord.ui.session.MatchActions
+import dev.jvmname.accord.ui.session.MatchState
 import dev.jvmname.accord.ui.theme.AccordTheme
 
 @[Composable CircuitInject(MasterSessionScreen::class, MatchScope::class)]
@@ -48,12 +62,12 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
     }
 
     StandardScaffold(
-        title = "Match",
+        title = "Tablet: ${state.matName}",
         onBackClick = { state.eventSink(MasterSessionEvent.ReturnToMain) },
         modifier = modifier.fillMaxSize(),
         topBarActions = {
-            TextButton(onClick = { state.eventSink(MasterSessionEvent.ShowCodes) }) {
-                Text("Codes")
+            IconButton(onClick = { state.eventSink(MasterSessionEvent.ShowCodes) }) {
+                Icon(Icons.Default.Password, "")
             }
         }
     ) { padding ->
@@ -65,81 +79,92 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+
+            Text(
+                state.matchState.timerDisplay,
+                style = MaterialTheme.typography.displayLargeEmphasized,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
             // Score row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("RED", color = Color.Red, style = MaterialTheme.typography.labelLarge)
                     Text(state.redName, style = MaterialTheme.typography.bodyMedium)
-                    Text("${state.score.redPoints}", style = MaterialTheme.typography.displayLarge)
+                    Text(
+                        "${state.matchState.score.redPoints}",
+                        style = MaterialTheme.typography.displayLarge,
+                        color = Color.Red
+                    )
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("BLUE", color = Color.Blue, style = MaterialTheme.typography.labelLarge)
                     Text(state.blueName, style = MaterialTheme.typography.bodyMedium)
-                    Text("${state.score.bluePoints}", style = MaterialTheme.typography.displayLarge)
+                    Text(
+                        "${state.matchState.score.bluePoints}",
+                        style = MaterialTheme.typography.displayLarge,
+                        color = Color.Blue,
+                    )
                 }
             }
 
-            // Timer
-            Text(
-                state.elapsedSeconds.formatAsTimer(),
-                style = MaterialTheme.typography.headlineLarge
-            )
-
-            Text("Round ${state.roundNumber}")
+            state.matchState.roundLabel?.let { Text(it) }
 
             // Control buttons
             if (!state.isMatchStarted && !state.isMatchEnded) {
-                Button(
-                    onClick = { state.eventSink(MasterSessionEvent.StartMatch) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Start Match")
-                }
+                IconTextButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Outlined.PlayArrow,
+                    text = "Start Match",
+                    onClick = { state.eventSink(MasterSessionEvent.StartMatch) }
+                )
             }
 
-            if (state.isMatchStarted && !state.isMatchEnded) {
-                if (!state.isPaused) {
-                    Button(
-                        onClick = { state.actions.pause?.invoke() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Pause")
-                    }
-                    Button(
-                        onClick = { state.actions.endRound?.invoke() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("End Round")
-                    }
-                } else {
-                    Button(
-                        onClick = { state.actions.resume?.invoke() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Resume")
-                    }
-                }
-                Button(
-                    onClick = { state.eventSink(MasterSessionEvent.EndMatch) },
+            state.actions.pause?.let { pause ->
+                IconTextButton(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("End Match")
-                }
+                    icon = Icons.Default.Pause,
+                    text = "Pause",
+                    onClick = pause,
+                )
+            }
+            state.actions.endRound?.let { endRound ->
+                IconTextButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Default.Stop,
+                    text = "End Round",
+                    onClick = endRound
+                )
+            }
+            state.actions.resume?.let { resume ->
+                IconTextButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Outlined.PlayArrow,
+                    text = "Resume",
+                    onClick = resume
+                )
+            }
+            if (state.isMatchStarted && !state.isMatchEnded) {
+                IconTextButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Default.StopCircle,
+                    text = "End Match",
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    onClick = { state.eventSink(MasterSessionEvent.EndMatch) }
+                )
             }
 
             if (state.isMatchEnded) {
                 Text("Match Complete", style = MaterialTheme.typography.headlineMedium)
                 // TODO: show winner — pass winner through state
-                Button(
-                    onClick = { state.eventSink(MasterSessionEvent.ReturnToMain) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Return to Main")
-                }
+                IconTextButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Default.Home,
+                    text = "Return to Main",
+                    onClick = { state.eventSink(MasterSessionEvent.ReturnToMain) }
+                )
                 // TODO: navigate to NewMatchScreen — wire in task 10 (already built)
             }
 
@@ -154,15 +179,14 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
     }
 }
 
-private fun Long.formatAsTimer(): String = "%02d:%02d".format(this / 60, this % 60)
-
 @Composable
 private fun SubmissionDialog(
-    onConfirm: (String?, CompetitorColor?) -> Unit,
+    onConfirm: (String?, Competitor?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var submissionText by remember { mutableStateOf("") }
-    var selectedSubmitter by remember { mutableStateOf<CompetitorColor?>(null) }
+
+    val submissionText = rememberTextFieldState()
+    var selected by remember { mutableStateOf<Competitor?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -170,33 +194,31 @@ private fun SubmissionDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
-                    value = submissionText,
-                    onValueChange = { submissionText = it },
+                    state = submissionText,
                     label = { Text("Submission (optional)") },
                     placeholder = { Text("e.g. rear naked choke") },
-                    singleLine = true,
+                    lineLimits = TextFieldLineLimits.SingleLine
                 )
-                Text("Submitted by:", style = MaterialTheme.typography.bodyMedium)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = selectedSubmitter == CompetitorColor.RED,
-                        onClick = { selectedSubmitter = CompetitorColor.RED }
-                    )
-                    Text("Red")
-                    Spacer(Modifier.width(16.dp))
-                    RadioButton(
-                        selected = selectedSubmitter == CompetitorColor.BLUE,
-                        onClick = { selectedSubmitter = CompetitorColor.BLUE }
-                    )
-                    Text("Blue")
+                Text("Winner:", style = MaterialTheme.typography.bodyMedium)
+
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    Competitor.entries.forEachIndexed { index, competitor ->
+                        SegmentedButton(
+                            shape = SegmentedButtonDefaults.itemShape(index, 2),
+                            border = SegmentedButtonDefaults.borderStroke(competitor.color),
+                            onClick = { selected = competitor },
+                            selected = competitor == selected,
+                            label = { Text(competitor.nameStr) }
+                        )
+                    }
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = {
                 onConfirm(
-                    submissionText.ifBlank { null },
-                    selectedSubmitter
+                    submissionText.text.ifBlank { null }?.toString(),
+                    selected
                 )
             }) { Text("Confirm") }
         },
@@ -206,32 +228,223 @@ private fun SubmissionDialog(
     )
 }
 
+// Match started, active round in progress — pause + end round + end match visible
 @Preview
 @Composable
-private fun MasterSessionContentPreview() {
+private fun MasterSessionContent_ActiveRound_Preview() {
     AccordTheme {
         MasterSessionContent(
             state = MasterSessionState(
-                matchId = MatchId("preview-match-1"),
+                matName = "BayJJ",
                 redName = "Alice",
                 blueName = "Bob",
-                score = Score(
-                    redPoints = 3,
-                    bluePoints = 1,
-                    activeControlTime = null,
-                    activeCompetitor = null,
-                    techFallWin = null,
+                matchState = MatchState(
+                    score = Score(
+                        redPoints = 3,
+                        bluePoints = 1,
+                        activeControlTime = null,
+                        activeCompetitor = null,
+                        techFallWin = null,
+                    ),
+                    roundInfo = null,
+                    timerDisplay = "02:07",
+                    roundLabel = "Round 2",
+                    showPointControls = false,
+                    controlDurations = emptyMap(),
                 ),
-                elapsedSeconds = 127L,
-                roundNumber = 2,
                 isMatchStarted = true,
                 isMatchEnded = false,
-                isPaused = false,
+                actions = MatchActions(pause = {}, endRound = {}),
+                showEndRoundDialog = false,
+                error = null,
+                eventSink = {},
+            )
+        )
+    }
+}
+
+// Match started, between rounds — only end match visible
+@Preview
+@Composable
+private fun MasterSessionContent_BetweenRounds_Preview() {
+    AccordTheme {
+        MasterSessionContent(
+            state = MasterSessionState(
+                matName = "BayJJ",
+                redName = "Alice",
+                blueName = "Bob",
+                matchState = MatchState(
+                    score = Score(
+                        redPoints = 3,
+                        bluePoints = 1,
+                        activeControlTime = null,
+                        activeCompetitor = null,
+                        techFallWin = null,
+                    ),
+                    roundInfo = null,
+                    timerDisplay = "02:07",
+                    roundLabel = null,
+                    showPointControls = false,
+                    controlDurations = emptyMap(),
+                ),
+                isMatchStarted = true,
+                isMatchEnded = false,
                 actions = MatchActions(),
                 showEndRoundDialog = false,
                 error = null,
                 eventSink = {},
             )
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MasterSessionContent_Start_Preview() {
+    AccordTheme {
+        MasterSessionContent(
+            state = MasterSessionState(
+                matName = "BayJJ",
+                redName = "Alice",
+                blueName = "Bob",
+                matchState = MatchState(
+                    score = Score(0, 0, null, null, null),
+                    roundInfo = null,
+                    timerDisplay = "05:00",
+                    roundLabel = "Round 1",
+                    showPointControls = false,
+                    controlDurations = emptyMap(),
+                ),
+                isMatchStarted = false,
+                isMatchEnded = false,
+                actions = MatchActions(),
+                showEndRoundDialog = false,
+                error = null,
+                eventSink = {},
+            )
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MasterSessionContent_Ended_Preview() {
+    AccordTheme {
+        MasterSessionContent(
+            state = MasterSessionState(
+                matName = "BayJJ",
+                redName = "Alice",
+                blueName = "Bob",
+                matchState = MatchState(
+                    score = Score(3, 1, null, null, null),
+                    roundInfo = null,
+                    timerDisplay = "00:00",
+                    roundLabel = "Round 3",
+                    showPointControls = false,
+                    controlDurations = emptyMap(),
+                ),
+                isMatchStarted = true,
+                isMatchEnded = true,
+                actions = MatchActions(),
+                showEndRoundDialog = false,
+                error = null,
+                eventSink = {},
+            )
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MasterSessionContent_Dialog_Preview() {
+    AccordTheme {
+        MasterSessionContent(
+            state = MasterSessionState(
+                matName = "BayJJ",
+                redName = "Alice",
+                blueName = "Bob",
+                matchState = MatchState(
+                    score = Score(2, 2, null, null, null),
+                    roundInfo = null,
+                    timerDisplay = "01:30",
+                    roundLabel = "Round 2",
+                    showPointControls = false,
+                    controlDurations = emptyMap(),
+                ),
+                isMatchStarted = true,
+                isMatchEnded = false,
+                actions = MatchActions(),
+                showEndRoundDialog = true,
+                error = null,
+                eventSink = {},
+            )
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MasterSessionContent_Paused_Preview() {
+    AccordTheme {
+        MasterSessionContent(
+            state = MasterSessionState(
+                matName = "BayJJ",
+                redName = "Alice",
+                blueName = "Bob",
+                matchState = MatchState(
+                    score = Score(2, 0, null, null, null),
+                    roundInfo = null,
+                    timerDisplay = "03:15",
+                    roundLabel = "Round 1",
+                    showPointControls = false,
+                    controlDurations = emptyMap(),
+                ),
+                isMatchStarted = true,
+                isMatchEnded = false,
+                actions = MatchActions(resume = {}),
+                showEndRoundDialog = false,
+                error = null,
+                eventSink = {},
+            )
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MasterSessionContent_Error_Preview() {
+    AccordTheme {
+        MasterSessionContent(
+            state = MasterSessionState(
+                matName = "BayJJ",
+                redName = "Alice",
+                blueName = "Bob",
+                matchState = MatchState(
+                    score = Score(1, 0, null, null, null),
+                    roundInfo = null,
+                    timerDisplay = "03:42",
+                    roundLabel = "Round 1",
+                    showPointControls = false,
+                    controlDurations = emptyMap(),
+                ),
+                isMatchStarted = true,
+                isMatchEnded = false,
+                actions = MatchActions(pause = {}, endRound = {}),
+                showEndRoundDialog = false,
+                error = "Failed to connect to server",
+                eventSink = {},
+            )
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun SubmissionDialogPreview() {
+    AccordTheme {
+        SubmissionDialog(
+            onConfirm = { _, _ -> },
+            onDismiss = {}
         )
     }
 }

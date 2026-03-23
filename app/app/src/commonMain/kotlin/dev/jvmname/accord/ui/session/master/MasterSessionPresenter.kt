@@ -6,6 +6,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.slack.circuit.codegen.annotations.CircuitInject
@@ -21,6 +22,7 @@ import dev.jvmname.accord.network.message
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.onEither
 import dev.jvmname.accord.ui.session.MasterSessionEvent
+import dev.jvmname.accord.ui.session.MatchState
 import dev.jvmname.accord.ui.session.rememberMatchActions
 import dev.jvmname.accord.ui.showcodes.ShowCodesScreen
 import dev.zacsweers.metro.Assisted
@@ -28,6 +30,7 @@ import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -43,6 +46,9 @@ class MasterSessionPresenter(
 
     @Composable
     override fun present(): MasterSessionState {
+        val matName by produceState("") {
+            value = prefs.observeMatInfo().filterNotNull().first().name
+        }
         val match by remember { matchManager.observeCurrentMatch() }.collectAsState(null)
         var error by remember { mutableStateOf<String?>(null) }
         var elapsedSeconds by remember { mutableLongStateOf(0L) }
@@ -72,6 +78,16 @@ class MasterSessionPresenter(
             techFallWin = null,
         )
         val roundNumber = match?.rounds?.size ?: 0
+        val timerDisplay = "%02d:%02d".format(elapsedSeconds / 60, elapsedSeconds % 60)
+        val roundLabel = if (roundNumber > 0) "Round $roundNumber" else null
+        val matchState = MatchState(
+            score = score,
+            roundInfo = null,
+            timerDisplay = timerDisplay,
+            roundLabel = roundLabel,
+            showPointControls = false,
+            controlDurations = emptyMap(),
+        )
 
         val isSessionActive = isMatchStarted && !isMatchEnded && !isPaused
 
@@ -153,15 +169,12 @@ class MasterSessionPresenter(
         )
 
         return MasterSessionState(
-            matchId = screen.matchId,
+            matName = matName,
             redName = match?.red?.name ?: "Red",
             blueName = match?.blue?.name ?: "Blue",
-            score = score,
-            elapsedSeconds = elapsedSeconds,
-            roundNumber = roundNumber,
+            matchState = matchState,
             isMatchStarted = isMatchStarted,
             isMatchEnded = isMatchEnded,
-            isPaused = isPaused,
             actions = actions,
             showEndRoundDialog = showEndRoundDialog,
             error = error,

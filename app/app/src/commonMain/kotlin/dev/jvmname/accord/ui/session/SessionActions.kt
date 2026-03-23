@@ -6,6 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 
 typealias MatchAction = () -> Unit
+operator fun MatchAction?.invoke() = this?.invoke()
 
 @Stable
 class MatchActions(

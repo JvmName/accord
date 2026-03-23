@@ -57,7 +57,6 @@ import dev.jvmname.accord.domain.color
 import dev.jvmname.accord.domain.control.buttonHold
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
-import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.StubVibrator
@@ -69,6 +68,7 @@ import dev.jvmname.accord.ui.session.JudgeSessionEvent.ButtonRelease
 import dev.jvmname.accord.ui.session.JudgeSessionEvent.ManualEdit
 import dev.jvmname.accord.ui.session.ManualEditAction
 import dev.jvmname.accord.ui.session.MatchActions
+import dev.jvmname.accord.ui.session.MatchState
 import dev.jvmname.accord.ui.theme.AccordTheme
 import top.ltfan.multihaptic.compose.rememberVibrator
 import kotlin.time.Duration.Companion.minutes
@@ -113,28 +113,14 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
             ) {
                 Spacer(modifier = Modifier.height(32.dp))
 
-                val remainingTime = remember(state.matchState.roundInfo) {
-                    state.matchState
-                        .roundInfo
-                        ?.remainingHumanTime()
-                        ?: "0:00"
-                }
                 Text(
-                    remainingTime,
+                    state.matchState.timerDisplay,
                     style = MaterialTheme.typography.displayLargeEmphasized,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                val roundNumber = remember(state.matchState.roundInfo) {
-                    val roundInfo = state.matchState.roundInfo
-                    when (val round = roundInfo?.round) {
-                        null -> null
-                        is RoundInfo.Break -> "Break"
-                        is RoundInfo.Round -> "Round ${round.index} of ${roundInfo.totalRounds}"
-                    }
-                }
-                roundNumber?.let {
+                state.matchState.roundLabel?.let {
                     Text(
                         text = it,
                         fontWeight = FontWeight.Medium,
@@ -152,11 +138,10 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
                         PlayerControl(
                             modifier = Modifier.weight(1f),
                             points = state.matchState.score.getPoints(competitor),
-                            controlDuration = state.matchState.score.controlTimeHumanReadable(competitor),
+                            controlDuration = state.matchState.controlDurations[competitor],
                             color = competitor.color,
                             playerName = competitor.nameStr,
-                            shouldShowPointControls = state.matchState.roundInfo?.state == RoundEvent.RoundState.PAUSED
-                                    && state.matchState.score.techFallWin == null,
+                            shouldShowPointControls = state.matchState.showPointControls,
                             eventSink = state.eventSink,
                             player = competitor
                         )
@@ -362,7 +347,11 @@ private fun JudgeSessionContentPreview() {
                         totalRounds = 3,
                         round = MatchConfig.RdojoKombat.rounds[0],
                         state = RoundEvent.RoundState.STARTED
-                    )
+                    ),
+                    timerDisplay = "2:30",
+                    roundLabel = "Round 1 of 3",
+                    showPointControls = false,
+                    controlDurations = emptyMap(),
                 ),
                 actions = MatchActions(),
                 eventSink = { },
@@ -394,7 +383,11 @@ private fun JudgeSessionContentPreview_Paused() {
                         totalRounds = 3,
                         round = MatchConfig.RdojoKombat.rounds[0],
                         state = RoundEvent.RoundState.PAUSED
-                    )
+                    ),
+                    timerDisplay = "2:30",
+                    roundLabel = "Round 1 of 3",
+                    showPointControls = true,
+                    controlDurations = emptyMap(),
                 ),
                 actions = MatchActions(),
                 eventSink = { },
@@ -427,6 +420,10 @@ private fun JudgeSessionContentPreview_Holding() {
                         round = MatchConfig.RdojoKombat.rounds[0],
                         state = RoundEvent.RoundState.STARTED
                     ),
+                    timerDisplay = "2:30",
+                    roundLabel = "Round 1 of 3",
+                    showPointControls = false,
+                    controlDurations = mapOf(Competitor.BLUE to "(3)"),
                 ),
                 actions = MatchActions(),
                 eventSink = { },

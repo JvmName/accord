@@ -128,9 +128,9 @@ class MatchManager(
     suspend fun endRound(
         matchId: MatchId,
         submission: String? = null,
-        submitter: CompetitorColor? = null
+        submitter: Competitor? = null
     ): NetworkResult<Match> {
-        return client.endRound(matchId, submission, submitter)
+        return client.endRound(matchId, submission, submitter?.asColor)
             .onSuccess { match ->
                 cacheMatch(match)
                 updateCurrentMatchIfActive(match)
