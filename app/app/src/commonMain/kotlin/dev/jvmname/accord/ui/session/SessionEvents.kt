@@ -35,6 +35,7 @@ sealed interface MasterSessionEvent : SessionEvent {
     data object Back : MasterSessionEvent
     data object ReturnToMain : MasterSessionEvent
     data object ShowCodes : MasterSessionEvent
+    data object ShowScores: MasterSessionEvent
     data object Pause : MasterSessionEvent, PausableEvent
     data object Resume : MasterSessionEvent, PausableEvent
     data object StartRound : MasterSessionEvent, RoundControlEvent

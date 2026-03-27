@@ -3,7 +3,7 @@ package dev.jvmname.accord.domain
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.andThen
 import com.github.michaelbull.result.flatMap
-import com.github.michaelbull.result.onSuccess
+import com.github.michaelbull.result.onOk
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.network.AccordClient
 import dev.jvmname.accord.network.CompetitorColor
@@ -54,10 +54,10 @@ class MatchManager(
         blueCompetitor: String,
     ): NetworkResult<Match> {
         return client.createMatch(
-            matCode = matCode,
-            redCompetitor = CompetitorRequest(name = redCompetitor),
-            blueCompetitor = CompetitorRequest(name = blueCompetitor)
-        ).onSuccess { match -> cacheMatch(match) }
+                matCode = matCode,
+                redCompetitor = CompetitorRequest(name = redCompetitor),
+                blueCompetitor = CompetitorRequest(name = blueCompetitor)
+            ).onOk { match -> cacheMatch(match) }
     }
 
     fun joinMatch(match: Match) {
@@ -69,7 +69,7 @@ class MatchManager(
         // Check cache first if enabled
         if (useCache && activeMatch.load()?.id == matchId) return Ok(activeMatch.load()!!)
         return client.getMatch(matchId)
-            .onSuccess { match ->
+            .onOk { match ->
                 cacheMatch(match)
             }
     }
@@ -81,7 +81,7 @@ class MatchManager(
                 Ok(match)
             }
             .flatMap { client.startMatch(it.id) }
-            .onSuccess { match ->
+            .onOk { match ->
                 cacheMatch(match)
                 prefs.updateCurrentMatch(match)
             }
@@ -94,7 +94,7 @@ class MatchManager(
                 Ok(match)
             }
             .flatMap { client.endMatch(it.id) }
-            .onSuccess { match ->
+            .onOk { match ->
                 cacheMatch(match)
                 // Clear current match from prefs since match ended
                 prefs.updateCurrentMatch(null)
@@ -118,7 +118,7 @@ class MatchManager(
                 }
             }
             .andThen { client.startRound(it.id) }
-            .onSuccess { match ->
+            .onOk { match ->
                 cacheMatch(match)
                 // Update current match since rounds changed
                 updateCurrentMatchIfActive(match)
@@ -131,7 +131,7 @@ class MatchManager(
         submitter: Competitor? = null
     ): NetworkResult<Match> {
         return client.endRound(matchId, submission, submitter?.asColor)
-            .onSuccess { match ->
+            .onOk { match ->
                 cacheMatch(match)
                 updateCurrentMatchIfActive(match)
             }
@@ -139,12 +139,12 @@ class MatchManager(
 
     suspend fun pauseRound(matchId: MatchId): NetworkResult<Match> {
         return client.pauseRound(matchId)
-            .onSuccess { match -> cacheMatch(match) }
+            .onOk { match -> cacheMatch(match) }
     }
 
     suspend fun resumeRound(matchId: MatchId): NetworkResult<Match> {
         return client.resumeRound(matchId)
-            .onSuccess { match -> cacheMatch(match) }
+            .onOk { match -> cacheMatch(match) }
     }
 
     suspend fun startRidingTimeVote(
@@ -152,7 +152,7 @@ class MatchManager(
         competitor: CompetitorColor
     ): NetworkResult<Match> {
         return client.startRidingTimeVote(matchId, competitor)
-            .onSuccess { match ->
+            .onOk { match ->
                 cacheMatch(match)
                 // Socket updates will handle prefs updates
             }
@@ -163,7 +163,7 @@ class MatchManager(
         competitor: CompetitorColor
     ): NetworkResult<Match> {
         return client.endRidingTimeVote(matchId, competitor)
-            .onSuccess { match ->
+            .onOk { match ->
                 cacheMatch(match)
                 // Socket updates will handle prefs updates
             }

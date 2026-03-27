@@ -1,6 +1,7 @@
 package dev.jvmname.accord.domain.session
 
 import co.touchlab.kermit.Logger
+import com.github.michaelbull.result.Err
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.ButtonEvent
@@ -12,6 +13,8 @@ import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.rounds.Timer
 import dev.jvmname.accord.domain.control.score.Score
+import dev.jvmname.accord.network.Match
+import dev.jvmname.accord.network.NetworkResult
 import dev.jvmname.accord.ui.session.ManualEditAction
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
@@ -147,7 +150,7 @@ class SoloMatchSession(
                 .drop(1)
                 .collect { (prev, current) ->
                     if (prev == null && current != null) {
-                        endRound()
+                        endRound(current, null)
                     }
                 }
         }
@@ -159,6 +162,11 @@ class SoloMatchSession(
 
     override fun recordRelease(competitor: Competitor) {
         buttonPressTracker.recordRelease(competitor)
+    }
+
+    override suspend fun startMatch(): NetworkResult<Match> {
+        startRound()
+        return Err(mapOf("solo" to listOf("no server match in solo mode")))
     }
 
     override fun startRound() {
@@ -190,7 +198,7 @@ class SoloMatchSession(
         timer.resume()
     }
 
-    override fun endRound() {
+    override fun endRound(winner: Competitor?, submission: String?) {
         timer.cancel()
 
         _roundEvent.update {
@@ -204,6 +212,13 @@ class SoloMatchSession(
             )
         }
     }
+
+    override suspend fun endMatch(): NetworkResult<Match> {
+        endRound(null, null)
+        //TODO unclear if this is helpful, maybe Ok(Match)?
+        return Err(mapOf("solo" to listOf("no server match in solo mode")))
+    }
+
 
     private fun nextRound() {
         overallIndex++
@@ -234,7 +249,7 @@ class SoloMatchSession(
                 .collect { remaining ->
                     when (remaining) {
                         Duration.ZERO -> {
-                            endRound()
+                            endRound(null, null)
                             startRound()
                         }
 

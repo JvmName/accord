@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Scoreboard
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -69,6 +70,9 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             IconButton(onClick = { state.eventSink(MasterSessionEvent.ShowCodes) }) {
                 Icon(Icons.Default.Password, "")
             }
+            IconButton(onClick = { state.eventSink(MasterSessionEvent.ShowScores) }){
+                Icon(Icons.Default.Scoreboard, "")
+            }
         }
     ) { padding ->
         Column(
@@ -86,6 +90,8 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface
             )
+
+            state.matchState.roundLabel?.let { Text(it) }
 
             // Score row
             Row(
@@ -109,8 +115,6 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                     )
                 }
             }
-
-            state.matchState.roundLabel?.let { Text(it) }
 
             // Control buttons
             if (!state.isMatchStarted && !state.isMatchEnded) {

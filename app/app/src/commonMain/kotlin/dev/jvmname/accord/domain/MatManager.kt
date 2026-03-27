@@ -2,7 +2,7 @@ package dev.jvmname.accord.domain
 
 import com.github.michaelbull.result.coroutines.coroutineBinding
 import com.github.michaelbull.result.map
-import com.github.michaelbull.result.onSuccess
+import com.github.michaelbull.result.onOk
 import dev.jvmname.accord.domain.user.UserManager
 import dev.jvmname.accord.network.AccordClient
 import dev.jvmname.accord.network.CompetitorRequest
@@ -53,10 +53,10 @@ class MatManager(
         val mat = prefs.observeMatInfo().first()!! //TODO
 //            ?: return Err(IllegalStateException("No active mat"))
         return client.createMatch(
-            matCode = mat.adminCode.code,
-            redCompetitor = CompetitorRequest(name = redName),
-            blueCompetitor = CompetitorRequest(name = blueName),
-        ).onSuccess { match ->
+                matCode = mat.adminCode.code,
+                redCompetitor = CompetitorRequest(name = redName),
+                blueCompetitor = CompetitorRequest(name = blueName),
+            ).onOk { match ->
             prefs.updateCurrentMatch(match)
         }
     }
@@ -67,7 +67,7 @@ class MatManager(
      */
     suspend fun joinMat(matCode: String, userName: String): NetworkResult<Mat> {
         return client.joinMat(matCode, userName)
-            .onSuccess {
+            .onOk {
                 prefs.updateMatInfo(it.mat)
                 prefs.updateMainUser(it.user)
                 prefs.setAuthToken(it.authToken)
@@ -77,7 +77,7 @@ class MatManager(
 
     suspend fun getMat(matId: String): NetworkResult<Mat> {
         return client.getMat(matId)
-            .onSuccess { prefs.updateMatInfo(it) }
+            .onOk { prefs.updateMatInfo(it) }
     }
 
     /** Observe mat info changes from Prefs. */
@@ -89,7 +89,7 @@ class MatManager(
      */
     suspend fun leaveMat(matCode: String): NetworkResult<Mat> {
         return client.leaveMat(matCode)
-            .onSuccess {
+            .onOk {
                 prefs.updateMatInfo(it)
             }
     }

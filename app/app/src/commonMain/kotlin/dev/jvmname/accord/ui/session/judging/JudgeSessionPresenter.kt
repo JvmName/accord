@@ -54,7 +54,7 @@ class JudgeSessionPresenter(
             is RoundInfo.Round -> "Round ${round.index} of ${roundEvent!!.totalRounds}"
         }
         val showPointControls = roundEvent?.state == RoundEvent.RoundState.PAUSED
-            && score.techFallWin == null
+                && score.techFallWin == null
         val controlDurations = Competitor.entries.associateWith { competitor ->
             score.controlTimeHumanReadable(competitor)
         }
@@ -69,49 +69,50 @@ class JudgeSessionPresenter(
         )
 
         val roundState = roundEvent?.state
-        val isActive = roundState == RoundEvent.RoundState.STARTED && roundEvent?.round is RoundInfo.Round
+        val isActive =
+            roundState == RoundEvent.RoundState.STARTED && roundEvent?.round is RoundInfo.Round
         val isPaused = roundState == RoundEvent.RoundState.PAUSED
 
         val eventSink: (JudgeSessionEvent) -> Unit = remember {
             { event ->
-            Logger.d { "Received event: $event" }
-            when (event) {
-                JudgeSessionEvent.Back -> navigator.pop()
-                is JudgeSessionEvent.ButtonPress -> {
-                    Logger.d { "Presenter press ${event.competitor}" }
-                    session.recordPress(event.competitor)
-                }
-
-                is JudgeSessionEvent.ButtonRelease -> {
-                    Logger.d { "Presenter release ${event.competitor}" }
-                    session.recordRelease(event.competitor)
-                }
-
-                is JudgeSessionEvent.ManualEdit -> {
-                    (session as? RoundController)?.manualEdit(event.competitor, event.action)
-                }
-
-                JudgeSessionEvent.StartRound -> {
-                    (session as? RoundController)?.let { rc ->
-                        rc.endRound()
-                        rc.startRound()
+                Logger.d { "Received event: $event" }
+                when (event) {
+                    JudgeSessionEvent.Back -> navigator.pop()
+                    is JudgeSessionEvent.ButtonPress -> {
+                        Logger.d { "Presenter press ${event.competitor}" }
+                        session.recordPress(event.competitor)
                     }
-                }
 
-                JudgeSessionEvent.Pause -> {
-                    session.pause()
-                }
+                    is JudgeSessionEvent.ButtonRelease -> {
+                        Logger.d { "Presenter release ${event.competitor}" }
+                        session.recordRelease(event.competitor)
+                    }
 
-                JudgeSessionEvent.Reset -> TODO()
-                JudgeSessionEvent.Resume -> {
-                    session.resume()
-                }
+                    is JudgeSessionEvent.ManualEdit -> {
+                        (session as? RoundController)?.manualEdit(event.competitor, event.action)
+                    }
 
-                is JudgeSessionEvent.EndRound -> {
-                    (session as? RoundController)?.endRound()
-                }
+                    JudgeSessionEvent.StartRound -> {
+                        (session as? RoundController)?.let { rc ->
+                            rc.endRound(null, null)
+                            rc.startRound()
+                        }
+                    }
 
-            }
+                    JudgeSessionEvent.Pause -> {
+                        session.pause()
+                    }
+
+                    JudgeSessionEvent.Reset -> TODO()
+                    JudgeSessionEvent.Resume -> {
+                        session.resume()
+                    }
+
+                    is JudgeSessionEvent.EndRound -> {
+                        (session as? RoundController)?.endRound(null, null)
+                    }
+
+                }
             }
         }
 

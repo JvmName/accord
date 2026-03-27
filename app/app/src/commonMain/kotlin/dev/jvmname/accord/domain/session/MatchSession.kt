@@ -4,6 +4,8 @@ import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.HapticEvent
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.score.Score
+import dev.jvmname.accord.network.Match
+import dev.jvmname.accord.network.NetworkResult
 import dev.jvmname.accord.ui.session.ManualEditAction
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,8 +27,10 @@ interface JudgingSession : PausableSession {
 }
 
 interface RoundController : PausableSession {
+    suspend fun startMatch(): NetworkResult<Match>
+    suspend fun endMatch(): NetworkResult<Match>
     fun startRound()
-    fun endRound()
+    fun endRound(winner: Competitor?, submission: String?)
     fun manualEdit(competitor: Competitor, action: ManualEditAction)
 }
 

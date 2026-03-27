@@ -84,8 +84,8 @@ class NetworkMasterSession(
         scope.launch { matchManager.startRound() }
     }
 
-    override fun endRound() {
-        scope.launch { currentMatchId?.let { matchManager.endRound(it) } }
+    override fun endRound(winner: Competitor?, submission: String?) {
+        scope.launch { currentMatchId?.let { matchManager.endRound(it, submission, winner) } }
     }
 
     override fun pause() {
@@ -106,7 +106,10 @@ class NetworkMasterSession(
     suspend fun createMatch(matCode: String, red: String, blue: String): NetworkResult<Match> =
         matchManager.createMatch(matCode, red, blue)
 
-    suspend fun endMatch(): NetworkResult<Match> =
+    override suspend fun startMatch(): NetworkResult<Match> =
+        matchManager.startMatch()
+
+    override suspend fun endMatch(): NetworkResult<Match> =
         matchManager.endMatch()
 
     private fun deriveRoundEventFromMatch(match: Match): RoundEvent? =
