@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
 
 @Inject
 @SingleIn(MatchScope::class)
-class NetworkMasterSession(
+class MasterSession(
     private val matchManager: MatchManager,
     private val scope: CoroutineScope,
     private val config: MatchConfig,

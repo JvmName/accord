@@ -59,6 +59,7 @@ class JudgeSessionPresenter(
             score.controlTimeHumanReadable(competitor)
         }
 
+
         val matchState = MatchState(
             score = score,
             roundInfo = roundEvent,
@@ -66,6 +67,7 @@ class JudgeSessionPresenter(
             roundLabel = roundLabel,
             showPointControls = showPointControls,
             controlDurations = controlDurations,
+            roundScores = emptyMap(),
         )
 
         val roundState = roundEvent?.state

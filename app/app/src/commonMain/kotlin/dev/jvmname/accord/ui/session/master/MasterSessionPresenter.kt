@@ -12,10 +12,11 @@ import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.di.MatchExitSignal
 import dev.jvmname.accord.di.MatchScope
+import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.MatchManager
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
-import dev.jvmname.accord.domain.session.NetworkMasterSession
+import dev.jvmname.accord.domain.session.MasterSession
 import dev.jvmname.accord.network.message
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.onEither
@@ -35,7 +36,7 @@ import kotlinx.coroutines.launch
 class MasterSessionPresenter(
     @Assisted private val screen: MasterSessionScreen,
     @Assisted private val navigator: Navigator,
-    private val session: NetworkMasterSession,
+    private val session: MasterSession,
     private val matchManager: MatchManager,
     private val prefs: Prefs,
     private val exitSignal: MatchExitSignal,
@@ -53,6 +54,7 @@ class MasterSessionPresenter(
 
         var error by remember { mutableStateOf<String?>(null) }
         var showEndRoundDialog by remember { mutableStateOf(false) }
+        var showScoresOverlay by remember { mutableStateOf(false) }
 
         val isMatchStarted = currentMatch?.startedAt != null
         val isMatchEnded = currentMatch?.endedAt != null
@@ -63,6 +65,30 @@ class MasterSessionPresenter(
             is RoundInfo.Break -> "Break"
             is RoundInfo.Round -> "Round ${round.index} of ${roundEvent!!.totalRounds}"
         }
+        val roundScores = currentMatch?.let { match ->
+            mapOf(
+                Competitor.RED to match.rounds.count { it.result.winner?.id == match.red.id },
+                Competitor.BLUE to match.rounds.count { it.result.winner?.id == match.blue.id },
+            )
+        } ?: mapOf(Competitor.RED to 0, Competitor.BLUE to 0)
+
+        val roundDisplays = currentMatch?.let { match ->
+            match.rounds.mapIndexed { index, round ->
+                val winner = when (round.result.winner?.id) {
+                    match.red.id -> Competitor.RED
+                    match.blue.id -> Competitor.BLUE
+                    else -> null
+                }
+                RoundDisplayInfo(
+                    roundNumber = index + 1,
+                    isInProgress = round.endedAt == null,
+                    winner = winner,
+                    redScore = round.score[match.red.id] ?: 0,
+                    blueScore = round.score[match.blue.id] ?: 0,
+                )
+            }
+        } ?: emptyList()
+
         val matchState = MatchState(
             score = score,
             roundInfo = roundEvent,
@@ -70,49 +96,55 @@ class MasterSessionPresenter(
             roundLabel = roundLabel,
             showPointControls = false,
             controlDurations = emptyMap(),
+            roundScores = roundScores,
         )
 
         val roundState = roundEvent?.state
-        val isActive = roundState == RoundEvent.RoundState.STARTED && roundEvent?.round is RoundInfo.Round
+        val isActive =
+            roundState == RoundEvent.RoundState.STARTED && roundEvent?.round is RoundInfo.Round
         val isPaused = roundState == RoundEvent.RoundState.PAUSED
 
         val eventSink: (MasterSessionEvent) -> Unit = remember {
             { event ->
-            when (event) {
-                MasterSessionEvent.ShowEndRoundDialog -> showEndRoundDialog = true
-                MasterSessionEvent.DismissEndRoundDialog -> showEndRoundDialog = false
-                MasterSessionEvent.StartMatch -> scope.launch {
-                    session.startMatch()
-                        .onEither(
-                            success = { /* match updated via flow */ },
-                            failure = { error = it.message }
-                        )
+                when (event) {
+                    MasterSessionEvent.ShowEndRoundDialog -> showEndRoundDialog = true
+                    MasterSessionEvent.DismissEndRoundDialog -> showEndRoundDialog = false
+                    MasterSessionEvent.StartMatch -> scope.launch {
+                        session.startMatch()
+                            .onEither(
+                                success = { /* match updated via flow */ },
+                                failure = { error = it.message }
+                            )
+                    }
+
+                    MasterSessionEvent.Pause -> session.pause()
+                    MasterSessionEvent.Resume -> session.resume()
+                    is MasterSessionEvent.EndRound -> {
+                        showEndRoundDialog = false
+                        session.endRound(event.submitter, event.submission)
+                    }
+
+                    MasterSessionEvent.StartRound -> session.startRound()
+                    MasterSessionEvent.EndMatch -> scope.launch {
+                        session.endMatch()
+                            .onEither(
+                                success = { exitSignal.requestExitToMain() },
+                                failure = { error = it.message }
+                            )
+                    }
+
+                    MasterSessionEvent.ShowCodes -> scope.launch {
+                        val mat = prefs.observeMatInfo().first() ?: return@launch
+                        val match = currentMatch ?: return@launch
+                        navigator.goTo(ShowCodesScreen(mat = mat, match = match))
+                    }
+
+                    MasterSessionEvent.ShowScores -> showScoresOverlay = true
+                    MasterSessionEvent.DismissScores -> showScoresOverlay = false
+
+                    MasterSessionEvent.ReturnToMain -> exitSignal.requestExitToMain()
+                    MasterSessionEvent.Back -> navigator.pop()
                 }
-                MasterSessionEvent.Pause -> session.pause()
-                MasterSessionEvent.Resume -> session.resume()
-                is MasterSessionEvent.EndRound -> {
-                    showEndRoundDialog = false
-                    session.endRound(event.submitter, event.submission)
-                }
-                MasterSessionEvent.StartRound -> session.startRound()
-                MasterSessionEvent.EndMatch -> scope.launch {
-                    session.endMatch()
-                        .onEither(
-                            success = { exitSignal.requestExitToMain() },
-                            failure = { error = it.message }
-                        )
-                }
-                MasterSessionEvent.ShowCodes -> scope.launch {
-                    val mat = prefs.observeMatInfo().first() ?: return@launch
-                    val match = currentMatch ?: return@launch
-                    navigator.goTo(ShowCodesScreen(mat = mat, match = match))
-                }
-                MasterSessionEvent.ShowScores -> {
-                    TODO()
-                }
-                MasterSessionEvent.ReturnToMain -> exitSignal.requestExitToMain()
-                MasterSessionEvent.Back -> navigator.pop()
-            }
             }
         }
 
@@ -135,6 +167,8 @@ class MasterSessionPresenter(
             isMatchEnded = isMatchEnded,
             actions = actions,
             showEndRoundDialog = showEndRoundDialog,
+            showScoresOverlay = showScoresOverlay,
+            roundDisplays = roundDisplays,
             error = error,
             eventSink = eventSink,
         )

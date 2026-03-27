@@ -1,37 +1,29 @@
 package dev.jvmname.accord.ui.session.master
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.Scoreboard
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,11 +31,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.slack.circuit.codegen.annotations.CircuitInject
+import com.slack.circuit.overlay.OverlayEffect
+import com.slack.circuitx.overlays.BottomSheetOverlay
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
-import dev.jvmname.accord.domain.color
 import dev.jvmname.accord.domain.control.score.Score
-import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.common.IconTextButton
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.MasterSessionEvent
@@ -54,12 +46,36 @@ import dev.jvmname.accord.ui.theme.AccordTheme
 @[Composable CircuitInject(MasterSessionScreen::class, MatchScope::class)]
 fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifier) {
     if (state.showEndRoundDialog) {
-        SubmissionDialog(
-            onConfirm = { submission, submitter ->
-                state.eventSink(MasterSessionEvent.EndRound(submission, submitter))
-            },
-            onDismiss = { state.eventSink(MasterSessionEvent.DismissEndRoundDialog) }
-        )
+        OverlayEffect(state.showEndRoundDialog) {
+            val result = show(
+                BottomSheetOverlay<Unit, SubmissionResult>(
+                    model = Unit,
+                    onDismiss = { SubmissionResult.Dismissed },
+                ) { _, navigator -> SubmissionDialog(navigator) }
+            )
+            when (result) {
+                is SubmissionResult.Confirmed -> state.eventSink(
+                    MasterSessionEvent.EndRound(result.submission, result.submitter)
+                )
+
+                SubmissionResult.Dismissed -> state.eventSink(MasterSessionEvent.DismissEndRoundDialog)
+            }
+        }
+    }
+
+    if (state.showScoresOverlay) {
+        OverlayEffect(state.showScoresOverlay) {
+            show(
+                BottomSheetOverlay(model = Unit, onDismiss = {}) { _, _ ->
+                    RoundScoresSheet(
+                        rounds = state.roundDisplays,
+                        redName = state.redName,
+                        blueName = state.blueName,
+                    )
+                }
+            )
+            state.eventSink(MasterSessionEvent.DismissScores)
+        }
     }
 
     StandardScaffold(
@@ -70,8 +86,19 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             IconButton(onClick = { state.eventSink(MasterSessionEvent.ShowCodes) }) {
                 Icon(Icons.Default.Password, "")
             }
-            IconButton(onClick = { state.eventSink(MasterSessionEvent.ShowScores) }){
-                Icon(Icons.Default.Scoreboard, "")
+            IconButton(onClick = { state.eventSink(MasterSessionEvent.ShowScores) }) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .border(1.5.dp, LocalContentColor.current, RoundedCornerShape(4.dp))
+                ) {
+                    Text(
+                        "${state.matchState.roundScores[Competitor.RED] ?: 0}:${state.matchState.roundScores[Competitor.BLUE] ?: 0}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         }
     ) { padding ->
@@ -183,54 +210,6 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
     }
 }
 
-@Composable
-private fun SubmissionDialog(
-    onConfirm: (String?, Competitor?) -> Unit,
-    onDismiss: () -> Unit,
-) {
-
-    val submissionText = rememberTextFieldState()
-    var selected by remember { mutableStateOf<Competitor?>(null) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("End Round") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    state = submissionText,
-                    label = { Text("Submission (optional)") },
-                    placeholder = { Text("e.g. rear naked choke") },
-                    lineLimits = TextFieldLineLimits.SingleLine
-                )
-                Text("Winner:", style = MaterialTheme.typography.bodyMedium)
-
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    Competitor.entries.forEachIndexed { index, competitor ->
-                        SegmentedButton(
-                            shape = SegmentedButtonDefaults.itemShape(index, 2),
-                            border = SegmentedButtonDefaults.borderStroke(competitor.color),
-                            onClick = { selected = competitor },
-                            selected = competitor == selected,
-                            label = { Text(competitor.nameStr) }
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onConfirm(
-                    submissionText.text.ifBlank { null }?.toString(),
-                    selected
-                )
-            }) { Text("Confirm") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
-}
 
 // Match started, active round in progress — pause + end round + end match visible
 @Preview
@@ -255,11 +234,16 @@ private fun MasterSessionContent_ActiveRound_Preview() {
                     roundLabel = "Round 2",
                     showPointControls = false,
                     controlDurations = emptyMap(),
+                    roundScores = emptyMap(),
                 ),
                 isMatchStarted = true,
                 isMatchEnded = false,
                 actions = MatchActions(pause = {}, endRound = {}),
                 showEndRoundDialog = false,
+                showScoresOverlay = false,
+                roundDisplays = listOf(
+                    RoundDisplayInfo(1, false, Competitor.RED, 12, 4),
+                ),
                 error = null,
                 eventSink = {},
             )
@@ -290,11 +274,14 @@ private fun MasterSessionContent_BetweenRounds_Preview() {
                     roundLabel = null,
                     showPointControls = false,
                     controlDurations = emptyMap(),
+                    roundScores = emptyMap(),
                 ),
                 isMatchStarted = true,
                 isMatchEnded = false,
                 actions = MatchActions(),
                 showEndRoundDialog = false,
+                showScoresOverlay = false,
+                roundDisplays = emptyList(),
                 error = null,
                 eventSink = {},
             )
@@ -318,11 +305,14 @@ private fun MasterSessionContent_Start_Preview() {
                     roundLabel = "Round 1",
                     showPointControls = false,
                     controlDurations = emptyMap(),
+                    roundScores = emptyMap(),
                 ),
                 isMatchStarted = false,
                 isMatchEnded = false,
                 actions = MatchActions(),
                 showEndRoundDialog = false,
+                showScoresOverlay = false,
+                roundDisplays = emptyList(),
                 error = null,
                 eventSink = {},
             )
@@ -346,11 +336,18 @@ private fun MasterSessionContent_Ended_Preview() {
                     roundLabel = "Round 3",
                     showPointControls = false,
                     controlDurations = emptyMap(),
+                    roundScores = emptyMap(),
                 ),
                 isMatchStarted = true,
                 isMatchEnded = true,
                 actions = MatchActions(),
                 showEndRoundDialog = false,
+                showScoresOverlay = false,
+                roundDisplays = listOf(
+                    RoundDisplayInfo(1, false, Competitor.RED, 12, 4),
+                    RoundDisplayInfo(2, false, Competitor.BLUE, 3, 18),
+                    RoundDisplayInfo(3, false, Competitor.RED, 9, 7),
+                ),
                 error = null,
                 eventSink = {},
             )
@@ -374,11 +371,14 @@ private fun MasterSessionContent_Dialog_Preview() {
                     roundLabel = "Round 2",
                     showPointControls = false,
                     controlDurations = emptyMap(),
+                    roundScores = emptyMap(),
                 ),
                 isMatchStarted = true,
                 isMatchEnded = false,
                 actions = MatchActions(),
                 showEndRoundDialog = true,
+                showScoresOverlay = false,
+                roundDisplays = emptyList(),
                 error = null,
                 eventSink = {},
             )
@@ -402,11 +402,14 @@ private fun MasterSessionContent_Paused_Preview() {
                     roundLabel = "Round 1",
                     showPointControls = false,
                     controlDurations = emptyMap(),
+                    roundScores = emptyMap(),
                 ),
                 isMatchStarted = true,
                 isMatchEnded = false,
                 actions = MatchActions(resume = {}),
                 showEndRoundDialog = false,
+                showScoresOverlay = false,
+                roundDisplays = emptyList(),
                 error = null,
                 eventSink = {},
             )
@@ -430,11 +433,14 @@ private fun MasterSessionContent_Error_Preview() {
                     roundLabel = "Round 1",
                     showPointControls = false,
                     controlDurations = emptyMap(),
+                    roundScores = emptyMap(),
                 ),
                 isMatchStarted = true,
                 isMatchEnded = false,
                 actions = MatchActions(pause = {}, endRound = {}),
                 showEndRoundDialog = false,
+                showScoresOverlay = false,
+                roundDisplays = emptyList(),
                 error = "Failed to connect to server",
                 eventSink = {},
             )
@@ -442,13 +448,4 @@ private fun MasterSessionContent_Error_Preview() {
     }
 }
 
-@Preview
-@Composable
-private fun SubmissionDialogPreview() {
-    AccordTheme {
-        SubmissionDialog(
-            onConfirm = { _, _ -> },
-            onDismiss = {}
-        )
-    }
-}
+
