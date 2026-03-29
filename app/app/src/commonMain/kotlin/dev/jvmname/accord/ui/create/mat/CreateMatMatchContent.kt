@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
@@ -28,6 +27,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -199,12 +199,15 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
 @Composable
 private fun JudgeCountEditText(judgeCount: Int, onJudgeCountChange: (count: Int) -> Unit) {
     val textState = rememberTextFieldState(judgeCount.toString())
+    LaunchedEffect(judgeCount) {
+        textState.edit { replace(0, length, judgeCount.toString()) }
+    }
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        FilledIconButton(
+        OutlinedIconButton(
             modifier = Modifier.padding(top = 6.dp),
             onClick = { if (judgeCount > 1) onJudgeCountChange(judgeCount - 1) },
             enabled = judgeCount > 1

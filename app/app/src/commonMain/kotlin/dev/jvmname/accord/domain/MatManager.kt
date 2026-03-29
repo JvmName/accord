@@ -11,6 +11,7 @@ import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.network.NetworkResult
 import dev.jvmname.accord.network.User
 import dev.jvmname.accord.network.adminCode
+import dev.jvmname.accord.network.merge
 import dev.jvmname.accord.prefs.Prefs
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.flow.Flow
@@ -67,12 +68,18 @@ class MatManager(
      */
     suspend fun joinMat(matCode: String, userName: String): NetworkResult<Mat> {
         return client.joinMat(matCode, userName)
-            .onOk {
-                prefs.updateMatInfo(it.mat)
-                prefs.updateMainUser(it.user)
-                prefs.setAuthToken(it.authToken)
+            .map { result ->
+                // The join endpoint returns a partial mat (no codes) — merge with what we have
+                // stored so callers that need codes (e.g. createMatch, ShowCodesScreen) work.
+                val mat = prefs.observeMatInfo()
+                    .first()
+                    ?.let { result.mat.merge(it) }
+                    ?: result.mat
+                prefs.updateMatInfo(mat)
+                prefs.updateMainUser(result.user)
+                prefs.setAuthToken(result.authToken)
+                mat
             }
-            .map { it.mat }
     }
 
     suspend fun getMat(matId: String): NetworkResult<Mat> {

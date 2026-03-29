@@ -1,7 +1,7 @@
 package dev.jvmname.accord.network
 
+import com.github.michaelbull.result.coroutines.runSuspendCatching
 import com.github.michaelbull.result.map
-import dev.jvmname.accord.ui.catchRunning
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
@@ -26,7 +26,7 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun createUser(name: String): NetworkResult<CreateUserResponse> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.post("users") {
                     setBody(CreateUserRequest(name))
                 }.body<ApiResult<CreateUserResponseData>>()
@@ -42,7 +42,7 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun createMat(name: String, judgeCount: Int): NetworkResult<Mat> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.post("mats") {
                     setBody(CreateMatRequest(name, judgeCount))
                 }.body<ApiResult<MatResponseData>>()
@@ -54,7 +54,7 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun getMat(matId: String): NetworkResult<Mat> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.get("mat/$matId")
                     .body<ApiResult<MatResponseData>>()
             }
@@ -65,7 +65,7 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun joinMat(matCode: String, name: String): NetworkResult<JoinMatResult> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.post("mat/$matCode/join") {
                     setBody(JoinMatRequest(name))
                 }.body<ApiResult<JoinMatResponseData>>()
@@ -77,7 +77,7 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun leaveMat(matCode: String): NetworkResult<Mat> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.delete("mat/$matCode/join")
                     .body<ApiResult<MatResponseData>>()
             }
@@ -88,7 +88,7 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun listJudges(matCode: String): NetworkResult<List<User>> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.get("mat/$matCode/judges")
                     .body<ApiResult<JudgesResponseData>>()
             }
@@ -99,7 +99,7 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun listViewers(matCode: String): NetworkResult<List<User>> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.get("mat/$matCode/viewers")
                     .body<ApiResult<ViewersResponseData>>()
             }
@@ -118,7 +118,7 @@ class AccordClient(private val httpClient: HttpClient) {
         blueCompetitor: CompetitorRequest,
     ): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.post("mat/$matCode/matches") {
                     setBody(
                         CreateMatchRequest(
@@ -135,7 +135,7 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun getMatch(matchId: MatchId): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.get("match/${matchId.id}")
                     .body<ApiResult<MatchResponseData>>()
             }
@@ -146,7 +146,7 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun startMatch(matchId: MatchId): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.post("match/${matchId.id}/start")
                     .body<ApiResult<MatchResponseData>>()
             }
@@ -161,7 +161,7 @@ class AccordClient(private val httpClient: HttpClient) {
         submitter: CompetitorColor? = null,
     ): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.post("match/${matchId.id}/end") {
                     setBody(EndMatchRequest(submission, submitter))
                 }.body<ApiResult<MatchResponseData>>()
@@ -177,7 +177,7 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun startRound(matchId: MatchId): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.post("match/${matchId.id}/rounds")
                     .body<ApiResult<MatchResponseData>>()
             }
@@ -192,7 +192,7 @@ class AccordClient(private val httpClient: HttpClient) {
         submitter: CompetitorColor? = null
     ): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.post("match/${matchId.id}/rounds/end") {
                     setBody(EndRoundRequest(submission, submitter))
                 }.body<ApiResult<MatchResponseData>>()
@@ -204,7 +204,7 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun pauseRound(matchId: MatchId): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.post("match/${matchId.id}/rounds/pause")
                     .body<ApiResult<MatchResponseData>>()
             }.unwrapApiResult().map { it.match }
@@ -213,7 +213,7 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun resumeRound(matchId: MatchId): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.post("match/${matchId.id}/rounds/resume")
                     .body<ApiResult<MatchResponseData>>()
             }.unwrapApiResult().map { it.match }
@@ -229,7 +229,7 @@ class AccordClient(private val httpClient: HttpClient) {
         rider: CompetitorColor
     ): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.post("match/${matchId.id}/ridingTime") {
                     setBody(StartRidingTimeVoteRequest(rider))
                 }.body<ApiResult<MatchResponseData>>()
@@ -241,7 +241,7 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun endRidingTimeVote(matchId: MatchId, rider: CompetitorColor): NetworkResult<Match> {
         return withContext(Dispatchers.IO) {
-            catchRunning {
+            runSuspendCatching {
                 httpClient.delete("match/${matchId.id}/ridingTime") {
                     parameter("rider", rider.name.lowercase())
                 }.body<ApiResult<MatchResponseData>>()

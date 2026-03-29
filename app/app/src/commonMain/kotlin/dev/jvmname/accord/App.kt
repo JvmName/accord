@@ -2,6 +2,10 @@ package dev.jvmname.accord
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import co.touchlab.kermit.DefaultFormatter
+import co.touchlab.kermit.Logger
+import co.touchlab.kermit.chunked
+import co.touchlab.kermit.platformLogWriter
 import com.slack.circuit.backstack.SaveableBackStack
 import com.slack.circuit.backstack.rememberSaveableBackStack
 import com.slack.circuit.foundation.Circuit
@@ -15,6 +19,8 @@ import dev.jvmname.accord.ui.theme.AccordTheme
 
 @Composable
 fun App(circuit: Circuit, onRootPop: () -> Unit) {
+    Logger.setLogWriters(platformLogWriter(DefaultFormatter).chunked(4000))
+    Logger.i { "We're up!" }
     val backstack = rememberSaveableBackStack(root = MainScreen())
     val navigator = platformNavigator(backstack, onRootPop)
     AccordTheme {

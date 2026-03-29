@@ -38,7 +38,7 @@ interface AccordGraph {
         fun create(
             @Provides context: PlatformContext,
             @Provides clock: Clock,
-            @Provides baseWebsocketUrl: BaseUrl = BaseUrl("http://localhost:3000")
+            @Provides baseUrl: BaseUrl = BaseUrl("http://localhost:3000")
         ): AccordGraph
     }
 }

@@ -19,6 +19,7 @@ import dev.jvmname.accord.ui.session.ManualEditAction
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -52,6 +53,7 @@ class SoloMatchSession(
     private val _roundEvent = MutableStateFlow<RoundEvent?>(null)
     override val roundEvent: StateFlow<RoundEvent?> = _roundEvent.asStateFlow()
 
+    private var timerCollectionJob: Job? = null
     private var latestRoundEvent = AtomicReference<RoundEvent?>(null)
     private val _score = MutableStateFlow(Score(0, 0, null, null, null))
     override val score: StateFlow<Score> = _score.asStateFlow()
@@ -243,7 +245,8 @@ class SoloMatchSession(
     }
 
     private fun runTimer(baseRound: RoundInfo) {
-        scope.launch {
+        timerCollectionJob?.cancel()
+        timerCollectionJob = scope.launch {
             timer.start(baseRound.duration, 500.milliseconds)
                 .dropWhile { it == Duration.ZERO }
                 .collect { remaining ->

@@ -221,20 +221,20 @@ class StartRidingTimeVoteRequest(
 @[JvmInline Serializable]
 value class CreateUserResponseData(val data: CreateUserResponse)
 
-@[JvmInline Serializable]
-value class MatResponseData(val mat: Mat)
+@[Poko Serializable]
+class MatResponseData(val mat: Mat)
 
 @[JvmInline Serializable]
 value class JoinMatResponseData(val data: JoinMatResult)
 
-@[JvmInline Serializable]
-value class MatchResponseData(val match: Match)
+@[Poko Serializable]
+class MatchResponseData(val match: Match)
 
-@[JvmInline Serializable]
-value class JudgesResponseData(val judges: List<User>)
+@[Poko Serializable]
+class JudgesResponseData(val judges: List<User>)
 
-@[JvmInline Serializable]
-value class ViewersResponseData(val viewers: List<User>)
+@[Poko Serializable]
+class ViewersResponseData(val viewers: List<User>)
 
 val Round.remainingDuration: Duration?
     get() = timeRemaining?.seconds

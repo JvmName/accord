@@ -1,5 +1,6 @@
 package dev.jvmname.accord.network
 
+import co.touchlab.kermit.Logger
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
@@ -25,7 +26,10 @@ fun <T> ApiResult<T>.toResult(): Result<T, ApiError> = when (this) {
 
 fun <T> Result<ApiResult<T>, Throwable>.unwrapApiResult(): Result<T, ApiError> {
     return this
-        .mapError { mapOf("exception" to listOf(it.message ?: "Network error")) }
+        .mapError {
+            Logger.e(it) { "API error: ${it.message}" }
+            mapOf("exception" to listOf(it.message.orEmpty(), it.stackTraceToString()))
+        }
         .andThen { it.toResult() }
 }
 

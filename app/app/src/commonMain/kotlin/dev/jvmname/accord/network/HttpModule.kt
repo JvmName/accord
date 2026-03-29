@@ -10,9 +10,15 @@ import io.ktor.client.engine.HttpClientEngineFactory
 import io.ktor.client.plugins.DefaultRequest
 import io.ktor.client.plugins.HttpSend
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.plugins.plugin
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.encodedPath
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.util.appendIfNameAbsent
 import kotlinx.serialization.json.Json
 
 @ContributesTo(AppScope::class)
@@ -25,14 +31,27 @@ interface HttpModule {
             }
             install(DefaultRequest) {
                 url(baseUrl.baseUrl)
+                headers.appendIfNameAbsent(
+                    HttpHeaders.ContentType,
+                    ContentType.Application.Json.toString()
+                )
+            }
+            install(Logging) {
+                logger = object : Logger {
+                    override fun log(message: String) {
+                        co.touchlab.kermit.Logger.i { "AccordClient: $message" }
+                    }
+                }
+                level = LogLevel.ALL
             }
         }.also {
-            it.plugin(HttpSend).intercept { request ->
-                if (!request.url.encodedPath.endsWith("/users")) {
-                    request.headers.append("X-Api-Token", prefs.getAuthToken()!!.token)
+            it.plugin(HttpSend).intercept({ request ->
+                val authToken = prefs.getAuthToken()
+                if (!request.url.encodedPath.endsWith("/users") && authToken != null) {
+                    request.headers.append("X-Api-Token", authToken.token)
                 }
                 execute(request)
-            }
+            })
         }
     }
 
