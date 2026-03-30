@@ -114,12 +114,14 @@ describe('Connection', () => {
 
             it ('enables logging when log level is debug', () => {
                 CONSTANTS.LOG_LEVEL = 'debug';
+                process.env.LOG_SQL = 1;
                 const conn = new Connection();
                 expect(conn._sequelize.options.logging).toEqual(expect.any(Function))
             });
 
             it ('does not enable logging when log level is not debug', () => {
                 CONSTANTS.LOG_LEVEL = 'info';
+                process.env.LOG_SQL = undefined;
                 const conn = new Connection();
                 expect(conn._sequelize.options.logging).toBeFalsy();
             });

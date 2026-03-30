@@ -86,6 +86,7 @@ describe('ConnectionConfiguration', () => {
     describe('ConnectionConfiguration#loggingEnabled', () => {
         it ('enables debug level logging', () => {
             CONSTANTS.LOG_LEVEL = 'debug';
+            process.env.LOG_SQL = 1;
             spy.mockImplementation(() => ({[databaseId1]: { test }}));
 
             const config = new ConnectionConfiguration(databaseId1);
@@ -94,6 +95,7 @@ describe('ConnectionConfiguration', () => {
 
         it ('does not enable with a less verbose log level', () => {
             CONSTANTS.LOG_LEVEL = 'info';
+            process.env.LOG_SQL = undefined;
             spy.mockImplementation(() => ({[databaseId1]: { test }}));
 
             const config = new ConnectionConfiguration(databaseId1);
