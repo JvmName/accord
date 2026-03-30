@@ -8,7 +8,7 @@
 // Mock BaseRecord so that Round.initialize() is a no-op and instances are
 // plain objects with the helpers Round#pause/resume/end rely on.
 // ---------------------------------------------------------------------------
-jest.mock('../../lib/active_record', () => {
+jest.mock('../../lib/activeRecord', () => {
     class BaseRecord {
         #cachedAssociations = {};
 

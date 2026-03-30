@@ -1,6 +1,6 @@
-const { ConnectionConfiguration } = require('../../../lib/active_record/db/connectionConfiguration');
-const { Migrator }                = require('../../../lib/active_record/db/migrator');
-const { QueryInterface }          = require('../../../lib/active_record/db/queryInterface');
+const { ConnectionConfiguration } = require('../../../lib/activeRecord/db/connectionConfiguration');
+const { Migrator }                = require('../../../lib/activeRecord/db/migrator');
+const { QueryInterface }          = require('../../../lib/activeRecord/db/queryInterface');
 const { Sequelize }               = require('sequelize');
 const   TestHelpers               = require('../../helpers');
 

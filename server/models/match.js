@@ -1,4 +1,4 @@
-const { BaseRecord }       = require('../lib/active_record');
+const { BaseRecord }       = require('../lib/activeRecord');
 const { Mat }              = require('./mat');
 const { RDojoKombatRules } = require('../lib/rules');
 const { Round }            = require('./round');

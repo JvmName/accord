@@ -1,5 +1,5 @@
-const { Connection }              = require('../../../lib/active_record/db/connection');
-const { ConnectionConfiguration } = require('../../../lib/active_record/db/connectionConfiguration');
+const { Connection }              = require('../../../lib/activeRecord/db/connection');
+const { ConnectionConfiguration } = require('../../../lib/activeRecord/db/connectionConfiguration');
 const   CONSTANTS                 = require('../../../lib/constants');
 const   TestHelpers               = require('../../helpers');
 
