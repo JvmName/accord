@@ -6,26 +6,42 @@ const { Worker }  = require('./worker');
 
 
 class TechFallTrackerWorker extends Worker {
+    #currentRound;
+    #currentMatch;
+
+
     async performJob() {
         await this.forEachRound(this.checkTechFallStatus.bind(this));
     }
 
 
     async checkTechFallStatus(round) {
-        logger.debug(`Checking round ${round.id} for tech fall`);
-        await this.logStatus(round);
+        this.#currentRound = round;
+        this.#currentMatch = await round.getMatch();;
+
+        logger.debug(`Checking round ${this.currentRoundLabel} for tech fall`);
+        await this.logStatus();
 
         const hasReachedTechFallThreshold = await round.hasReachedTechFallThreshold();
         if (!hasReachedTechFallThreshold) return;
 
-        await round.end();
+        await this.endRound();
+        await this.notifyServerOfRoundEnd()
+    }
 
-        const match     = await round.getMatch();
+
+    async endRound() {
+        await this.#currentMatch.endRound();
+    }
+
+
+    async notifyServerOfRoundEnd() {
+        const match     = await this.#currentRound.getMatch();
         const rounds    = await match.getRounds();
         const response  = await match.toApiResponse();
         response.rounds = [];
         for (const aRound of rounds) {
-            response.rounds.push(await round.toApiResponse());
+            response.rounds.push(await aRound.toApiResponse());
         }
         this.notifyServer(EVENTS.TECH_FALL, response);
     }
@@ -45,12 +61,17 @@ class TechFallTrackerWorker extends Worker {
 
     async logStatus(round) {
         if (CONSTANTS.LOG_LEVEL == 'debug') {
-            const redScore    = await round.getRedScore();
-            const blueScore   = await round.getBlueScore();
-            const roundNumber = await round.getRoundNumber();
-            const threshold   = round.rules.techFallThreshold(roundNumber);
-            logger.debug(`Round ${round.id} tech fall status: Red: ${redScore} Blue: ${blueScore} Threshold: ${threshold}`);
+            const redScore    = await this.#currentRound.getRedScore();
+            const blueScore   = await this.#currentRound.getBlueScore();
+            const roundNumber = await this.#currentRound.getRoundNumber();
+            const threshold   = this.#currentRound.rules.techFallThreshold(roundNumber);
+            logger.debug(`Round ${this.currentRoundLabel} tech fall status: Red: ${redScore} Blue: ${blueScore} Threshold: ${threshold}`);
         }
+    }
+
+
+    get currentRoundLabel() {
+        return `${this.#currentMatch.id}.${this.#currentRound.id}`;
     }
 }
 

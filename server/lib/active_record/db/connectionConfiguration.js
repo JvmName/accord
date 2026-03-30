@@ -29,7 +29,7 @@ class ConnectionConfiguration {
     get #poolMin()       { return this.#config.pool?.min || 0 }
     get #poolMax()       { return this.#config.pool?.max || 5 }
 
-    get loggingEnabled() { return CONSTANTS.LOG_LEVEL == 'debug' };
+    get loggingEnabled() { return process.env.LOG_SQL && CONSTANTS.LOG_LEVEL == 'debug' };
 
 
     #validateConfiguration() {
