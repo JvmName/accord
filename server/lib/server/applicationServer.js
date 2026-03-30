@@ -284,7 +284,7 @@ class ApplicationServer {
             await controllerInstance.render({error: err.message});
         }
 
-        if (CONSTANTS.DEV) console.log(err);
+        if (CONSTANTS.DEV) logger.error(err);
     }
 
 

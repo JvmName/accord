@@ -25,11 +25,16 @@ class Worker {
 
 
     async connect() {
-        const socket = io(`${this.#host}:${this.#port}`, {
+        this.#ioClient = io(`http://${this.#host}:${this.#port}`, {
             query: {workerToken: this.#workerToken}
         });
-        socket.on("connect", () => {console.log("Web socket connected")});
-        socket.on("disconnect", () => {console.log("Web socket disconnected")});
+        this.#ioClient.on("connect",    () => { logger.info("Web socket connected")});
+        this.#ioClient.on("disconnect", () => { logger.info("Web socket disconnected")});
+    }
+
+
+    async notifyServer(event, msg) {
+       this.#ioClient.emit(event, msg); 
     }
 
 
@@ -42,15 +47,18 @@ class Worker {
 
     queueJob() {
         const requeueInterval = 1000;
-        this.#timeout = setTimeout(this.performJob.bind(this), requeueInterval);
+        this.#timeout = setTimeout(this._performJob.bind(this), requeueInterval);
     }
 
 
-    performJob() {
+    async _performJob() {
         if (this.#closed) return;
-        logger.info('hello world');
+        await this.performJob();
         this.queueJob();
     }
+
+
+    async performJob() {}
 }
 
 

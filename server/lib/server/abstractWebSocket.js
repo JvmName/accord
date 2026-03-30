@@ -1,3 +1,6 @@
+const { logger } = require('../logger');
+
+
 class AbstractWebSocket {
     #ioSocket;
     #server;
@@ -19,7 +22,7 @@ class AbstractWebSocket {
         this.#ioSocket.adapter.on('join-room',  this.#handleRoomJoined.bind(this));
         this.#ioSocket.adapter.on('leave-room', this.#handleRoomLeft.bind(this));
 
-        addMatchEventHandlers(this, this.#server);
+        this.addEventHandlers();
     }
 
 
@@ -38,11 +41,19 @@ class AbstractWebSocket {
     }
 
 
+    addEventHandlers() {}
+
+
     /***********************************************************************************************
     * EVENTS
     ***********************************************************************************************/
     on(eventName, eventHandler) {
         this.#ioSocket.on(eventName, eventHandler.bind(this));
+    }
+
+
+    emitToRoom(room, eventName, eventData) {
+        this.#server.emit(room, eventName, eventData);
     }
 
 
@@ -71,6 +82,11 @@ class AbstractWebSocket {
         if (this.id == room) return;
         const numConnections = this.#ioSocket.adapter.rooms.get(room).size;
         logger.info(`Web socket left room ${room}.${numConnections} - (${id})`);
+    }
+
+
+    roomForMatch(matchId) {
+        return `match:${matchId}`;
     }
 
 

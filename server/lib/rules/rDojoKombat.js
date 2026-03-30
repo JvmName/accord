@@ -18,9 +18,17 @@ const RDojoKombatRules = {
     },
 
 
-    determineWinner(red, blue, redScore, blueScore, round) {
-        let winner = null;
-        let method = {type: null, value: null};
+    techFallThreshold(roundNumber) {
+        if (roundNumber == 1) return 24;
+        if (roundNumber == 2) return 16;
+        return 8;
+    },
+
+
+    determineWinner(red, blue, redScore, blueScore, roundNumber, round) {
+        let winner      = null;
+        let method      = {type: null, value: null};
+        const threshold = this.techFallThreshold(roundNumber);
 
         if (!round.ended) {
             // do nothing
@@ -33,7 +41,7 @@ const RDojoKombatRules = {
         } else if (redScore != blueScore) {
             const score  = Math.max(redScore, blueScore);
             winner       = score == redScore ? red : blue;
-            method.type  = 'points';
+            method.type  = score >= threshold ? 'tech-fall' : 'points';
             method.value = score;
         } else {
             method.type  = 'tie'

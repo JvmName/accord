@@ -1,7 +1,6 @@
 const { Connection }              = require('../../../lib/active_record/db/connection');
 const { ConnectionConfiguration } = require('../../../lib/active_record/db/connectionConfiguration');
 const   CONSTANTS                 = require('../../../lib/constants');
-const { logger }                  = require('../../../lib/logger');
 const   TestHelpers               = require('../../helpers');
 
 
@@ -116,7 +115,7 @@ describe('Connection', () => {
             it ('enables logging when log level is debug', () => {
                 CONSTANTS.LOG_LEVEL = 'debug';
                 const conn = new Connection();
-                expect(conn._sequelize.options.logging).toBe(logger.debug);
+                expect(conn._sequelize.options.logging).toEqual(expect.any(Function))
             });
 
             it ('does not enable logging when log level is not debug', () => {

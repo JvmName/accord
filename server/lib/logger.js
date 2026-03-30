@@ -1,9 +1,10 @@
-const pino = require('pino');
+const pino      = require('pino');
+const CONSTANTS = require('./constants');
 
 const procName = process.env.PROC_NAME || "SERVER";
 const logger = pino({
+    level: CONSTANTS.LOG_LEVEL,
     transport: {
-        level: process.env.LOG_LEVEL ? 'debug' : 'info',
         target: 'pino-pretty',
         options: {
             colorize: true,
