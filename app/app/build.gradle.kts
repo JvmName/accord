@@ -146,6 +146,10 @@ android {
     }
     signingConfigs {
         create("release") {
+            storeFile = file(System.getenv("SIGNING_STORE_FILE") ?: "AccordProdKey.jks")
+            storePassword = System.getenv("SIGNING_STORE_PASSWORD")
+            keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+            keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
         }
     }
     buildTypes {
