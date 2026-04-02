@@ -68,9 +68,9 @@ class RidingTimeCalculator {
     #processEvents() {
         for (const event of this.#events) {
             if (event.type === 'voteStart') {
-                this.startVote(event.vote);
+                this.#startVote(event.vote);
             } else if (event.type === 'voteEnd') {
-                this.endVote(event.vote);
+                this.#endVote(event.vote);
             } else if (event.type === 'pausedAt') {
                 this.#handlePause(event.time);
             } else if (event.type === 'resumedAt') {
@@ -79,7 +79,7 @@ class RidingTimeCalculator {
         }
 
         if (this.controlActive && !this.#paused) {
-            this.endControlPeriod(this.#endAt);
+            this.#endControlPeriod(this.#endAt);
         }
     }
 
@@ -106,7 +106,7 @@ class RidingTimeCalculator {
     }
 
 
-    startVote(vote) {
+    #startVote(vote) {
         this.#activeVotes[vote.judge_id] = vote;
         if (!this.#paused && !this.#controlStartedAt && this.controlActive) {
             const voteTime = new Date(vote.started_at).getTime();
@@ -118,10 +118,11 @@ class RidingTimeCalculator {
     }
 
 
-    endVote(vote) {
+    #endVote(vote) {
         delete this.#activeVotes[vote.judge_id];
-        if (!this.controlActive && !this.#paused) {
+        if (!this.controlActive && !this.#paused && this.#controlStartedAt) {
             // Quorum lost outside a pause: discard everything
+            this.#endControlPeriod(vote.ended_at);
             this.#controlStartedAt = null;
             this.#pendingControlTime = 0;
             this.#resumedAt = null;
@@ -143,7 +144,7 @@ class RidingTimeCalculator {
     }
 
 
-    endControlPeriod(endAt) {
+    #endControlPeriod(endAt) {
         const time = endAt.getTime() - this.#controlStartedAt.getTime();
         this.#ridingTime += time/1000;
         this.#controlStartedAt = null;

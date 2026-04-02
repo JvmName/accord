@@ -1,4 +1,4 @@
-const { BaseRecord }          = require('../lib/active_record');
+const { BaseRecord }          = require('../lib/activeRecord');
 const { RidingTimeVote }      = require('./ridingTimeVote');
 const { RoundPause }          = require('./roundPause');
 const { RDojoKombatRules }    = require('../lib/rules');
@@ -11,6 +11,12 @@ class Round extends BaseRecord {
     #redScore;
     #winMethod;
     #winner;
+
+
+    static async getOpenRounds() {
+        const rounds = await this.where({ended_at: null});
+        return rounds;
+    }
 
 
     /***********************************************************************************************
@@ -54,6 +60,13 @@ class Round extends BaseRecord {
 
     async isPaused() {
         return !!(await this.getCurrentPause());
+    }
+
+
+    async getRoundNumber() {
+        const match  = await this.getMatch();
+        const rounds = await match.getRounds();
+        return rounds.findIndex(round => round.id == this.id) + 1;
     }
 
 
@@ -169,16 +182,29 @@ class Round extends BaseRecord {
     }
 
 
+    async hasReachedTechFallThreshold() {
+        const roundNumber = await this.getRoundNumber();
+        const threshold   = this.rules.techFallThreshold(roundNumber);
+
+        const blueScore   = await this.getBlueScore();
+        if (blueScore >= threshold) return true;
+
+        const redScore    = await this.getRedScore();
+        return redScore >= threshold;
+    }
+
+
     async #collectResultsData() {
         if (this.#redScore !== undefined) return;
 
-        const match          = await this.getMatch();
-        const red            = await match.getRedCompetitor();
-        const blue           = await match.getBlueCompetitor();
-        const judges         = await match.getJudges();
+        const match       = await this.getMatch();
+        const red         = await match.getRedCompetitor();
+        const blue        = await match.getBlueCompetitor();
+        const judges      = await match.getJudges();
+        const roundNumber = await this.getRoundNumber();
 
         const { redScore, blueScore } = await this.#getScore(red, blue, judges);
-        const { winner, method }      = this.#determineWinner(red, blue, redScore, blueScore);
+        const { winner, method }      = this.#determineWinner(red, blue, redScore, blueScore, roundNumber);
 
         this.#redScore  = redScore;
         this.#blueScore = blueScore;
@@ -194,8 +220,8 @@ class Round extends BaseRecord {
     }
 
 
-    #determineWinner(red, blue, redScore, blueScore) {
-        return this.rules.determineWinner(red, blue, redScore, blueScore, this);
+    #determineWinner(red, blue, redScore, blueScore, roundNumber) {
+        return this.rules.determineWinner(red, blue, redScore, blueScore, roundNumber, this);
     }
 
 

@@ -1,5 +1,5 @@
-const { Connection }              = require('../../../lib/active_record/db/connection');
-const { ConnectionConfiguration } = require('../../../lib/active_record/db/connectionConfiguration');
+const { Connection }              = require('../../../lib/activeRecord/db/connection');
+const { ConnectionConfiguration } = require('../../../lib/activeRecord/db/connectionConfiguration');
 const   CONSTANTS                 = require('../../../lib/constants');
 const   TestHelpers               = require('../../helpers');
 
@@ -18,12 +18,12 @@ jest.mock('sequelize', () => {
 
 
 let spy;
-const origEnv = CONSTANTS.ENV;
+const origLogLevel = CONSTANTS.LOG_LEVEL;
 afterEach(() => {
     if (spy) spy.mockRestore();
     spy = null;
     Connection.clearConnectionsCache();
-    CONSTANTS.ENV = origEnv;
+    CONSTANTS.LOG_LEVEL = origLogLevel;
 });
 
 
@@ -112,14 +112,16 @@ describe('Connection', () => {
                 expect(conn._sequelize.options.dialectOptions).toEqual({ssl: {require: true}});
             });
 
-            it ('enables logging in development', () => {
-                CONSTANTS.ENV = 'development';
+            it ('enables logging when log level is debug', () => {
+                CONSTANTS.LOG_LEVEL = 'debug';
+                process.env.LOG_SQL = 1;
                 const conn = new Connection();
-                expect(conn._sequelize.options.logging).toBe(undefined); // undefined defaults to true
+                expect(conn._sequelize.options.logging).toEqual(expect.any(Function))
             });
 
-            it ('does not enable logging in production', () => {
-                CONSTANTS.ENV = 'production';
+            it ('does not enable logging when log level is not debug', () => {
+                CONSTANTS.LOG_LEVEL = 'info';
+                process.env.LOG_SQL = undefined;
                 const conn = new Connection();
                 expect(conn._sequelize.options.logging).toBeFalsy();
             });

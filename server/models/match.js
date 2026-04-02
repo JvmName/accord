@@ -1,4 +1,4 @@
-const { BaseRecord }       = require('../lib/active_record');
+const { BaseRecord }       = require('../lib/activeRecord');
 const { Mat }              = require('./mat');
 const { RDojoKombatRules } = require('../lib/rules');
 const { Round }            = require('./round');
@@ -142,10 +142,17 @@ class Match extends BaseRecord {
         response.blue_competitor = await this.getBlueCompetitor();
         response.winner          = await this.getWinner();
 
-        if (options.includeMat)         response.mat    = await this.getMat();
-        if (options.includeMatchJudges) response.judges = await this.getJudges();
+        if (options.includeMat) {
+            const mat    = await this.getMat();
+            response.mat = mat.toApiResponse(options);
+        }
+        if (options.includeMatchJudges) {
+            const judges    = await this.getJudges()
+            response.judges = judges.map(j => j.toApiResponse(options));
+        }
         if (options.includeRounds) {
-            response.rounds = await this.getRounds();
+            const rounds    = await this.getRounds();
+            response.rounds = rounds.map(r => r.toApiResponse(options));
         }
 
         return response;
