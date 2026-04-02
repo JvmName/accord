@@ -16,13 +16,43 @@ class TechFallTrackerWorker extends Worker {
 
 
     async checkTechFallStatus(round) {
+        const checker = new TechFallRoundChecker(round, this);
+        await checker.check();
+
+    }
+
+
+    async forEachRound(fnc) {
+        const rounds = await this.getOpenRounds();
+        logger.debug(`Checking ${rounds.length} round(s) for tech fall`);
+        await Promise.all(rounds.map(round => fnc(round)));
+    }
+
+
+    async getOpenRounds() {
+        return await Round.getOpenRounds();
+    }
+}
+
+
+class TechFallRoundChecker {
+    #currentRound;
+    #currentMatch;
+    #worker;
+
+    constructor(round, worker) {
         this.#currentRound = round;
-        this.#currentMatch = await round.getMatch();;
+        this.#worker       = worker;
+    }
+
+
+    async check() {
+        this.#currentMatch = await this.#currentRound.getMatch();
 
         logger.debug(`Checking round ${this.currentRoundLabel} for tech fall`);
         await this.logStatus();
 
-        const hasReachedTechFallThreshold = await round.hasReachedTechFallThreshold();
+        const hasReachedTechFallThreshold = await this.#currentRound.hasReachedTechFallThreshold();
         if (!hasReachedTechFallThreshold) return;
 
         await this.endRound();
@@ -43,23 +73,11 @@ class TechFallTrackerWorker extends Worker {
         for (const aRound of rounds) {
             response.rounds.push(await aRound.toApiResponse());
         }
-        this.notifyServer(EVENTS.TECH_FALL, response);
+        this.#worker.notifyServer(EVENTS.TECH_FALL, response);
     }
 
 
-    async forEachRound(fnc) {
-        const rounds = await this.getOpenRounds();
-        logger.debug(`Checking ${rounds.length} round(s) for tech fall`);
-        await Promise.all(rounds.map(round => fnc(round)));
-    }
-
-
-    async getOpenRounds() {
-        return await Round.getOpenRounds();
-    }
-
-
-    async logStatus(round) {
+    async logStatus() {
         if (CONSTANTS.LOG_LEVEL == 'debug') {
             const redScore    = await this.#currentRound.getRedScore();
             const blueScore   = await this.#currentRound.getBlueScore();

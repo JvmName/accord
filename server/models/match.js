@@ -142,10 +142,17 @@ class Match extends BaseRecord {
         response.blue_competitor = await this.getBlueCompetitor();
         response.winner          = await this.getWinner();
 
-        if (options.includeMat)         response.mat    = await this.getMat().toApiResonse(options);
-        if (options.includeMatchJudges) response.judges = await this.getJudges().map(j => j.toApiResponse(options));
+        if (options.includeMat) {
+            const mat    = await this.getMat();
+            response.mat = mat.toApiResponse(options);
+        }
+        if (options.includeMatchJudges) {
+            const judges    = await this.getJudges()
+            response.judges = judges.map(j => j.toApiResponse(options));
+        }
         if (options.includeRounds) {
-            response.rounds = await this.getRounds.map(r => r.toApiResponse(options));
+            const rounds    = await this.getRounds();
+            response.rounds = rounds.map(r => r.toApiResponse(options));
         }
 
         return response;
