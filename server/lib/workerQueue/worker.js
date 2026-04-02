@@ -2,6 +2,9 @@ const { io }     = require('socket.io-client');
 const { logger } = require('../logger');
 
 
+const DEFAULT_REQUEUE_INTERVAL = 1000;
+
+
 class Worker {
     #closed = false;
     #host;
@@ -46,8 +49,12 @@ class Worker {
 
 
     queueJob() {
-        const requeueInterval = 1000;
-        this.#timeout = setTimeout(this._performJob.bind(this), requeueInterval);
+        this.#timeout = setTimeout(this._performJob.bind(this), this.requeueInterval);
+    }
+
+
+    get requeueInterval() {
+        return DEFAULT_REQUEUE_INTERVAL;
     }
 
 
