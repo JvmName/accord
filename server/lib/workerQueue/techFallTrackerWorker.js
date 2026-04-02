@@ -38,7 +38,7 @@ class TechFallTrackerWorker extends Worker {
     async notifyServerOfRoundEnd() {
         const match     = await this.#currentMatch;
         const rounds    = await match.getRounds();
-        const response  = await match.toApiResponse();
+        const response  = await match.toApiResponse({includeRounds: true});
         response.rounds = [];
         for (const aRound of rounds) {
             response.rounds.push(await aRound.toApiResponse());
