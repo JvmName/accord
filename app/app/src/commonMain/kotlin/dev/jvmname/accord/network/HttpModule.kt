@@ -42,7 +42,7 @@ interface HttpModule {
                         co.touchlab.kermit.Logger.i { "AccordClient: $message" }
                     }
                 }
-                level = LogLevel.ALL
+                level = LogLevel.BODY
             }
         }.also {
             it.plugin(HttpSend).intercept({ request ->

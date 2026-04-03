@@ -262,44 +262,6 @@ module.exports = {
             "unique": false
         }
     },
-    "round_pauses": {
-        "id": {
-            "type": "UUID",
-            "allowNull": false,
-            "primaryKey": true,
-            "unique": true
-        },
-        "round_id": {
-            "type": "UUID",
-            "allowNull": false,
-            "primaryKey": false,
-            "unique": false
-        },
-        "paused_at": {
-            "type": "DATETIME",
-            "allowNull": false,
-            "primaryKey": false,
-            "unique": false
-        },
-        "resumed_at": {
-            "type": "DATETIME",
-            "allowNull": true,
-            "primaryKey": false,
-            "unique": false
-        },
-        "created_at": {
-            "type": "DATETIME",
-            "allowNull": false,
-            "primaryKey": false,
-            "unique": false
-        },
-        "updated_at": {
-            "type": "DATETIME",
-            "allowNull": false,
-            "primaryKey": false,
-            "unique": false
-        }
-    },
     "rounds": {
         "id": {
             "type": "UUID",
@@ -388,6 +350,44 @@ module.exports = {
             "allowNull": false,
             "primaryKey": false,
             "unique": true
+        },
+        "created_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "updated_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        }
+    },
+    "round_pauses": {
+        "id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": true,
+            "unique": true
+        },
+        "round_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "paused_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "resumed_at": {
+            "type": "DATETIME",
+            "allowNull": true,
+            "primaryKey": false,
+            "unique": false
         },
         "created_at": {
             "type": "DATETIME",

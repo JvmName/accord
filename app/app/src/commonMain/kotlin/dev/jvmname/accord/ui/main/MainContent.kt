@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallMerge
 import androidx.compose.material.icons.automirrored.outlined.NoteAdd
+import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
@@ -50,7 +51,7 @@ fun MainContent(state: MainState, modifier: Modifier) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (state.mat != null) {
                     ActionCard(
-                        icon = Icons.AutoMirrored.Filled.CallMerge,
+                        icon = Icons.Default.AddCircleOutline,
                         title = "New Match",
                         description = "Start a new match on ${state.mat.name}",
                         onClick = { state.eventSink(ContinueMat) }

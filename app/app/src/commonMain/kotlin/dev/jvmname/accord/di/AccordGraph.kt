@@ -38,7 +38,7 @@ interface AccordGraph {
         fun create(
             @Provides context: PlatformContext,
             @Provides clock: Clock,
-            @Provides baseUrl: BaseUrl = BaseUrl("http://localhost:3000")
+            @Provides baseUrl: BaseUrl = platformBaseUrl()
         ): AccordGraph
     }
 }
@@ -46,3 +46,5 @@ interface AccordGraph {
 val LocalGraph = compositionLocalOf<AccordGraph> {
     error("No SnackbarHostState")
 }
+
+expect fun platformBaseUrl(): BaseUrl

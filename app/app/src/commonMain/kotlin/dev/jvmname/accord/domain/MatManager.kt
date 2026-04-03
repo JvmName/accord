@@ -1,12 +1,12 @@
 package dev.jvmname.accord.domain
 
 import com.github.michaelbull.result.coroutines.coroutineBinding
-import com.github.michaelbull.result.map
 import com.github.michaelbull.result.onOk
 import dev.jvmname.accord.domain.user.UserManager
 import dev.jvmname.accord.network.AccordClient
 import dev.jvmname.accord.network.CompetitorRequest
 import dev.jvmname.accord.network.Mat
+import dev.jvmname.accord.network.MatId
 import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.network.NetworkResult
 import dev.jvmname.accord.network.User
@@ -67,23 +67,26 @@ class MatManager(
      * Updates cached mat info in Prefs.
      */
     suspend fun joinMat(matCode: String, userName: String): NetworkResult<Mat> {
-        return client.joinMat(matCode, userName)
-            .map { result ->
-                // The join endpoint returns a partial mat (no codes) — merge with what we have
-                // stored so callers that need codes (e.g. createMatch, ShowCodesScreen) work.
-                val mat = prefs.observeMatInfo()
-                    .first()
-                    ?.let { result.mat.merge(it) }
-                    ?: result.mat
-                prefs.updateMatInfo(mat)
-                prefs.updateMainUser(result.user)
-                prefs.setAuthToken(result.authToken)
-                mat
-            }
+        return coroutineBinding {
+            val result = client.joinMat(matCode, userName).bind()
+            // The join endpoint returns a partial mat (no codes) — merge with what we have
+            // stored so callers that need codes (e.g. createMatch, ShowCodesScreen) work.
+            val mat = prefs.observeMatInfo()
+                .first()
+                ?.let { result.mat.merge(it) }
+                ?: result.mat
+            prefs.updateMainUser(result.user)
+            prefs.setAuthToken(result.authToken)
+
+            // Fetch full mat to include current_match, then merge to preserve codes
+            val fullMat = getMat(mat.id).bind().merge(mat)
+            prefs.updateMatInfo(fullMat)
+            fullMat
+        }
     }
 
-    suspend fun getMat(matId: String): NetworkResult<Mat> {
-        return client.getMat(matId)
+    suspend fun getMat(matId: MatId): NetworkResult<Mat> {
+        return client.getMat(matId.id)
             .onOk { prefs.updateMatInfo(it) }
     }
 

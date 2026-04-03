@@ -45,16 +45,20 @@ class ApiResultSerializer<T>(private val dataSerializer: KSerializer<T>) :
                 ApiResult.Success(data)
             }
             else -> {
-                // Error case: deserialize data.errors as Map<String, List<String>>
                 val dataObject = dataElement.jsonObject
-                val errorsElement = dataObject["errors"]
-                    ?: throw SerializationException("Missing 'errors' field in error response")
-
-                val errorsSerializer = MapSerializer(
-                    String.serializer(),
-                    ListSerializer(String.serializer())
-                )
-                val errors = jsonDecoder.json.decodeFromJsonElement(errorsSerializer, errorsElement)
+                val errors = when {
+                    dataObject.containsKey("errors") -> {
+                        val errorsSerializer = MapSerializer(
+                            String.serializer(),
+                            ListSerializer(String.serializer())
+                        )
+                        jsonDecoder.json.decodeFromJsonElement(errorsSerializer, dataObject["errors"]!!)
+                    }
+                    dataObject.containsKey("error") -> {
+                        mapOf("error" to listOf(dataObject["error"]!!.jsonPrimitive.content))
+                    }
+                    else -> throw SerializationException("Missing 'errors'/'error' field in error response")
+                }
                 ApiResult.Error(errors)
             }
         }

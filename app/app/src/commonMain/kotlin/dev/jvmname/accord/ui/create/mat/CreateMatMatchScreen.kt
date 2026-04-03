@@ -23,7 +23,7 @@ sealed interface CreateMatMatchEvent : CircuitUiEvent {
         val judgeCount: Int,
         val redName: String,
         val blueName: String,
-        val isJudging: Boolean,
+//        val isJudging: Boolean,
     ) : CreateMatMatchEvent
     data object Back : CreateMatMatchEvent
 
