@@ -58,7 +58,7 @@ class Connection {
             ...this.dialectOptions,
             define:  { underscored: true },
             dialect: this.dialect,
-            logging: (sql) => logger.info(sql)
+            logging: (sql) => logger.debug(sql)
         };
 
         if (!this.loggingEnabled) options.logging = false;

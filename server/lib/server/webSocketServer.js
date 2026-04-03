@@ -1,3 +1,4 @@
+const   CONSTANTS         = require('../constants');
 const { logger }          = require('../logger');
 const   IoServer          = require("socket.io")
 const { WebSocket }       = require('./webSocket');
@@ -72,6 +73,7 @@ class WebSocketServer {
             await socket.init();
             next();
         } catch(err) {
+            if (CONSTANTS.ENV != 'test') logger.error(err);
             return next(err);
         }
     }

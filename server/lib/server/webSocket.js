@@ -1,7 +1,7 @@
 const { AbstractWebSocket }     = require('./abstractWebSocket');
-const { addMatchEventHandlers } = require('./webSocketEventHandlers/matchEventHandlers');
 const { Authorizer }            = require('./authorizer');
 const { logger }                = require('../logger');
+const { Match }                 = require('../../models/match');
 const { User }                  = require('../../models/user');
 
 
@@ -18,6 +18,25 @@ class WebSocket extends AbstractWebSocket {
             this.close();
             return;
         }
+    }
+
+
+    addEventHandlers() {
+        this.on('match.join',  this.handleMatchJoined.bind(this));
+        this.on('match.leave', this.handleMatchLeft.bind(this));
+    }
+
+
+    async handleMatchJoined(matchId) {
+        const match = await Match.find(matchId)
+        if (!await this.authorizer.can('view', match)) return;
+
+        this.join(this.roomForMatch(matchId));
+    }
+
+
+    handleMatchLeft(matchId) {
+        this.leave(this.roomForMatch(matchId));
     }
 
 

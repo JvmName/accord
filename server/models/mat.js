@@ -1,4 +1,4 @@
-const { BaseRecord }    = require('../lib/active_record');
+const { BaseRecord }    = require('../lib/activeRecord');
 const { MatCode }       = require('./matCode');
 const { User }          = require('./user');
 const { WordGenerator } = require('../lib/external_api/word_generator');

@@ -21,7 +21,7 @@ class ConnectionConfiguration {
     get port()           { return this.#config.port || 5432 };
     get username()       { return this.#config.username };
     get ssl()            { return Boolean(this.#config.ssl) };
-    get storage()        { return `${utils.configDirectory}/database.${this.env}.sqlite` };
+    get storage()        { return process.env.DATABASE_PATH ?? `${utils.configDirectory}/database.${this.env}.sqlite` };
 
     get readers()        { return this.#config.readers || [] };
 
@@ -29,7 +29,7 @@ class ConnectionConfiguration {
     get #poolMin()       { return this.#config.pool?.min || 0 }
     get #poolMax()       { return this.#config.pool?.max || 5 }
 
-    get loggingEnabled() { return this.env == 'development' };
+    get loggingEnabled() { return process.env.LOG_SQL && CONSTANTS.LOG_LEVEL == 'debug' };
 
 
     #validateConfiguration() {
