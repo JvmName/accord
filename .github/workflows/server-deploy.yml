@@ -1,0 +1,108 @@
+name: Server Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/package.json'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies
+        run: cd server && npm ci
+
+      - name: Run tests
+        run: cd server && npm test
+
+  prepare:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      exists: ${{ steps.check_release.outputs.exists }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./server/package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
+
+      - name: Check if release already exists
+        id: check_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "server-${{ steps.version.outputs.version }}" > /dev/null 2>&1; then
+            echo "Release server-${{ steps.version.outputs.version }} already exists — skipping."
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+  deploy:
+    needs: prepare
+    if: needs.prepare.outputs.exists == 'false'
+    runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Railway
+        working-directory: server
+        run: railway up --service=${{ secrets.RAILWAY_SERVICE_ID }} --ci
+
+  release:
+    needs: [prepare, deploy]
+    if: needs.prepare.outputs.exists == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PREV=$(gh release list --limit 50 --json tagName --jq '[.[] | select(.tagName | startswith("server-"))] | first | .tagName // ""')
+          if [ -n "$PREV" ]; then
+            NOTES=$(git log "${PREV}..HEAD" --oneline -- server/)
+          else
+            NOTES=$(git log --oneline -- server/)
+          fi
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "server-${{ needs.prepare.outputs.version }}" \
+            --title "Server ${{ needs.prepare.outputs.version }}" \
+            --notes "${{ steps.notes.outputs.notes }}"

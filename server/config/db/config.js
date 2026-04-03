@@ -1,10 +1,13 @@
 module.exports = {
     default: {
         test: {
-            dialect: 'sqlite' 
+            dialect: 'sqlite'
         },
         development: {
-            dialect: 'sqlite' 
+            dialect: 'sqlite'
+        },
+        production: {
+            dialect: 'sqlite'
         }
     }
 };
