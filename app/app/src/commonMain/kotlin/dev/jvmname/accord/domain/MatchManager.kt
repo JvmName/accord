@@ -4,6 +4,8 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.andThen
 import com.github.michaelbull.result.flatMap
 import com.github.michaelbull.result.onOk
+import com.github.michaelbull.retry.policy.stopAtAttempts
+import com.github.michaelbull.retry.retry
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.network.AccordClient
 import dev.jvmname.accord.network.CompetitorColor
@@ -20,6 +22,7 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicReference
 
@@ -29,7 +32,7 @@ class MatchManager(
     private val client: AccordClient,
     private val socketFactory: SocketClient.Factory,
     private val scope: CoroutineScope,
-    private val match: Match?,
+    private val match: Match,
 ) {
     private var activeMatch = AtomicReference<Match?>(null)
     private lateinit var socket: SocketClient
@@ -39,12 +42,13 @@ class MatchManager(
         scope.launch {
             val token = requireNotNull(prefs.getAuthToken())
             socket = socketFactory.create(token)
-            match?.let {
-                cacheMatch(it)
-                connectAndObserve(it)
-            }
+            getMatch(match.id, false)
+            cacheMatch(match)
+            connectAndObserve(match)
         }
     }
+
+    fun observeMatch(): Flow<Match> = prefs.observeCurrentMatch().filterNotNull()
 
     fun observeCurrentMatch(): Flow<Match?> = prefs.observeCurrentMatch()
 
@@ -54,25 +58,19 @@ class MatchManager(
         blueCompetitor: String,
     ): NetworkResult<Match> {
         return client.createMatch(
-                matCode = matCode,
-                redCompetitor = CompetitorRequest(name = redCompetitor),
-                blueCompetitor = CompetitorRequest(name = blueCompetitor)
-            ).onOk { match -> cacheMatch(match) }
+            matCode = matCode,
+            redCompetitor = CompetitorRequest(name = redCompetitor),
+            blueCompetitor = CompetitorRequest(name = blueCompetitor)
+        ).onOk { match -> cacheMatch(match) }
     }
 
-    fun joinMatch(match: Match) {
-        cacheMatch(match)
-        connectAndObserve(match)
-    }
-
-    suspend fun getMatch(matchId: MatchId, useCache: Boolean = true): NetworkResult<Match> {
-        // Check cache first if enabled
-        if (useCache && activeMatch.load()?.id == matchId) return Ok(activeMatch.load()!!)
-        return client.getMatch(matchId)
-            .onOk { match ->
-                cacheMatch(match)
-            }
-    }
+    suspend fun getMatch(matchId: MatchId, useCache: Boolean = true): NetworkResult<Match> =
+        retry(stopAtAttempts(5)) {
+            // Check cache first if enabled
+            if (useCache && activeMatch.load()?.id == matchId) return Ok(activeMatch.load()!!)
+            return client.getMatch(matchId)
+                .onOk { match -> cacheMatch(match) }
+        }
 
     suspend fun startMatch(): NetworkResult<Match> {
         return catchRunning { activeMatch.load() }

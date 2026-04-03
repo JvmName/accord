@@ -44,7 +44,7 @@ class JudgeSessionPresenter(
         val hapticEvent by remember { session.hapticEvents }.collectAsState(null)
         val roundEvent by remember { session.roundEvent }.collectAsState()
 
-        val currentMatch by remember { matchManager.observeCurrentMatch() }.collectAsState(null)
+        val currentMatch by remember { matchManager.observeMatch() }.collectAsState(null)
         val isMatchEnded = currentMatch?.endedAt != null
 
         val timerDisplay = roundEvent?.remainingHumanTime() ?: "0:00"

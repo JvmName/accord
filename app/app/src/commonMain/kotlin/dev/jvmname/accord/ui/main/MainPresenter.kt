@@ -10,6 +10,17 @@ import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.di.MatchRole
 import dev.jvmname.accord.domain.MatManager
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
+import dev.jvmname.accord.domain.control.rounds.MatchConfig.Companion.RdojoKombat
+import dev.jvmname.accord.domain.control.rounds.RoundInfo
+import dev.jvmname.accord.network.MatId
+import dev.jvmname.accord.network.Match
+import dev.jvmname.accord.network.MatchId
+import dev.jvmname.accord.network.Round
+import dev.jvmname.accord.network.RoundId
+import dev.jvmname.accord.network.RoundResult
+import dev.jvmname.accord.network.RoundResultMethod
+import dev.jvmname.accord.network.User
+import dev.jvmname.accord.network.UserId
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.create.mat.CreateMatMatchScreen
 import dev.jvmname.accord.ui.create.newmatch.NewMatchScreen
@@ -22,6 +33,7 @@ import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.Dispatchers
+import kotlin.time.Clock
 
 @AssistedInject
 class MainPresenter(
@@ -49,7 +61,31 @@ class MainPresenter(
                     navigator.goTo(
                         TrampolineMatchGraphScreen(
                             innerRoot = JudgeSessionScreen,
-                            match = null,
+                            match = Match(
+                                id = MatchId("localMatchId"),
+                                creatorId = UserId("me"),
+                                matId = MatId("localMatId"),
+                                startedAt = Clock.System.now(),
+                                endedAt = null,
+                                red = User(UserId("red"), "Red"),
+                                blue = User(UserId("blue"), "Blue"),
+                                judges = emptyList(),
+                                rounds = RdojoKombat.rounds
+                                    .filterIsInstance<RoundInfo.Round>()
+                                    .map { roundInfo ->
+                                        Round(
+                                            id = RoundId("round_${roundInfo.index}"),
+                                            maxDuration = roundInfo.duration.inWholeSeconds.toInt(),
+                                            startedAt = Clock.System.now(),
+                                            endedAt = null,
+                                            score = emptyMap(),
+                                            result = RoundResult(
+                                                winner = null,
+                                                method = RoundResultMethod(type = null, value = null),
+                                            ),
+                                        )
+                                    }
+                            ),
                             matchConfig = MatchConfig.RdojoKombat,
                             matchRole = MatchRole.SOLO,
                         )

@@ -26,7 +26,6 @@ import kotlinx.coroutines.launch
 class NewMatchPresenter(
     @Assisted private val navigator: Navigator,
     private val matManager: MatManager,
-//    private val matchManager: MatchManager, //TODO matchManager
     private val prefs: Prefs,
     private val scope: CoroutineScope,
 ) : Presenter<NewMatchState> {
@@ -52,7 +51,6 @@ class NewMatchPresenter(
                         matManager.createMatch(event.redName, event.blueName)
                             .onEither(
                                 success = { match ->
-//                                    matchManager.joinMatch(match)
                                     val currentMat = prefs.observeMatInfo().first()
                                         ?: return@onEither // TODO: handle null mat edge case
                                     navigator.goTo(ShowCodesScreen(mat = currentMat, match = match))

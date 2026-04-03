@@ -58,6 +58,7 @@ multihaptic = { module = "top.ltfan.multihaptic:multihaptic-compose", version.re
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 kotlin-result = { module = "com.michael-bull.kotlin-result:kotlin-result", version.ref = "kotlinResult" }
 kotlin-result-coroutines = { module = "com.michael-bull.kotlin-result:kotlin-result-coroutines", version.ref = "kotlinResult" }
+kotlin-result-retry = "com.michael-bull.kotlin-retry:kotlin-retry-result:2.0.2"
 socketio-client = { module = "io.socket:socket.io-client", version.ref = "socketio" }
 
 [plugins]
@@ -70,6 +71,6 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 kotlinParcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
 serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
-metro = "dev.zacsweers.metro:0.11.4"
+metro = "dev.zacsweers.metro:0.12.1"
 poko = "dev.drewhamilton.poko:0.22.0"
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

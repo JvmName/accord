@@ -47,16 +47,14 @@ class ShowCodesPresenter(
             joinedJudges = joinedJudges
         ) { event ->
             when (event) {
-                ShowCodesEvent.Ready -> {
-                    navigator.goTo(
-                        TrampolineMatchGraphScreen(
-                            innerRoot = MasterSessionScreen(matchId = screen.match.id),
-                            match = screen.match,
-                            matchConfig = MatchConfig.RdojoKombat,
-                            matchRole = MatchRole.MASTER,
-                        )
+                ShowCodesEvent.Ready -> navigator.goTo(
+                    TrampolineMatchGraphScreen(
+                        innerRoot = MasterSessionScreen(matchId = screen.match.id),
+                        match = screen.match,
+                        matchConfig = MatchConfig.RdojoKombat,
+                        matchRole = MatchRole.MASTER,
                     )
-                }
+                )
 
                 ShowCodesEvent.Back -> navigator.pop()
             }

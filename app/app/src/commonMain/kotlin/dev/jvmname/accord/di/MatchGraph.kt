@@ -21,7 +21,7 @@ interface MatchGraph {
     @GraphExtension.Factory
     interface Factory {
         operator fun invoke(
-            @Provides match: Match?,
+            @Provides match: Match,
             @Provides config: MatchConfig,
             @Provides role: MatchRole,
         ): MatchGraph

@@ -54,6 +54,7 @@ kotlin {
 
                 implementation(libs.kotlin.result)
                 implementation(libs.kotlin.result.coroutines)
+                implementation(libs.kotlin.result.retry)
 
                 implementation(libs.multihaptic)
                 implementation(libs.kermit)
