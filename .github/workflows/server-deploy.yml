@@ -24,17 +24,19 @@ jobs:
       - name: Run tests
         run: cd server && npm test
 
-  deploy:
+  prepare:
     needs: test
     runs-on: ubuntu-latest
-    container: ghcr.io/railwayapp/cli:latest
-    permissions:
-      contents: write
-    env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      exists: ${{ steps.check_release.outputs.exists }}
 
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
       - name: Extract version
         id: version
@@ -55,16 +57,52 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
+  deploy:
+    needs: prepare
+    if: needs.prepare.outputs.exists == 'false'
+    runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Deploy to Railway
-        if: steps.check_release.outputs.exists == 'false'
         working-directory: server
         run: railway up --service=${{ secrets.RAILWAY_SERVICE_ID }} --ci
 
-      - name: Create GitHub Release
-        if: steps.check_release.outputs.exists == 'false'
+  release:
+    needs: [prepare, deploy]
+    if: needs.prepare.outputs.exists == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute release notes
+        id: notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create server-${{ steps.version.outputs.version }} \
-            --title "Server ${{ steps.version.outputs.version }}" \
-            --generate-notes
+          PREV=$(gh release list --limit 50 --json tagName --jq '[.[] | select(.tagName | startswith("server-"))] | first | .tagName // ""')
+          if [ -n "$PREV" ]; then
+            NOTES=$(git log "${PREV}..HEAD" --oneline -- server/)
+          else
+            NOTES=$(git log --oneline -- server/)
+          fi
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "server-${{ needs.prepare.outputs.version }}" \
+            --title "Server ${{ needs.prepare.outputs.version }}" \
+            --notes "${{ steps.notes.outputs.notes }}"
