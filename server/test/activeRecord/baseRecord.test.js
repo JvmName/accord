@@ -1,8 +1,8 @@
-const { BaseRecord }              = require('../../lib/active_record/baseRecord');
-const { Connection}               = require('../../lib/active_record/db/connection');
-const { ConnectionConfiguration } = require('../../lib/active_record/db/connectionConfiguration');
-const { getActiveRecordSchema }   = require('../../lib/active_record/db/schema');
-const   importSchema              = require('../../lib/active_record/db/importSchema');
+const { BaseRecord }              = require('../../lib/activeRecord/baseRecord');
+const { Connection}               = require('../../lib/activeRecord/db/connection');
+const { ConnectionConfiguration } = require('../../lib/activeRecord/db/connectionConfiguration');
+const { getActiveRecordSchema }   = require('../../lib/activeRecord/db/schema');
+const   importSchema              = require('../../lib/activeRecord/db/importSchema');
 const { Model, Sequelize }        = require('sequelize');
 const   TestHelpers               = require('../helpers');
 
@@ -41,7 +41,7 @@ const dataTypeValue1 = Sequelize.DataTypes[dataTypeKey1].types.postgres[0];
 const dataTypeValue2 = Sequelize.DataTypes[dataTypeKey2].types.postgres[0];
 
 
-jest.mock('../../lib/active_record/db/importSchema', () => jest.fn());
+jest.mock('../../lib/activeRecord/db/importSchema', () => jest.fn());
 importSchema.mockImplementation(() => ({created_at: {type: dataTypeValue1}, updated_at: {type: dataTypeValue2}}));
 
 

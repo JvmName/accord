@@ -4,15 +4,22 @@ const { spawn }             = require('node:child_process');
 
 
 const server = new ApplicationServer();
-/*
-const worker = spawn('npm', ['run', 'worker', server.workerToken]);
+
+const workerArgs = ['run', 'worker', server.workerToken];
+const workerEnv  = {
+    ...process.env,
+    HOST: server.host,
+    PORT: server.port,
+    PROC_NAME: 'WORKER'
+};
+const worker = spawn('npm', workerArgs, {env: workerEnv});
 worker.stdout.on('data', data => console.log(data.toString().trim()));
-*/
+worker.stderr.on('data', data => console.log(data.toString().trim()));
 
 
 const handler = () => {
     server.close();
-    //worker.kill();
+    worker.kill();
 };
 process.on('SIGINT',  handler);
 process.on('SIGTERM', handler);

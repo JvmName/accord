@@ -1,6 +1,6 @@
-const { Worker } = require('./worker');
+const { TechFallTrackerWorker } = require('./techFallTrackerWorker');
 
 
 module.exports = {
-    Worker
+    TechFallTrackerWorker 
 }

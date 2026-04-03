@@ -7,8 +7,9 @@ const apiToken = TestHelpers.Faker.Text.randomString();
 const socketId = TestHelpers.Faker.Text.randomString();
 const ioSocket = {adapter:    {on: jest.fn(), eventNames: jest.fn(() => [])},
                   eventNames: jest.fn(() => []),
+                  close:      jest.fn(),
                   id:         socketId,
-                  handshake:  {auth: { apiToken }},
+                  handshake:  {query: { apiToken }},
                   on:         jest.fn()};
 const user     = new User();
 
@@ -34,10 +35,9 @@ describe('WebSocket', () => {
             expect(socket.currentUser).toBe(user);
         });
 
-        it ('throws an error if there is no user', async () => {
-            await expect(async () => {
-                await socket.init()
-            }).rejects.toThrow();
+        it ('closes the socket if there is no user', async () => {
+            await socket.init()
+            expect(ioSocket.close).toHaveBeenCalledTimes(1);
         });
 
         it ('sets up a disconnection handler', async () => {
