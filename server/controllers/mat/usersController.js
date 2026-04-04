@@ -29,15 +29,18 @@ class UsersController extends ServerController {
     async postJoin() {
         await this.addUser();
         if (!this.rendered) {
-            const mat  = this.currentMat;
-            const user = this.currentUser;
-            await this.render({ mat, user, api_token: this.currentUser.api_token }, {includeMatJudges: true});
+            const mat      = this.currentMat;
+            const user     = this.currentUser;
+            const judges   = await mat.getJudges();
+            const isJudge  = judges.some(j => j.id == user.id);
+            const role     = isJudge ? "admin" : "viewer";
+            await this.render({ mat, user, api_token: this.currentUser.api_token, role }, {includeMatJudges: true});
         }
     }
 
 
     async deleteJoin() {
-        await this.removeUser(this.currentMatCode.role);
+        await this.removeUser();
         if (!this.rendered) {
             await this.render({ mat: this.currentMat }, {includeMatJudges: true});
         }
@@ -94,7 +97,8 @@ class UsersController extends ServerController {
                 response: {
                     mat:       { $ref: "Mat" },
                     user:      { $ref: "User" },
-                    api_token: { type: "string" }
+                    api_token: { type: "string" },
+                    role:      { type: "string", enum: ["admin", "viewer"] }
                 }
             },
             deleteJoin: {
@@ -122,8 +126,9 @@ class UsersController extends ServerController {
             this.currentUser = await User.create({name: name});
         }
 
-        const role = this.currentMatCode.role;
-        if (role == MatCode.ROLES.ADMIN) {
+        const role      = this.currentMatCode.role;
+        const isCreator = this.currentUser.id === this.currentMat.creator_id;
+        if (role == MatCode.ROLES.ADMIN && !isCreator) {
             await this.addAsJudge();
         } else {
             await this.addAsViewer();
@@ -131,8 +136,11 @@ class UsersController extends ServerController {
     }
 
 
-    async removeUser(role) {
-        if (role == MatCode.ROLES.ADMIN) {
+    async removeUser() {
+        const judges   = await this.currentMat.getJudges();
+        const isJudge  = judges.some(j => j.id == this.currentUser.id);
+
+        if (isJudge) {
             await this.authorize("assign",            this.currentMat);
             await this.authorize("be assigned judge", this.currentMat);
             await this.currentMat.removeJudge(this.currentUser);
