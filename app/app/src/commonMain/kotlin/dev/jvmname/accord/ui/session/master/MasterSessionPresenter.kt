@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
@@ -42,6 +43,8 @@ class MasterSessionPresenter(
     private val exitSignal: MatchExitSignal,
     private val scope: CoroutineScope,
 ) : Presenter<MasterSessionState> {
+
+    private val log = Logger.withTag("UI/MasterSession")
 
     @Composable
     override fun present(): MasterSessionState {
@@ -106,30 +109,49 @@ class MasterSessionPresenter(
 
         val eventSink: (MasterSessionEvent) -> Unit = remember {
             { event ->
+                log.i { "event: $event" }
                 when (event) {
                     MasterSessionEvent.ShowEndRoundDialog -> showEndRoundDialog = true
                     MasterSessionEvent.DismissEndRoundDialog -> showEndRoundDialog = false
                     MasterSessionEvent.StartMatch -> scope.launch {
+                        log.i { "starting match" }
                         session.startMatch()
                             .onEither(
                                 success = { /* match updated via flow */ },
-                                failure = { error = it.message }
+                                failure = {
+                                    log.w { "error: ${it.message}" }
+                                    error = it.message
+                                }
                             )
                     }
 
-                    MasterSessionEvent.Pause -> session.pause()
-                    MasterSessionEvent.Resume -> session.resume()
+                    MasterSessionEvent.Pause -> {
+                        log.i { "round paused" }
+                        session.pause()
+                    }
+                    MasterSessionEvent.Resume -> {
+                        log.i { "round resumed" }
+                        session.resume()
+                    }
                     is MasterSessionEvent.EndRound -> {
+                        log.i { "ending round submission=${event.submission}" }
                         showEndRoundDialog = false
                         session.endRound(event.submitter, event.submission)
                     }
 
-                    MasterSessionEvent.StartRound -> session.startRound()
+                    MasterSessionEvent.StartRound -> {
+                        log.i { "starting round" }
+                        session.startRound()
+                    }
                     MasterSessionEvent.EndMatch -> scope.launch {
+                        log.i { "ending match" }
                         session.endMatch()
                             .onEither(
                                 success = { exitSignal.requestExitToMain() },
-                                failure = { error = it.message }
+                                failure = {
+                                    log.w { "error: ${it.message}" }
+                                    error = it.message
+                                }
                             )
                     }
 

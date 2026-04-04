@@ -1,7 +1,10 @@
 package dev.jvmname.accord.network
 
+import co.touchlab.kermit.Logger
 import com.github.michaelbull.result.coroutines.runSuspendCatching
 import com.github.michaelbull.result.map
+import com.github.michaelbull.result.onErr
+import com.github.michaelbull.result.onOk
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
@@ -20,11 +23,14 @@ import kotlinx.coroutines.withContext
 @Inject
 class AccordClient(private val httpClient: HttpClient) {
 
+    private val log = Logger.withTag("Net/AccordClient")
+
     // ========================================================================
     // Authentication
     // ========================================================================
 
     suspend fun createUser(name: String): NetworkResult<CreateUserResponse> {
+        log.d { "createUser name=$name" }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.post("users") {
@@ -33,6 +39,8 @@ class AccordClient(private val httpClient: HttpClient) {
             }
                 .unwrapApiResult()
                 .map { it.data }
+                .onOk { log.i { "user created id=${it.user.id}" } }
+                .onErr { log.w { "createUser FAILED: $it" } }
         }
     }
 
@@ -41,6 +49,7 @@ class AccordClient(private val httpClient: HttpClient) {
     // ========================================================================
 
     suspend fun createMat(name: String, judgeCount: Int): NetworkResult<Mat> {
+        log.d { "createMat name=$name judges=$judgeCount" }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.post("mats") {
@@ -49,10 +58,13 @@ class AccordClient(private val httpClient: HttpClient) {
             }
                 .unwrapApiResult()
                 .map { it.mat }
+                .onOk { log.i { "mat created id=${it.id}" } }
+                .onErr { log.w { "createMat FAILED: $it" } }
         }
     }
 
     suspend fun getMat(matId: String): NetworkResult<Mat> {
+        log.d { "getMat matId=$matId" }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.get("mat/$matId")
@@ -60,10 +72,13 @@ class AccordClient(private val httpClient: HttpClient) {
             }
                 .unwrapApiResult()
                 .map { it.mat }
+                .onOk { log.i { "getMat OK id=${it.id}" } }
+                .onErr { log.w { "getMat FAILED: $it" } }
         }
     }
 
     suspend fun joinMat(matCode: String, name: String): NetworkResult<JoinMatResult> {
+        log.d { "joinMat code=${matCode.split('.').first()}..." }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.post("mat/$matCode/join") {
@@ -72,10 +87,13 @@ class AccordClient(private val httpClient: HttpClient) {
             }
                 .unwrapApiResult()
                 .map { it.data }
+                .onOk { log.i { "joined mat=${it.mat.id}" } }
+                .onErr { log.w { "joinMat FAILED: $it" } }
         }
     }
 
     suspend fun leaveMat(matCode: String): NetworkResult<Mat> {
+        log.d { "leaveMat matCode=${matCode.split('.').first()}..." }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.delete("mat/$matCode/join")
@@ -83,6 +101,8 @@ class AccordClient(private val httpClient: HttpClient) {
             }
                 .unwrapApiResult()
                 .map { it.mat }
+                .onOk { log.i { "leaveMat OK id=${it.id}" } }
+                .onErr { log.w { "leaveMat FAILED: $it" } }
         }
     }
 
@@ -117,6 +137,7 @@ class AccordClient(private val httpClient: HttpClient) {
         redCompetitor: CompetitorRequest,
         blueCompetitor: CompetitorRequest,
     ): NetworkResult<Match> {
+        log.d { "createMatch matCode=${matCode.split('.').first()}..." }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.post("mat/$matCode/matches") {
@@ -130,10 +151,13 @@ class AccordClient(private val httpClient: HttpClient) {
             }
                 .unwrapApiResult()
                 .map { it.match }
+                .onOk { log.i { "match created id=${it.id}" } }
+                .onErr { log.w { "createMatch FAILED: $it" } }
         }
     }
 
     suspend fun getMatch(matchId: MatchId): NetworkResult<Match> {
+        log.d { "getMatch matchId=$matchId" }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.get("match/${matchId.id}")
@@ -141,10 +165,13 @@ class AccordClient(private val httpClient: HttpClient) {
             }
                 .unwrapApiResult()
                 .map { it.match }
+                .onOk { log.i { "getMatch OK id=${it.id}" } }
+                .onErr { log.w { "getMatch FAILED: $it" } }
         }
     }
 
     suspend fun startMatch(matchId: MatchId): NetworkResult<Match> {
+        log.d { "startMatch matchId=$matchId" }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.post("match/${matchId.id}/start")
@@ -152,6 +179,8 @@ class AccordClient(private val httpClient: HttpClient) {
             }
                 .unwrapApiResult()
                 .map { it.match }
+                .onOk { log.i { "startMatch OK id=${it.id}" } }
+                .onErr { log.w { "startMatch FAILED: $it" } }
         }
     }
 
@@ -160,6 +189,7 @@ class AccordClient(private val httpClient: HttpClient) {
         submission: String? = null,
         submitter: CompetitorColor? = null,
     ): NetworkResult<Match> {
+        log.d { "endMatch matchId=$matchId submission=${submission != null} submitter=$submitter" }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.post("match/${matchId.id}/end") {
@@ -168,6 +198,8 @@ class AccordClient(private val httpClient: HttpClient) {
             }
                 .unwrapApiResult()
                 .map { it.match }
+                .onOk { log.i { "endMatch OK id=${it.id}" } }
+                .onErr { log.w { "endMatch FAILED: $it" } }
         }
     }
 
@@ -176,6 +208,7 @@ class AccordClient(private val httpClient: HttpClient) {
     // ========================================================================
 
     suspend fun startRound(matchId: MatchId): NetworkResult<Match> {
+        log.d { "startRound matchId=$matchId" }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.post("match/${matchId.id}/rounds")
@@ -183,6 +216,8 @@ class AccordClient(private val httpClient: HttpClient) {
             }
                 .unwrapApiResult()
                 .map { it.match }
+                .onOk { log.i { "startRound OK matchId=${it.id} rounds=${it.rounds.size}" } }
+                .onErr { log.w { "startRound FAILED: $it" } }
         }
     }
 
@@ -191,6 +226,7 @@ class AccordClient(private val httpClient: HttpClient) {
         submission: String? = null,
         submitter: CompetitorColor? = null
     ): NetworkResult<Match> {
+        log.d { "endRound matchId=$matchId submission=${submission != null} submitter=$submitter" }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.post("match/${matchId.id}/rounds/end") {
@@ -199,24 +235,32 @@ class AccordClient(private val httpClient: HttpClient) {
             }
                 .unwrapApiResult()
                 .map { it.match }
+                .onOk { log.i { "endRound OK matchId=${it.id}" } }
+                .onErr { log.w { "endRound FAILED: $it" } }
         }
     }
 
     suspend fun pauseRound(matchId: MatchId): NetworkResult<Match> {
+        log.d { "pauseRound matchId=$matchId" }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.post("match/${matchId.id}/rounds/pause")
                     .body<ApiResult<MatchResponseData>>()
             }.unwrapApiResult().map { it.match }
+                .onOk { log.i { "pauseRound OK matchId=${it.id}" } }
+                .onErr { log.w { "pauseRound FAILED: $it" } }
         }
     }
 
     suspend fun resumeRound(matchId: MatchId): NetworkResult<Match> {
+        log.d { "resumeRound matchId=$matchId" }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.post("match/${matchId.id}/rounds/resume")
                     .body<ApiResult<MatchResponseData>>()
             }.unwrapApiResult().map { it.match }
+                .onOk { log.i { "resumeRound OK matchId=${it.id}" } }
+                .onErr { log.w { "resumeRound FAILED: $it" } }
         }
     }
 
@@ -228,6 +272,7 @@ class AccordClient(private val httpClient: HttpClient) {
         matchId: MatchId,
         rider: CompetitorColor
     ): NetworkResult<Match> {
+        log.d { "startRidingTimeVote matchId=$matchId rider=$rider" }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.post("match/${matchId.id}/ridingTime") {
@@ -236,10 +281,13 @@ class AccordClient(private val httpClient: HttpClient) {
             }
                 .unwrapApiResult()
                 .map { it.match }
+                .onOk { log.d { "startRidingTimeVote OK matchId=${it.id}" } }
+                .onErr { log.w { "startRidingTimeVote FAILED: $it" } }
         }
     }
 
     suspend fun endRidingTimeVote(matchId: MatchId, rider: CompetitorColor): NetworkResult<Match> {
+        log.d { "endRidingTimeVote matchId=$matchId rider=$rider" }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.delete("match/${matchId.id}/ridingTime") {
@@ -248,6 +296,8 @@ class AccordClient(private val httpClient: HttpClient) {
             }
                 .unwrapApiResult()
                 .map { it.match }
+                .onOk { log.d { "endRidingTimeVote OK matchId=${it.id}" } }
+                .onErr { log.w { "endRidingTimeVote FAILED: $it" } }
         }
     }
 }

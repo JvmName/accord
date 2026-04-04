@@ -5,13 +5,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import com.github.michaelbull.result.flatMap
-import com.github.michaelbull.result.map
+import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.domain.MatManager
-import dev.jvmname.accord.network.adminCode
 import dev.jvmname.accord.network.message
 import dev.jvmname.accord.ui.onEither
 import dev.jvmname.accord.ui.showcodes.ShowCodesScreen
@@ -28,6 +26,8 @@ class CreateMatMatchPresenter(
     private val scope: CoroutineScope,
     private val matManager: MatManager,
 ) : Presenter<CreateMatMatchState> {
+    private val log = Logger.withTag("UI/CreateMat")
+
     @Composable
     override fun present(): CreateMatMatchState {
         var loading by remember { mutableStateOf(false) }
@@ -42,6 +42,7 @@ class CreateMatMatchPresenter(
                     scope.launch {
                         loading = true
                         error = null
+                        log.i { "creating mat name='${event.matName}' judges=${event.judgeCount}" }
 
                         matManager.createMatAndMatch(
                             masterName = event.masterName,
@@ -50,16 +51,18 @@ class CreateMatMatchPresenter(
                             redName = event.redName,
                             blueName = event.blueName,
                         )
-                            .flatMap { (mat, match) ->
-                                matManager.joinMat(mat.adminCode.code, event.masterName)
-                                    .map { it to match }
-                            }
+                            //TODO if the creator wants to join a judge, then we'd .join here
                             .onEither(
-                                success = { (mat, match) ->
-                                    navigator.goTo(ShowCodesScreen(mat = mat, match = match))
-                                },
-                                failure = { error = "Error creating mat: ${it.message}" }
-                            )
+                            success = { (mat, match) ->
+                                log.i { "mat+match created, navigating to ShowCodes" }
+                                navigator.goTo(ShowCodesScreen(mat = mat, match = match))
+                            },
+                            failure = {
+                                val errorMessage = "Error creating mat: ${it.message}"
+                                log.w { "mat creation failed: ${it.message}" }
+                                error = errorMessage
+                            }
+                        )
                         loading = false
                     }
                 }

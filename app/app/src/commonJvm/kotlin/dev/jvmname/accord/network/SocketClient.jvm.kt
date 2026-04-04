@@ -30,7 +30,7 @@ import org.json.JSONObject
 
 @AssistedInject
 actual class SocketClient actual constructor(
-    baseUrl: BaseUrl,
+    private val baseUrl: BaseUrl,
     @Assisted token: AuthToken,
     private val json: Json,
     private val scope: CoroutineScope,
@@ -40,6 +40,8 @@ actual class SocketClient actual constructor(
     actual interface Factory {
         actual fun create(token: AuthToken): SocketClient
     }
+
+    private val log = Logger.withTag("Net/Socket")
 
     private val socket: Socket
 
@@ -53,9 +55,22 @@ actual class SocketClient actual constructor(
             //TODO websocketfactory
         }
         socket = IO.socket(baseUrl.baseUrl, options)
+
+        socket.on(Socket.EVENT_CONNECT) {
+            log.i { "socket connected" }
+        }
+        socket.on(Socket.EVENT_DISCONNECT) { args ->
+            val reason = args?.firstOrNull()?.toString() ?: "unknown"
+            log.i { "socket disconnected reason=$reason" }
+        }
+        socket.on(Socket.EVENT_CONNECT_ERROR) { args ->
+            val error = args?.firstOrNull()?.toString() ?: "unknown"
+            log.e { "socket connect error: $error" }
+        }
     }
 
     actual fun connect() {
+        log.i { "connecting to ${baseUrl.baseUrl}" }
         if (!socket.connected()) {
             socket.connect()
         }
@@ -75,17 +90,25 @@ actual class SocketClient actual constructor(
                         val el = args[0].toJsonElement()
                         json.decodeFromJsonElement<Match>(el)
                     }.onEither(
-                        success = { trySend(it) },
-                        failure = { Logger.e(throwable = it) { "Websocket parse error: " } }
+                        success = { match ->
+                            log.d { "match update matchId=$matchId rounds=${match.rounds.size}" }
+                            trySend(match)
+                        },
+                        failure = { error ->
+                            val rawSnippet = args?.firstOrNull()?.toString()?.take(200)
+                            log.e(throwable = error) { "Websocket parse error matchId=$matchId raw=$rawSnippet" }
+                        }
                     )
                 }
 
                 // Register listener and join match room
+                log.i { "joining room match:$matchId" }
                 socket.on("match.update", listener)
                 socket.emit("match.join", matchId.id)
 
                 awaitClose {
                     // Leave match room and unregister listener
+                    log.i { "leaving room match:$matchId" }
                     socket.emit("match.leave", matchId.id)
                     socket.off("match.update", listener)
                 }

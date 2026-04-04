@@ -1,5 +1,6 @@
 package dev.jvmname.accord.domain.session
 
+import co.touchlab.kermit.Logger
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.MatchManager
@@ -32,6 +33,8 @@ class NetworkJudgeSession(
     private val config: MatchConfig,
 ) : JudgingSession {
 
+    private val log = Logger.withTag("Session/JudgeSession")
+
     private var currentMatchId: MatchId? = null
     private val _score = MutableStateFlow(Score(0, 0, null, null, null))
     override val score: StateFlow<Score> = _score.asStateFlow()
@@ -58,9 +61,11 @@ class NetworkJudgeSession(
             buttonPressTracker.buttonEvents.collect { event ->
                 when (event) {
                     is ButtonEvent.Holding -> scope.launch {
+                        log.d { "button held → startVote competitor=${event.competitor}" }
                         currentMatchId?.let { matchManager.startRidingTimeVote(it, event.competitor.toCompetitorColor()) }
                     }
                     is ButtonEvent.Release -> scope.launch {
+                        log.d { "button released → endVote competitor=${event.competitor}" }
                         currentMatchId?.let { matchManager.endRidingTimeVote(it, event.competitor.toCompetitorColor()) }
                     }
                     else -> Unit

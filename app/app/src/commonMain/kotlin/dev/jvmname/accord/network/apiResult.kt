@@ -21,7 +21,10 @@ val ApiError.message: String
 
 fun <T> ApiResult<T>.toResult(): Result<T, ApiError> = when (this) {
     is ApiResult.Success<T> -> Ok(this.data)
-    is ApiResult.Error<T> -> Err(errors)
+    is ApiResult.Error<T> -> {
+        Logger.w(tag = "Net/ApiResult") { "API error: ${errors.message}" }
+        Err(errors)
+    }
 }
 
 fun <T> Result<ApiResult<T>, Throwable>.unwrapApiResult(): Result<T, ApiError> {

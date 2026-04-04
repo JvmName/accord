@@ -1,5 +1,6 @@
 package dev.jvmname.accord.domain
 
+import co.touchlab.kermit.Logger
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.andThen
 import com.github.michaelbull.result.flatMap
@@ -34,11 +35,13 @@ class MatchManager(
     private val scope: CoroutineScope,
     private val match: Match,
 ) {
+    private val log = Logger.withTag("Domain/MatchManager")
     private var activeMatch = AtomicReference<Match?>(null)
     private lateinit var socket: SocketClient
     private var observationJob: Job? = null
 
     init {
+        log.i { "MatchManager init matchId=${match.id}" }
         scope.launch {
             val token = requireNotNull(prefs.getAuthToken())
             socket = socketFactory.create(token)
@@ -57,15 +60,20 @@ class MatchManager(
         redCompetitor: String,
         blueCompetitor: String,
     ): NetworkResult<Match> {
+        log.d { "createMatch matCode=$matCode" }
         return client.createMatch(
             matCode = matCode,
             redCompetitor = CompetitorRequest(name = redCompetitor),
             blueCompetitor = CompetitorRequest(name = blueCompetitor)
-        ).onOk { match -> cacheMatch(match) }
+        ).onOk { match ->
+            log.i { "match created id=${match.id}" }
+            cacheMatch(match)
+        }
     }
 
     suspend fun getMatch(matchId: MatchId, useCache: Boolean = true): NetworkResult<Match> =
         retry(stopAtAttempts(5)) {
+            log.d { "getMatch matchId=$matchId" }
             // Check cache first if enabled
             if (useCache && activeMatch.load()?.id == matchId) return Ok(activeMatch.load()!!)
             return client.getMatch(matchId)
@@ -73,6 +81,7 @@ class MatchManager(
         }
 
     suspend fun startMatch(): NetworkResult<Match> {
+        log.i { "starting match ${activeMatch.load()?.id}" }
         return catchRunning { activeMatch.load() }
             .flatMapping { match ->
                 if (match == null) error("Must create match first")
@@ -82,10 +91,12 @@ class MatchManager(
             .onOk { match ->
                 cacheMatch(match)
                 prefs.updateCurrentMatch(match)
+                log.i { "match started" }
             }
     }
 
     suspend fun endMatch(): NetworkResult<Match> {
+        log.i { "ending match ${activeMatch.load()?.id}" }
         return catchRunning { activeMatch.load() }
             .flatMapping { match ->
                 if (match == null) error("Must create match first")
@@ -100,6 +111,7 @@ class MatchManager(
                 observationJob?.cancel()
                 observationJob = null
                 socket.disconnect()
+                log.i { "match ended, cache cleared" }
             }
     }
 
@@ -109,10 +121,14 @@ class MatchManager(
                 when (match?.startedAt) {
                     null -> {
                         val matchId = match?.id ?: error("Match null -- must create match first")
+                        log.i { "starting round matchId=$matchId (autoStartedMatch=true)" }
                         client.startMatch(matchId)
                     }
 
-                    else -> Ok(match)
+                    else -> {
+                        log.i { "starting round matchId=${match.id}" }
+                        Ok(match)
+                    }
                 }
             }
             .andThen { client.startRound(it.id) }
@@ -128,6 +144,7 @@ class MatchManager(
         submission: String? = null,
         submitter: Competitor? = null
     ): NetworkResult<Match> {
+        log.i { "ending round matchId=$matchId submission=$submission" }
         return client.endRound(matchId, submission, submitter?.asColor)
             .onOk { match ->
                 cacheMatch(match)
@@ -137,18 +154,25 @@ class MatchManager(
 
     suspend fun pauseRound(matchId: MatchId): NetworkResult<Match> {
         return client.pauseRound(matchId)
-            .onOk { match -> cacheMatch(match) }
+            .onOk { match ->
+                log.i { "round $matchId paused" }
+                cacheMatch(match)
+            }
     }
 
     suspend fun resumeRound(matchId: MatchId): NetworkResult<Match> {
         return client.resumeRound(matchId)
-            .onOk { match -> cacheMatch(match) }
+            .onOk { match ->
+                log.i { "round $matchId resumed" }
+                cacheMatch(match)
+            }
     }
 
     suspend fun startRidingTimeVote(
         matchId: MatchId,
         competitor: CompetitorColor
     ): NetworkResult<Match> {
+        log.d { "startVote competitor=$competitor round=$matchId" }
         return client.startRidingTimeVote(matchId, competitor)
             .onOk { match ->
                 cacheMatch(match)
@@ -160,6 +184,7 @@ class MatchManager(
         matchId: MatchId,
         competitor: CompetitorColor
     ): NetworkResult<Match> {
+        log.d { "endVote competitor=$competitor round=$matchId" }
         return client.endRidingTimeVote(matchId, competitor)
             .onOk { match ->
                 cacheMatch(match)
@@ -169,10 +194,12 @@ class MatchManager(
 
 
     private fun connectAndObserve(match: Match) {
+        log.i { "observing match ${match.id} via socket" }
         socket.connect()
         observationJob?.cancel()
         observationJob = scope.launch {
             socket.observeMatch(match.id).collect { updatedMatch ->
+                log.d { "cache updated matchId=${updatedMatch.id} rounds=${updatedMatch.rounds.size}" }
                 cacheMatch(updatedMatch)
                 prefs.updateCurrentMatch(updatedMatch)
             }

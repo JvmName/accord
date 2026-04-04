@@ -35,6 +35,8 @@ class MasterSession(
     private val config: MatchConfig,
 ) : RoundController {
 
+    private val log = Logger.withTag("Session/MasterSession")
+
     private var currentMatchId: MatchId? = null
     private val _score = MutableStateFlow(Score(0, 0, null, null, null))
     override val score: StateFlow<Score> = _score.asStateFlow()
@@ -48,7 +50,9 @@ class MasterSession(
             matchManager.observeCurrentMatch().collect { match ->
                 match ?: return@collect
                 currentMatchId = match.id
-                _score.value = deriveScoreFromMatch(match)
+                val derived = deriveScoreFromMatch(match)
+                log.d { "scores derived red=${derived.redPoints} blue=${derived.bluePoints}" }
+                _score.value = derived
                 _roundEvent.value = deriveRoundEventFromMatch(match)
             }
         }
@@ -61,6 +65,7 @@ class MasterSession(
                 .drop(1)
                 .collect { (prev, current) ->
                     if (prev == null && current != null) {
+                        log.i { "tech fall detected winner=$current" }
                         _hapticEvents.emit(HapticEvent(Consumable(HapticTrigger.TechFallWin.effect)))
                     }
                 }
@@ -73,7 +78,11 @@ class MasterSession(
                 }
                 .drop(1)
                 .collect { (_, current) ->
+                    if (current != null) {
+                        log.i { "round event → $current" }
+                    }
                     if (current?.remaining == kotlin.time.Duration.ZERO && current.state == RoundEvent.RoundState.STARTED) {
+                        log.i { "time expired in round" }
                         _hapticEvents.emit(HapticEvent(Consumable(HapticTrigger.TimeExpired.effect)))
                     }
                 }
