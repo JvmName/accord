@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
@@ -32,6 +33,8 @@ class JoinMatPresenter(
     private val scope: CoroutineScope,
 ) : Presenter<JoinMatState> {
 
+    private val log = Logger.withTag("UI/JoinMat")
+
     @Composable
     override fun present(): JoinMatState {
         var loading by remember { mutableStateOf(false) }
@@ -45,32 +48,43 @@ class JoinMatPresenter(
                     scope.launch {
                         loading = true
                         error = null
+                        log.i { "join attempt code=${it.code.split('.').first()}..." }
                         matManager.joinMat(it.code, it.name)
                             .onEither(
                                 success = { mat ->
-                                    val currentMatch = mat.currentMatch ?: run {
-                                        error = "No active match on this mat yet"
-                                        return@onEither
-                                    }
-                                    val next =
-                                        when (mat.codes.find { c -> c.code == it.code }?.role) {
-                                            Role.ADMIN -> TrampolineMatchGraphScreen(
-                                                innerRoot = JudgeSessionScreen,
-                                                match = currentMatch,
-                                                matchConfig = MatchConfig.RdojoKombat,
-                                                matchRole = MatchRole.JUDGE,
-                                            )
-
-                                            else -> TrampolineMatchGraphScreen(
-                                                innerRoot = ViewerScreen(mat.id),
-                                                match = currentMatch,
-                                                matchConfig = MatchConfig.RdojoKombat,
-                                                matchRole = MatchRole.VIEWER,
-                                            )
+                                    val match = mat.currentMatch
+                                        ?: mat.upcomingMatches.firstOrNull()
+                                        ?: run {
+                                            error = "No matches on this mat yet"
+                                            log.e { "No matches on this mat ${mat.id} yet" }
+                                            return@onEither
                                         }
+                                    val currentUserId = matManager.currentUserId()
+                                    val isJudge = mat.judges.any { j -> j.id == currentUserId }
+                                        || mat.codes.find { c -> c.code == it.code }?.role == Role.ADMIN
+                                    val role = if (isJudge) MatchRole.JUDGE else MatchRole.VIEWER
+                                    val next = when {
+                                        isJudge -> TrampolineMatchGraphScreen(
+                                            innerRoot = JudgeSessionScreen,
+                                            match = match,
+                                            matchConfig = MatchConfig.RdojoKombat,
+                                            matchRole = MatchRole.JUDGE,
+                                        )
+                                        else -> TrampolineMatchGraphScreen(
+                                            innerRoot = ViewerScreen(mat.id),
+                                            match = match,
+                                            matchConfig = MatchConfig.RdojoKombat,
+                                            matchRole = MatchRole.VIEWER,
+                                        )
+                                    }
+                                    log.i { "joined as $role → navigating to $next" }
                                     navigator.goTo(next)
                                 },
-                                failure = { error = it.message ?: "Failed to join mat" }
+                                failure = {
+                                    val errorMessage = it.message ?: "Failed to join mat"
+                                    log.w { "join failed: $errorMessage" }
+                                    error = errorMessage
+                                }
                             )
                         loading = false
                     }
