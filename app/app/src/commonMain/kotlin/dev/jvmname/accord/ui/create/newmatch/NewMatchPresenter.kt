@@ -20,7 +20,6 @@ import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @AssistedInject
@@ -56,9 +55,8 @@ class NewMatchPresenter(
                             .onEither(
                                 success = { match ->
                                     log.i { "match created id=${match.id}" }
-                                    val currentMat = prefs.observeMatInfo().first()
-                                        ?: return@onEither // TODO: handle null mat edge case
-                                    navigator.goTo(ShowCodesScreen(mat = currentMat, match = match))
+                                    val matNN = mat!!
+                                    navigator.goTo(ShowCodesScreen(mat = matNN, match = match, judgeCount = matNN.judgeCount))
                                 },
                                 failure = {
                                     log.w { "match creation failed: ${it.message}" }

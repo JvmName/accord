@@ -60,7 +60,7 @@ fun ShowCodesContent(state: ShowCodesState, modifier: Modifier = Modifier) {
             Spacer(Modifier.height(32.dp))
 
             Text(
-                text = "Judges joined: ${state.joinedJudges.size}",
+                text = "Judges joined: ${state.joinedJudges.size} ${if (state.allJudgesJoined) "✅" else ""}",
                 style = MaterialTheme.typography.titleMedium,
             )
 
@@ -124,6 +124,7 @@ private fun ShowCodesContentPreview() {
                 adminCode = "scuba.horse.bicycle.stapler",
                 viewerCode = "battery.horse.stapler",
                 joinedJudges = listOf(User(UserId("j1"), "Charlie")),
+                allJudgesJoined = true,
                 eventSink = {},
             ),
         )

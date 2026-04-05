@@ -133,10 +133,12 @@ class MasterSessionPresenter(
                         log.i { "round paused" }
                         session.pause()
                     }
+
                     MasterSessionEvent.Resume -> {
                         log.i { "round resumed" }
                         session.resume()
                     }
+
                     is MasterSessionEvent.EndRound -> {
                         log.i { "ending round submission=${event.submission}" }
                         showEndRoundDialog = false
@@ -147,6 +149,7 @@ class MasterSessionPresenter(
                         log.i { "starting round" }
                         session.startRound()
                     }
+
                     MasterSessionEvent.EndMatch -> scope.launch {
                         log.i { "ending match" }
                         session.endMatch()
@@ -162,7 +165,9 @@ class MasterSessionPresenter(
                     MasterSessionEvent.ShowCodes -> scope.launch {
                         val mat = prefs.observeMatInfo().first() ?: return@launch
                         val match = currentMatch ?: return@launch
-                        navigator.goTo(ShowCodesScreen(mat = mat, match = match))
+                        navigator.goTo(
+                            ShowCodesScreen(mat = mat, match = match, judgeCount = mat.judgeCount)
+                        )
                     }
 
                     MasterSessionEvent.ShowScores -> showScoresOverlay = true

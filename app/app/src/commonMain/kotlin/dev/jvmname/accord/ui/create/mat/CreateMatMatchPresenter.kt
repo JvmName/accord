@@ -55,7 +55,7 @@ class CreateMatMatchPresenter(
                             .onEither(
                             success = { (mat, match) ->
                                 log.i { "mat+match created, navigating to ShowCodes" }
-                                navigator.goTo(ShowCodesScreen(mat = mat, match = match))
+                                navigator.goTo(ShowCodesScreen(mat = mat, match = match, judgeCount = event.judgeCount))
                             },
                             failure = {
                                 val errorMessage = "Error creating mat: ${it.message}"

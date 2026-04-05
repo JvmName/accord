@@ -41,7 +41,8 @@ class ShowCodesPresenter(
         return ShowCodesState(
             adminCode = screen.mat.adminCode.code,
             viewerCode = screen.mat.viewerCode.code,
-            joinedJudges = joinedJudges
+            joinedJudges = joinedJudges,
+            allJudgesJoined = screen.mat.judgeCount == joinedJudges.size,
         ) { event ->
             when (event) {
                 ShowCodesEvent.Ready -> navigator.goTo(
