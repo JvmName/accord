@@ -132,7 +132,7 @@ class ServerController {
             }
 
         } else if (body.constructor == Date) {
-            return body.getTime();
+            return body.toISOString();
 
         } else {
             for (let [key, val] of Object.entries(body)) {
