@@ -2,7 +2,7 @@ class RidingTimeCalculator {
     #activeVotes = {};
     #controlStartedAt;
     #endAt;
-    #ridingTime;
+    #controlPeriods = [];
     #votes;
     #voteThreshold;
     #events = [];
@@ -26,7 +26,6 @@ class RidingTimeCalculator {
 
 
     calculate() {
-        this.#ridingTime = 0;
         this.#collectEvents();
         this.#sortEvents();
         this.#processEvents();
@@ -121,16 +120,19 @@ class RidingTimeCalculator {
     #endVote(vote) {
         delete this.#activeVotes[vote.judge_id];
         if (!this.controlActive && !this.#paused && this.#controlStartedAt) {
-            // Quorum lost outside a pause: discard everything
             this.#endControlPeriod(vote.ended_at);
             this.#controlStartedAt = null;
             this.#pendingControlTime = 0;
             this.#resumedAt = null;
+        } else if (!this.controlActive && this.#paused && this.#pendingControlTime > 0) {
+            // Quorum lost during pause — score the banked pre-pause time as a completed period
+            this.#controlPeriods.push(this.#pendingControlTime / 1000);
+            this.#pendingControlTime = 0;
         }
     }
 
 
-    get ridingTime()    { return this.#ridingTime }
+    get controlPeriods() { return this.#controlPeriods; }
     get controlActive() { return this.numVotes >= this.#voteThreshold }
     get numVotes()      { return Object.values(this.#activeVotes).length }
     get activeVotes()   {
@@ -145,17 +147,17 @@ class RidingTimeCalculator {
 
 
     #endControlPeriod(endAt) {
-        const time = endAt.getTime() - this.#controlStartedAt.getTime();
-        this.#ridingTime += time/1000;
+        const ms = endAt.getTime() - this.#controlStartedAt.getTime();
+        this.#controlPeriods.push(ms / 1000);
         this.#controlStartedAt = null;
     }
 }
 
 
 function calculateRidingTime(votes, judges, endAt, pauses = []) {
-    const calculator = new RidingTimeCalculator(votes, judges, endAt, pauses)
+    const calculator = new RidingTimeCalculator(votes, judges, endAt, pauses);
     calculator.calculate();
-    return calculator.ridingTime;
+    return calculator.controlPeriods;
 }
 
 
