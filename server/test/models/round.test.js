@@ -24,8 +24,18 @@ jest.mock('../../lib/activeRecord', () => {
         static get fn()     { return null; }
         static get col()    { return null; }
 
-        getCachedAssociation(name, _Cls, _where, _opts) {
-            return Promise.resolve(this.#cachedAssociations[name] || []);
+        async getCachedAssociation(name, Cls, where, queryOptions) {
+            if (queryOptions && Object.keys(queryOptions).length) {
+                queryOptions.where = {...queryOptions.where, ...where};
+                return await Cls.findAll(queryOptions);
+            }
+
+            if (!this.#cachedAssociations[name]) {
+                const record = await Cls.findAll({ where });
+                this._cacheRecord(name, record);
+            }
+
+            return Array.from(this.#cachedAssociations[name]);
         }
 
         clearCachedAssociation(name) {
@@ -83,6 +93,8 @@ jest.mock('../../models/roundPause', () => {
             Object.assign(this, attrs);
             this.save = jest.fn().mockResolvedValue(this);
         }
+
+        get isOpen() { return !this.resumed_at; }
 
         static initialize() {}
     }
@@ -268,6 +280,8 @@ describe('round.end()', () => {
         mockRoundPauseFindAll
             .mockResolvedValueOnce([pause])   // getPauses inside end()
             .mockResolvedValueOnce([pause]);  // getPauses inside resume() (called by end())
+
+        round.save = jest.fn().mockResolvedValue(round);
 
         const resumeSpy = jest.spyOn(round, 'resume');
 

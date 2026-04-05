@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 
 const { logger }                = require('../lib/logger');
-const { TechFallTrackerWorker } = require('../lib/workerQueue');
+const { TechFallTrackerWorker,
+        MatchUpdateWorker }     = require('../lib/workerQueue');
 
-    
+
 
 const workerToken = process.argv[2];
 if (workerToken) {
-    const worker = new TechFallTrackerWorker(workerToken);
-    worker.start();
+    new TechFallTrackerWorker(workerToken).start();
+    new MatchUpdateWorker(workerToken).start();
 } else {
     logger.error('Missing worker token. Unable to start worker');
 }

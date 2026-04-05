@@ -6,13 +6,14 @@ const RDojoKombatRules = {
     roundDurations: [180, 120, 60],
 
     scoreRound(red, blue, judges, votes, pauses = []) {
-        const redVotes       = votes.filter(vote => vote.competitor_id == red.id);
-        const blueVotes      = votes.filter(vote => vote.competitor_id == blue.id);
-        const redRidingTime  = calculateRidingTime(redVotes,  judges, this.ended_at, pauses);
-        const blueRidingTime = calculateRidingTime(blueVotes, judges, this.ended_at, pauses);
+        const redVotes    = votes.filter(vote => vote.competitor_id == red.id);
+        const blueVotes   = votes.filter(vote => vote.competitor_id == blue.id);
 
-        const redScore  = Math.floor(redRidingTime/3);
-        const blueScore = Math.floor(blueRidingTime/3);
+        const redPeriods  = calculateRidingTime(redVotes,  judges, this.ended_at, pauses);
+        const bluePeriods = calculateRidingTime(blueVotes, judges, this.ended_at, pauses);
+
+        const redScore  = redPeriods.reduce((sum, d)  => sum + Math.floor(d / 3), 0);
+        const blueScore = bluePeriods.reduce((sum, d) => sum + Math.floor(d / 3), 0);
 
         return { redScore, blueScore };
     },
