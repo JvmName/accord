@@ -11,11 +11,13 @@ import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.domain.MatManager
 import dev.jvmname.accord.domain.MatchManager
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.session.JudgingSession
 import dev.jvmname.accord.domain.session.RoundController
+import dev.jvmname.accord.network.Mat
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.session.JudgeSessionEvent
 import dev.jvmname.accord.ui.session.MatchState
@@ -23,8 +25,10 @@ import dev.jvmname.accord.ui.session.rememberMatchActions
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 @AssistedInject
 class JudgeSessionPresenter(
@@ -32,19 +36,21 @@ class JudgeSessionPresenter(
     @Assisted private val navigator: Navigator,
     private val prefs: Prefs,
     private val session: JudgingSession,
+    private val matManager: MatManager,
     private val matchManager: MatchManager,
+    private val scope: CoroutineScope,
 ) : Presenter<JudgeSessionState> {
     @Composable
     override fun present(): JudgeSessionState {
-        val matName by produceState("") {
-            value = prefs.observeMatInfo().filterNotNull().first().name
+        val mat: Mat? by produceState(null) {
+            value = prefs.observeMatInfo().filterNotNull().first()
         }
 
         val score by remember { session.score }.collectAsState()
         val hapticEvent by remember { session.hapticEvents }.collectAsState(null)
         val roundEvent by remember { session.roundEvent }.collectAsState()
 
-        val currentMatch by remember { matchManager.observeMatch() }.collectAsState(null)
+        val currentMatch by remember { matchManager.observeCurrentMatch() }.collectAsState(null)
         val isMatchEnded = currentMatch?.endedAt != null
 
         val timerDisplay = roundEvent?.remainingHumanTime() ?: "0:00"
@@ -79,7 +85,11 @@ class JudgeSessionPresenter(
             { event ->
                 Logger.d { "Received event: $event" }
                 when (event) {
-                    JudgeSessionEvent.Back -> navigator.pop()
+                    JudgeSessionEvent.Back -> scope.launch {
+                        prefs.getJoinCode()?.let { matManager.leaveMat(it) }
+                        navigator.pop()
+                    }
+
                     is JudgeSessionEvent.ButtonPress -> {
                         Logger.d { "Presenter press ${event.competitor}" }
                         session.recordPress(event.competitor)
@@ -130,7 +140,7 @@ class JudgeSessionPresenter(
         )
 
         return JudgeSessionState(
-            matName = matName,
+            matName = mat?.name.orEmpty(),
             matchState = matchState,
             hapticEvent = hapticEvent,
             actions = actions,

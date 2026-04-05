@@ -14,10 +14,13 @@ import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.di.MatchExitSignal
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.domain.MatManager
 import dev.jvmname.accord.domain.MatchManager
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.session.MasterSession
+import dev.jvmname.accord.network.Mat
+import dev.jvmname.accord.network.adminCode
 import dev.jvmname.accord.network.message
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.onEither
@@ -39,6 +42,7 @@ class MasterSessionPresenter(
     @Assisted private val navigator: Navigator,
     private val session: MasterSession,
     private val matchManager: MatchManager,
+    private val matManager: MatManager,
     private val prefs: Prefs,
     private val exitSignal: MatchExitSignal,
     private val scope: CoroutineScope,
@@ -48,8 +52,8 @@ class MasterSessionPresenter(
 
     @Composable
     override fun present(): MasterSessionState {
-        val matName by produceState("") {
-            value = prefs.observeMatInfo().filterNotNull().first().name
+        val mat: Mat? by produceState(null) {
+            value = prefs.observeMatInfo().filterNotNull().first()
         }
         val currentMatch by remember { matchManager.observeCurrentMatch() }.collectAsState(null)
         val score by remember { session.score }.collectAsState()
@@ -165,7 +169,12 @@ class MasterSessionPresenter(
                     MasterSessionEvent.DismissScores -> showScoresOverlay = false
 
                     MasterSessionEvent.ReturnToMain -> exitSignal.requestExitToMain()
-                    MasterSessionEvent.Back -> navigator.pop()
+                    MasterSessionEvent.Back -> scope.launch {
+                        mat?.let {
+                            matManager.leaveMat(it.adminCode.code)
+                        }
+                        navigator.pop()
+                    }
                 }
             }
         }
@@ -181,7 +190,7 @@ class MasterSessionPresenter(
         )
 
         return MasterSessionState(
-            matName = matName,
+            matName = mat?.name.orEmpty(),
             redName = currentMatch?.red?.name ?: "Red",
             blueName = currentMatch?.blue?.name ?: "Blue",
             matchState = matchState,

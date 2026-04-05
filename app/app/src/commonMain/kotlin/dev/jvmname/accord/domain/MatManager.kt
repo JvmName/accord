@@ -15,7 +15,6 @@ import dev.jvmname.accord.network.adminCode
 import dev.jvmname.accord.network.merge
 import dev.jvmname.accord.prefs.Prefs
 import dev.zacsweers.metro.Inject
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
 @Inject
@@ -84,6 +83,7 @@ class MatManager(
                 ?: result.mat
             prefs.updateMainUser(result.user)
             prefs.setAuthToken(result.authToken)
+            prefs.updateJoinCode(matCode)
 
             // Fetch full mat to include current_match, then merge to preserve codes
             val fullMat = getMat(mat.id).bind().merge(mat)
@@ -100,9 +100,6 @@ class MatManager(
     }
 
     suspend fun currentUserId() = userManager.user().id
-
-    /** Observe mat info changes from Prefs. */
-    fun observeMatInfo(): Flow<Mat?> = prefs.observeMatInfo()
 
     /**
      * Leave a mat (remove as judge or viewer).

@@ -90,11 +90,23 @@ class Prefs(
         }
     }
 
+    suspend fun updateJoinCode(code: String?) {
+        datastore.edit { prefs ->
+            if (code == null) prefs.remove(JOIN_CODE)
+            else prefs[JOIN_CODE] = code
+        }
+    }
+
+    suspend fun getJoinCode(): String? {
+        return datastore.data.first()[JOIN_CODE]
+    }
+
     companion object {
         const val FILENAME = "prefs.preferences_pb"
         val MAT_INFO = stringPreferencesKey("mat_info")
         val AUTH_TOKEN = stringPreferencesKey("auth_token")
         val MAIN_USER = stringPreferencesKey("user.main")
         val CURRENT_MATCH = stringPreferencesKey("current_match")
+        val JOIN_CODE = stringPreferencesKey("join_code")
     }
 }

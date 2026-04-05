@@ -23,7 +23,6 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicReference
 
@@ -50,8 +49,6 @@ class MatchManager(
             connectAndObserve(match)
         }
     }
-
-    fun observeMatch(): Flow<Match> = prefs.observeCurrentMatch().filterNotNull()
 
     fun observeCurrentMatch(): Flow<Match?> = prefs.observeCurrentMatch()
 
