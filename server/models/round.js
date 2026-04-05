@@ -244,6 +244,18 @@ class Round extends BaseRecord {
         const winner      = await this.getWinner();
         const method      = await this.getWinMethod();
         const maxDuration = await this.getMaxDuration();
+        const pauses      = await this.getPauses();
+        const currentPause = pauses.slice().reverse().find(p => p.isOpen) || null;
+
+        let timeRemaining = null;
+        if (!this.ended_at) {
+            const ref = currentPause ? new Date(currentPause.paused_at) : new Date();
+            let pausedMs = 0;
+            for (const p of pauses) {
+                if (p.resumed_at) pausedMs += new Date(p.resumed_at) - new Date(p.paused_at);
+            }
+            timeRemaining = Math.max(0, maxDuration - Math.floor((ref - new Date(this.started_at) - pausedMs) / 1000));
+        }
 
         const score = {
             [match.red_competitor_id]:  redScore,
@@ -253,11 +265,12 @@ class Round extends BaseRecord {
         const result = { winner, method };
 
         const response = {
-            id:           this.id,
-            started_at:   this.started_at,
-            ended_at:     this.ended_at,
-            max_duration: maxDuration,
-            paused:       await this.isPaused(),
+            id:             this.id,
+            started_at:     this.started_at,
+            ended_at:       this.ended_at,
+            max_duration:   maxDuration,
+            paused:         !!currentPause,
+            time_remaining: timeRemaining,
             score,
             result,
         }

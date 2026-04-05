@@ -5,6 +5,7 @@ import dev.jvmname.accord.parcel.CommonParcelable
 import dev.jvmname.accord.parcel.CommonParcelize
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonIgnoreUnknownKeys
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -41,7 +42,7 @@ value class RoundId(val id: String) : CommonParcelable
 // User Models
 // ============================================================================
 
-@[Poko Serializable CommonParcelize]
+@[Poko Serializable CommonParcelize JsonIgnoreUnknownKeys]
 class User(
     val id: UserId,
     val name: String,

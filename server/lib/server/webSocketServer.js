@@ -57,10 +57,11 @@ class WebSocketServer {
 
 
     async _initWebSocket(ioSocket, next) {
-        const query = ioSocket.handshake.query
+        const auth  = ioSocket.handshake.auth;
+        const query = ioSocket.handshake.query;
         let socket;
 
-        if (query?.apiToken) {
+        if (auth?.apiToken) {
             socket = new WebSocket(ioSocket, this);
         } else if (query?.workerToken) {
             socket = new WorkerWebSocket(ioSocket, this);

@@ -93,7 +93,7 @@ class AbstractWebSocket {
     /***********************************************************************************************
     * AUTH
     ***********************************************************************************************/
-    get apiToken() { return this.#ioSocket.handshake.query?.apiToken; }
+    get apiToken() { return this.#ioSocket.handshake.auth?.apiToken; }
     get id()       { return this.#ioSocket.id }
 }
 
