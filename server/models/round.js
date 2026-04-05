@@ -45,10 +45,12 @@ class Round extends BaseRecord {
 
 
     async getPauses(queryOptions={}) {
-        return await this.getCachedAssociation('pauses',
-                                               RoundPause,
-                                               {round_id: this.id},
-                                               queryOptions);
+        const pauses = await this.getCachedAssociation('pauses',
+                                                        RoundPause,
+                                                        {round_id: this.id},
+                                                        queryOptions);
+        this._cachedPauses = pauses;
+        return pauses;
     }
 
 
@@ -60,6 +62,13 @@ class Round extends BaseRecord {
 
     async isPaused() {
         return !!(await this.getCurrentPause());
+    }
+
+
+    get paused() {
+        const pauses = this._cachedPauses;
+        if (!pauses?.length) return false;
+        return !!pauses.slice().reverse().find(p => p.isOpen);
     }
 
 
