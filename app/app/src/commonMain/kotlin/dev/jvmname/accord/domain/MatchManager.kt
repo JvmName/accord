@@ -16,6 +16,7 @@ import dev.jvmname.accord.network.MatchId
 import dev.jvmname.accord.network.NetworkResult
 import dev.jvmname.accord.network.SocketClient
 import dev.jvmname.accord.network.flatMapping
+import dev.jvmname.accord.network.merge
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.catchRunning
 import dev.zacsweers.metro.Inject
@@ -130,9 +131,9 @@ class MatchManager(
             }
             .andThen { client.startRound(it.id) }
             .onOk { match ->
-                cacheMatch(match)
-                // Update current match since rounds changed
-                updateCurrentMatchIfActive(match)
+                val merged = activeMatch.load()?.let { match.merge(it) } ?: match
+                cacheMatch(merged)
+                updateCurrentMatchIfActive(merged)
             }
     }
 
@@ -144,8 +145,9 @@ class MatchManager(
         log.i { "ending round matchId=$matchId submission=$submission" }
         return client.endRound(matchId, submission, submitter?.asColor)
             .onOk { match ->
-                cacheMatch(match)
-                updateCurrentMatchIfActive(match)
+                val merged = activeMatch.load()?.let { match.merge(it) } ?: match
+                cacheMatch(merged)
+                updateCurrentMatchIfActive(merged)
             }
     }
 
@@ -153,7 +155,9 @@ class MatchManager(
         return client.pauseRound(matchId)
             .onOk { match ->
                 log.i { "round $matchId paused" }
-                cacheMatch(match)
+                val merged = activeMatch.load()?.let { match.merge(it) } ?: match
+                cacheMatch(merged)
+                prefs.updateCurrentMatch(merged)
             }
     }
 
@@ -161,7 +165,9 @@ class MatchManager(
         return client.resumeRound(matchId)
             .onOk { match ->
                 log.i { "round $matchId resumed" }
-                cacheMatch(match)
+                val merged = activeMatch.load()?.let { match.merge(it) } ?: match
+                cacheMatch(merged)
+                prefs.updateCurrentMatch(merged)
             }
     }
 
@@ -172,7 +178,7 @@ class MatchManager(
         log.d { "startVote competitor=$competitor round=$matchId" }
         return client.startRidingTimeVote(matchId, competitor)
             .onOk { match ->
-                cacheMatch(match)
+                cacheMatch(activeMatch.load()?.let { match.merge(it) } ?: match)
                 // Socket updates will handle prefs updates
             }
     }
@@ -184,7 +190,7 @@ class MatchManager(
         log.d { "endVote competitor=$competitor round=$matchId" }
         return client.endRidingTimeVote(matchId, competitor)
             .onOk { match ->
-                cacheMatch(match)
+                cacheMatch(activeMatch.load()?.let { match.merge(it) } ?: match)
                 // Socket updates will handle prefs updates
             }
     }
@@ -197,8 +203,9 @@ class MatchManager(
         observationJob = scope.launch {
             socket.observeMatch(match.id).collect { updatedMatch ->
                 log.d { "cache updated matchId=${updatedMatch.id} rounds=${updatedMatch.rounds.size}" }
-                cacheMatch(updatedMatch)
-                prefs.updateCurrentMatch(updatedMatch)
+                val merged = activeMatch.load()?.let { updatedMatch.merge(it) } ?: updatedMatch
+                cacheMatch(merged)
+                prefs.updateCurrentMatch(merged)
             }
         }
     }

@@ -23,3 +23,22 @@ fun Mat.merge(other: Mat): Mat = Mat(
     currentMatch = currentMatch ?: other.currentMatch,
     upcomingMatches = upcomingMatches.ifEmpty { other.upcomingMatches },
 )
+
+/**
+ * Returns a new [Match] with fields from [other] used as fallback for absent optional associations.
+ * Some endpoints (e.g. pause/resume) omit `judges` because they pass `includeJudges` instead of
+ * `includeMatchJudges` — merge preserves the previously cached value in that case.
+ */
+fun Match.merge(other: Match): Match = Match(
+    id = id,
+    creatorId = creatorId,
+    matId = matId,
+    startedAt = startedAt,
+    endedAt = endedAt,
+    red = red,
+    blue = blue,
+    winner = winner,
+    mat = mat ?: other.mat,
+    judges = judges.ifEmpty { other.judges },
+    rounds = rounds.ifEmpty { other.rounds },
+)

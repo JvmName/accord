@@ -59,7 +59,7 @@ interface HttpModule {
     fun provideJson(): Json {
         return Json {
             prettyPrint = true
-//        isLenient = true
+//            ignoreUnknownKeys = true //TODO before releasing set this to true
             useAlternativeNames = false
         }
     }

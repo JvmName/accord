@@ -17,6 +17,8 @@ import dev.jvmname.accord.ui.session.ManualEditAction
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -24,8 +26,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.runningFold
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 @Inject
 @SingleIn(MatchScope::class)
@@ -42,19 +48,31 @@ class MasterSession(
     override val score: StateFlow<Score> = _score.asStateFlow()
     private val _roundEvent = MutableStateFlow<RoundEvent?>(null)
     override val roundEvent: StateFlow<RoundEvent?> = _roundEvent.asStateFlow()
+    private var countdownJob: Job? = null
     private val _hapticEvents = MutableSharedFlow<HapticEvent>()
     override val hapticEvents: SharedFlow<HapticEvent> = _hapticEvents.asSharedFlow()
 
     init {
         scope.launch {
-            matchManager.observeCurrentMatch().collect { match ->
-                match ?: return@collect
-                currentMatchId = match.id
-                val derived = deriveScoreFromMatch(match)
-                log.d { "scores derived red=${derived.redPoints} blue=${derived.bluePoints}" }
-                _score.value = derived
-                _roundEvent.value = deriveRoundEventFromMatch(match)
-            }
+            matchManager.observeCurrentMatch()
+                .filterNotNull()
+                .collect { match ->
+                    currentMatchId = match.id
+                    _score.update {
+                        deriveScoreFromMatch(match).also {
+                            log.d { "scores derived red=${it.redPoints} blue=${it.bluePoints}" }
+                        }
+                    }
+                    val event = deriveRoundEventFromMatch(match).also {
+                        _roundEvent.value = it
+                    }
+                    if (event?.state == RoundEvent.RoundState.STARTED) {
+                        startCountdown(event.remaining)
+                    } else {
+                        countdownJob?.cancel()
+                        countdownJob = null
+                    }
+                }
         }
 
         scope.launch {
@@ -120,6 +138,23 @@ class MasterSession(
 
     override suspend fun endMatch(): NetworkResult<Match> =
         matchManager.endMatch()
+
+    private fun startCountdown(initialRemaining: Duration) {
+        countdownJob?.cancel()
+        countdownJob = scope.launch {
+            var remaining = initialRemaining
+            while (remaining > Duration.ZERO) {
+                delay(1.seconds)
+                remaining -= 1.seconds
+                val current = _roundEvent.value ?: return@launch
+                if (current.state == RoundEvent.RoundState.STARTED) {
+                    _roundEvent.value = current.copy(remaining = remaining)
+                } else {
+                    return@launch
+                }
+            }
+        }
+    }
 
     private fun deriveRoundEventFromMatch(match: Match): RoundEvent? =
         deriveRoundEventFromMatch(match, config)

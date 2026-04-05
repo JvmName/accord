@@ -172,6 +172,7 @@ class Round(
     @SerialName("started_at") val startedAt: Instant,
     @SerialName("ended_at") val endedAt: Instant?,
     val score: Map<UserId, Int>,
+    val paused: Boolean = false,
     @SerialName("time_remaining") val timeRemaining: Int? = null,
     val result: RoundResult,
 ) : CommonParcelable
