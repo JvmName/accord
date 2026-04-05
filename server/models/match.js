@@ -144,15 +144,15 @@ class Match extends BaseRecord {
 
         if (options.includeMat) {
             const mat    = await this.getMat();
-            response.mat = mat.toApiResponse(options);
+            response.mat = await mat.toApiResponse(options);
         }
         if (options.includeMatchJudges) {
             const judges    = await this.getJudges()
-            response.judges = judges.map(j => j.toApiResponse(options));
+            response.judges = await Promise.all(judges.map(j => j.toApiResponse(options)));
         }
         if (options.includeRounds) {
             const rounds    = await this.getRounds();
-            response.rounds = rounds.map(r => r.toApiResponse(options));
+            response.rounds = await Promise.all(rounds.map(r => r.toApiResponse(options)));
         }
 
         return response;

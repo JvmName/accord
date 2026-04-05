@@ -25,7 +25,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
-import kotlin.concurrent.atomics.AtomicReference
 
 @[Inject SingleIn(MatchScope::class)]
 class MatchManager(
