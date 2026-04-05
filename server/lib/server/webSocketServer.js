@@ -65,7 +65,7 @@ class WebSocketServer {
         } else if (query?.workerToken) {
             socket = new WorkerWebSocket(ioSocket, this);
         } else {
-            ioSocket.close();
+            ioSocket.disconnect();
             return next();
         }
 

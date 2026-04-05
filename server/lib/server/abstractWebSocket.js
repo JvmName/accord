@@ -27,7 +27,7 @@ class AbstractWebSocket {
 
 
     close() {
-        this.#ioSocket.close();
+        this.#ioSocket.disconnect();
     }
 
 
