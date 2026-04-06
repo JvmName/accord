@@ -1,5 +1,6 @@
 package dev.jvmname.accord.ui.create.mat
 
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -94,7 +95,9 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
                 placeholder = { Text("Jane Smith") },
                 label = { Text("Your Name *") },
                 isError = masterNameError,
-                supportingText = if (masterNameError) { { Text("Required") } } else null,
+                supportingText = if (masterNameError) {
+                    { Text("Required") }
+                } else null,
                 lineLimits = TextFieldLineLimits.SingleLine,
                 keyboardOptions = KeyboardOptions.Default.copy(
                     capitalization = KeyboardCapitalization.Words,
@@ -110,7 +113,9 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
                 placeholder = { Text("Mat #1") },
                 label = { Text("Mat Name *") },
                 isError = matNameError,
-                supportingText = if (matNameError) { { Text("Required") } } else null,
+                supportingText = if (matNameError) {
+                    { Text("Required") }
+                } else null,
                 lineLimits = TextFieldLineLimits.SingleLine,
                 keyboardOptions = KeyboardOptions.Default.copy(
                     capitalization = KeyboardCapitalization.Words,
@@ -125,7 +130,13 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
 
             Spacer(Modifier.height(16.dp))
 
-            Text("Match Info", style = AccordTypography.titleLarge)
+            Text(
+                "Match Info", style = AccordTypography.titleLarge,
+                modifier = Modifier.combinedClickable(
+                    onLongClick = { state.eventSink(CreateMatMatchEvent.LongClick) },
+                    onClick = {}
+                )
+            )
 
             Spacer(Modifier.height(16.dp))
 
@@ -177,7 +188,7 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
 //                            isJudging = isJudging,
                         )
                     )
-                }
+                },
             )
         }
     }

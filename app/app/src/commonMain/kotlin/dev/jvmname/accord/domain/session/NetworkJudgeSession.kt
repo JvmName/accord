@@ -47,6 +47,8 @@ class NetworkJudgeSession(
     )
     override val hapticEvents: SharedFlow<HapticEvent> = hapticHelper.hapticEvents
 
+    private var activeVote: Competitor? = null
+
     init {
         scope.launch {
             matchManager.observeCurrentMatch().collect { match ->
@@ -60,14 +62,33 @@ class NetworkJudgeSession(
         scope.launch {
             buttonPressTracker.buttonEvents.collect { event ->
                 when (event) {
-                    is ButtonEvent.Holding -> scope.launch {
-                        log.d { "button held → startVote competitor=${event.competitor}" }
-                        currentMatchId?.let { matchManager.startRidingTimeVote(it, event.competitor.toCompetitorColor()) }
+                    is ButtonEvent.Holding -> {
+                        if(activeVote != null) {
+                            log.d { "button continue held → (no network call) competitor=${event.competitor}" }
+                            return@collect
+                        }
+                        activeVote = event.competitor
+                        scope.launch {
+                            log.d { "button started held → startVote competitor=${event.competitor}" }
+                            currentMatchId?.let {
+                                matchManager.startRidingTimeVote(it, event.competitor.toCompetitorColor())
+                            }
+                        }
                     }
-                    is ButtonEvent.Release -> scope.launch {
-                        log.d { "button released → endVote competitor=${event.competitor}" }
-                        currentMatchId?.let { matchManager.endRidingTimeVote(it, event.competitor.toCompetitorColor()) }
+
+                    is ButtonEvent.Release -> {
+                        activeVote = null
+                        scope.launch {
+                            log.d { "button released → endVote competitor=${event.competitor}" }
+                            currentMatchId?.let {
+                                matchManager.endRidingTimeVote(
+                                    it,
+                                    event.competitor.toCompetitorColor()
+                                )
+                            }
+                        }
                     }
+
                     else -> Unit
                 }
             }

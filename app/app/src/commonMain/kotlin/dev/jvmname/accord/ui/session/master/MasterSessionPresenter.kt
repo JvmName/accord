@@ -101,7 +101,6 @@ class MasterSessionPresenter(
             roundInfo = roundEvent,
             timerDisplay = timerDisplay,
             roundLabel = roundLabel,
-            showPointControls = false,
             controlDurations = emptyMap(),
             roundScores = roundScores,
         )

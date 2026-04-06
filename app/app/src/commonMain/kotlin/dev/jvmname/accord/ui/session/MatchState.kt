@@ -11,7 +11,6 @@ class MatchState(
     val roundInfo: RoundEvent?,
     val timerDisplay: String,
     val roundLabel: String?,
-    val showPointControls: Boolean,
     val controlDurations: Map<Competitor, String?>,
     val roundScores: Map<Competitor, Int>,
 )

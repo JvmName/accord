@@ -17,6 +17,7 @@ import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.session.JudgingSession
 import dev.jvmname.accord.domain.session.RoundController
+import dev.jvmname.accord.domain.session.SoloSession
 import dev.jvmname.accord.network.Mat
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.session.JudgeSessionEvent
@@ -59,19 +60,15 @@ class JudgeSessionPresenter(
             is RoundInfo.Break -> "Break"
             is RoundInfo.Round -> "Round ${round.index} of ${roundEvent!!.totalRounds}"
         }
-        val showPointControls = roundEvent?.state == RoundEvent.RoundState.PAUSED
-                && score.techFallWin == null
         val controlDurations = Competitor.entries.associateWith { competitor ->
             score.controlTimeHumanReadable(competitor)
         }
-
 
         val matchState = MatchState(
             score = score,
             roundInfo = roundEvent,
             timerDisplay = timerDisplay,
             roundLabel = roundLabel,
-            showPointControls = showPointControls,
             controlDurations = controlDurations,
             roundScores = emptyMap(),
         )
@@ -137,6 +134,9 @@ class JudgeSessionPresenter(
             onStartRound = { eventSink(JudgeSessionEvent.StartRound) },
             onEndRound = { eventSink(JudgeSessionEvent.EndRound()) },
             onReset = { eventSink(JudgeSessionEvent.Reset) },
+            onManualEdit = if (session is SoloSession && isPaused && score.techFallWin == null) {
+                { competitor, action -> eventSink(JudgeSessionEvent.ManualEdit(competitor, action)) }
+            } else null,
         )
 
         return JudgeSessionState(

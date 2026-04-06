@@ -26,5 +26,6 @@ sealed interface CreateMatMatchEvent : CircuitUiEvent {
 //        val isJudging: Boolean,
     ) : CreateMatMatchEvent
     data object Back : CreateMatMatchEvent
+    data object LongClick : CreateMatMatchEvent
 
 }

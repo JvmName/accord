@@ -36,12 +36,25 @@ class CreateMatMatchPresenter(
         return CreateMatMatchState(loading, error) { event ->
             when (event) {
                 CreateMatMatchEvent.Back -> navigator.pop()
-
-                is CreateMatMatchEvent.CreateMat -> {
+                CreateMatMatchEvent.LongClick, is CreateMatMatchEvent.CreateMat -> {
                     if (loading) return@CreateMatMatchState
                     scope.launch {
                         loading = true
                         error = null
+
+                        val event = when (event) {
+                            is CreateMatMatchEvent.LongClick -> CreateMatMatchEvent.CreateMat(
+                                masterName = "Test 0",
+                                matName = "Mat 1",
+                                judgeCount = 1,
+                                redName = "RRR",
+                                blueName = "BBB"
+                            )
+
+                            is CreateMatMatchEvent.CreateMat -> event
+                        }
+
+
                         log.i { "creating mat name='${event.matName}' judges=${event.judgeCount}" }
 
                         matManager.createMatAndMatch(
@@ -53,16 +66,22 @@ class CreateMatMatchPresenter(
                         )
                             //TODO if the creator wants to join a judge, then we'd .join here
                             .onEither(
-                            success = { (mat, match) ->
-                                log.i { "mat+match created, navigating to ShowCodes" }
-                                navigator.goTo(ShowCodesScreen(mat = mat, match = match, judgeCount = event.judgeCount))
-                            },
-                            failure = {
-                                val errorMessage = "Error creating mat: ${it.message}"
-                                log.w { "mat creation failed: ${it.message}" }
-                                error = errorMessage
-                            }
-                        )
+                                success = { (mat, match) ->
+                                    log.i { "mat+match created, navigating to ShowCodes" }
+                                    navigator.goTo(
+                                        ShowCodesScreen(
+                                            mat = mat,
+                                            match = match,
+                                            judgeCount = event.judgeCount
+                                        )
+                                    )
+                                },
+                                failure = {
+                                    val errorMessage = "Error creating mat: ${it.message}"
+                                    log.w { "mat creation failed: ${it.message}" }
+                                    error = errorMessage
+                                }
+                            )
                         loading = false
                     }
                 }

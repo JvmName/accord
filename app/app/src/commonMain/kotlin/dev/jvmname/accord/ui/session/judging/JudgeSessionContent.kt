@@ -65,7 +65,6 @@ import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.JudgeSessionEvent
 import dev.jvmname.accord.ui.session.JudgeSessionEvent.ButtonPress
 import dev.jvmname.accord.ui.session.JudgeSessionEvent.ButtonRelease
-import dev.jvmname.accord.ui.session.JudgeSessionEvent.ManualEdit
 import dev.jvmname.accord.ui.session.ManualEditAction
 import dev.jvmname.accord.ui.session.MatchActions
 import dev.jvmname.accord.ui.session.MatchState
@@ -141,7 +140,7 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
                             controlDuration = state.matchState.controlDurations[competitor],
                             color = competitor.color,
                             playerName = competitor.nameStr,
-                            shouldShowPointControls = state.matchState.showPointControls,
+                            manualEdit = state.actions.manualEdit,
                             eventSink = state.eventSink,
                             player = competitor
                         )
@@ -188,7 +187,7 @@ private fun PlayerControl(
     color: Color,
     playerName: String,
     player: Competitor,
-    shouldShowPointControls: Boolean,
+    manualEdit: ((Competitor, ManualEditAction) -> Unit)?,
     eventSink: EventSink,
     modifier: Modifier = Modifier,
 ) {
@@ -202,13 +201,11 @@ private fun PlayerControl(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = spacedBy(6.dp)
         ) {
-            AnimatedVisibility(shouldShowPointControls) {
+            AnimatedVisibility(manualEdit != null) {
                 CompositionLocalProvider(LocalContentColor provides color) {
                     OutlinedIconButton(
                         onClick = {
-                            if (points > 0) eventSink(
-                                ManualEdit(player, ManualEditAction.DECREMENT)
-                            )
+                            if (points > 0) manualEdit?.invoke(player, ManualEditAction.DECREMENT)
                         },
                         enabled = points > 0
                     ) {
@@ -228,11 +225,9 @@ private fun PlayerControl(
                 fontWeight = FontWeight.Medium
             )
             CompositionLocalProvider(LocalContentColor provides color) {
-                AnimatedVisibility(shouldShowPointControls) {
+                AnimatedVisibility(manualEdit != null) {
                     OutlinedIconButton(
-                        onClick = {
-                            eventSink(ManualEdit(player, ManualEditAction.INCREMENT))
-                        },
+                        onClick = { manualEdit?.invoke(player, ManualEditAction.INCREMENT) },
                     ) {
                         Icon(
                             Icons.Default.Add,
@@ -350,7 +345,6 @@ private fun JudgeSessionContentPreview() {
                     ),
                     timerDisplay = "2:30",
                     roundLabel = "Round 1 of 3",
-                    showPointControls = false,
                     controlDurations = emptyMap(),
                     roundScores = emptyMap(),
                 ),
@@ -387,7 +381,6 @@ private fun JudgeSessionContentPreview_Paused() {
                     ),
                     timerDisplay = "2:30",
                     roundLabel = "Round 1 of 3",
-                    showPointControls = true,
                     controlDurations = emptyMap(),
                     roundScores = emptyMap(),
                 ),
@@ -424,7 +417,6 @@ private fun JudgeSessionContentPreview_Holding() {
                     ),
                     timerDisplay = "2:30",
                     roundLabel = "Round 1 of 3",
-                    showPointControls = false,
                     controlDurations = mapOf(Competitor.BLUE to "(3)"),
                     roundScores = emptyMap(),
                 ),

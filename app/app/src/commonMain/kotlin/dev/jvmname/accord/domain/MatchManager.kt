@@ -24,6 +24,9 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @[Inject SingleIn(MatchScope::class)]
@@ -35,7 +38,7 @@ class MatchManager(
     private val match: Match,
 ) {
     private val log = Logger.withTag("Domain/MatchManager")
-    private var activeMatch = AtomicReference<Match?>(null)
+    private val _currentMatch = MutableStateFlow<Match?>(match)
     private lateinit var socket: SocketClient
     private var observationJob: Job? = null
 
@@ -45,12 +48,12 @@ class MatchManager(
             val token = requireNotNull(prefs.getAuthToken())
             socket = socketFactory.create(token)
             getMatch(match.id, false)
-            cacheMatch(match)
+            updateCache(match)
             connectAndObserve(match)
         }
     }
 
-    fun observeCurrentMatch(): Flow<Match?> = prefs.observeCurrentMatch()
+    fun observeCurrentMatch(): Flow<Match?> = _currentMatch.asStateFlow()
 
     suspend fun createMatch(
         matCode: String,
@@ -64,7 +67,7 @@ class MatchManager(
             blueCompetitor = CompetitorRequest(name = blueCompetitor)
         ).onOk { match ->
             log.i { "match created id=${match.id}" }
-            cacheMatch(match)
+            updateCache(match)
         }
     }
 
@@ -72,36 +75,36 @@ class MatchManager(
         retry(stopAtAttempts(5)) {
             log.d { "getMatch matchId=$matchId" }
             // Check cache first if enabled
-            if (useCache && activeMatch.load()?.id == matchId) return Ok(activeMatch.load()!!)
+            if (useCache && _currentMatch.value?.id == matchId) return Ok(_currentMatch.value!!)
             return client.getMatch(matchId)
-                .onOk { match -> cacheMatch(match) }
+                .onOk { match -> updateCache(match) }
         }
 
     suspend fun startMatch(): NetworkResult<Match> {
-        log.i { "starting match ${activeMatch.load()?.id}" }
-        return catchRunning { activeMatch.load() }
+        log.i { "starting match ${_currentMatch.value?.id}" }
+        return catchRunning { _currentMatch.value }
             .flatMapping { match ->
                 if (match == null) error("Must create match first")
                 Ok(match)
             }
             .flatMap { client.startMatch(it.id) }
             .onOk { match ->
-                cacheMatch(match)
+                updateCache(match)
                 prefs.updateCurrentMatch(match)
                 log.i { "match started" }
             }
     }
 
     suspend fun endMatch(): NetworkResult<Match> {
-        log.i { "ending match ${activeMatch.load()?.id}" }
-        return catchRunning { activeMatch.load() }
+        log.i { "ending match ${_currentMatch.value?.id}" }
+        return catchRunning { _currentMatch.value }
             .flatMapping { match ->
                 if (match == null) error("Must create match first")
                 Ok(match)
             }
             .flatMap { client.endMatch(it.id) }
             .onOk { match ->
-                cacheMatch(match)
+                updateCache(match)
                 // Clear current match from prefs since match ended
                 prefs.updateCurrentMatch(null)
                 // Stop observing match updates
@@ -113,7 +116,7 @@ class MatchManager(
     }
 
     suspend fun startRound(): NetworkResult<Match> {
-        return catchRunning { activeMatch.load() }
+        return catchRunning { _currentMatch.value }
             .flatMapping { match ->
                 when (match?.startedAt) {
                     null -> {
@@ -130,9 +133,7 @@ class MatchManager(
             }
             .andThen { client.startRound(it.id) }
             .onOk { match ->
-                val merged = activeMatch.load()?.let { match.merge(it) } ?: match
-                cacheMatch(merged)
-                updateCurrentMatchIfActive(merged)
+                updateCache(match)
             }
     }
 
@@ -144,9 +145,7 @@ class MatchManager(
         log.i { "ending round matchId=$matchId submission=$submission" }
         return client.endRound(matchId, submission, submitter?.asColor)
             .onOk { match ->
-                val merged = activeMatch.load()?.let { match.merge(it) } ?: match
-                cacheMatch(merged)
-                updateCurrentMatchIfActive(merged)
+                updateCache(match)
             }
     }
 
@@ -154,9 +153,7 @@ class MatchManager(
         return client.pauseRound(matchId)
             .onOk { match ->
                 log.i { "round $matchId paused" }
-                val merged = activeMatch.load()?.let { match.merge(it) } ?: match
-                cacheMatch(merged)
-                prefs.updateCurrentMatch(merged)
+                updateCache(match)
             }
     }
 
@@ -164,9 +161,7 @@ class MatchManager(
         return client.resumeRound(matchId)
             .onOk { match ->
                 log.i { "round $matchId resumed" }
-                val merged = activeMatch.load()?.let { match.merge(it) } ?: match
-                cacheMatch(merged)
-                prefs.updateCurrentMatch(merged)
+                updateCache(match)
             }
     }
 
@@ -176,10 +171,7 @@ class MatchManager(
     ): NetworkResult<Match> {
         log.d { "startVote competitor=$competitor round=$matchId" }
         return client.startRidingTimeVote(matchId, competitor)
-            .onOk { match ->
-                cacheMatch(activeMatch.load()?.let { match.merge(it) } ?: match)
-                // Socket updates will handle prefs updates
-            }
+            .onOk { match -> updateCache(match) }
     }
 
     suspend fun endRidingTimeVote(
@@ -188,35 +180,26 @@ class MatchManager(
     ): NetworkResult<Match> {
         log.d { "endVote competitor=$competitor round=$matchId" }
         return client.endRidingTimeVote(matchId, competitor)
-            .onOk { match ->
-                cacheMatch(activeMatch.load()?.let { match.merge(it) } ?: match)
-                // Socket updates will handle prefs updates
-            }
+            .onOk { match -> updateCache(match) }
     }
-
 
     private fun connectAndObserve(match: Match) {
         log.i { "observing match ${match.id} via socket" }
         socket.connect()
         observationJob?.cancel()
         observationJob = scope.launch {
-            socket.observeMatch(match.id).collect { updatedMatch ->
-                log.d { "cache updated matchId=${updatedMatch.id} rounds=${updatedMatch.rounds.size}" }
-                val merged = activeMatch.load()?.let { updatedMatch.merge(it) } ?: updatedMatch
-                cacheMatch(merged)
-                prefs.updateCurrentMatch(merged)
-            }
+            socket.observeMatch(match.id)
+                .collect {
+                    log.d { "cache updated matchId=${it.id} rounds=${it.rounds.size}" }
+                    updateCache(it)
+                }
+
         }
     }
 
-    private fun cacheMatch(match: Match) {
-        activeMatch.store(match)
-    }
-
-    private suspend fun updateCurrentMatchIfActive(match: Match) {
-        // Only update prefs if match is currently active (started but not ended)
-        if (match.startedAt != null && match.endedAt == null) {
-            prefs.updateCurrentMatch(match)
+    private fun updateCache(match: Match) {
+        _currentMatch.update { curr ->
+            curr?.let { match.merge(curr) } ?: match
         }
     }
 }
