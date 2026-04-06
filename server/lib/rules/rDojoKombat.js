@@ -43,10 +43,10 @@ const RDojoKombatRules = {
             const score  = Math.max(redScore, blueScore);
             winner       = score == redScore ? red : blue;
             method.type  = score >= threshold ? 'tech-fall' : 'points';
-            method.value = score;
+            method.value = String(score);
         } else {
             method.type  = 'tie'
-            method.value = redScore;
+            method.value = String(redScore);
         }
 
         return { winner, method };

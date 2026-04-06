@@ -1,13 +1,14 @@
 // JSON Schema (draft-07 / OpenAPI 3.1) for the Round model.
 // Round uses a fully custom toApiResponse() — it does NOT use apiSafeKeys.
 // Fields returned:
-//   id           (UUID string)          — this.id
-//   started_at   (integer, ms)          — mapped from this.created_at (see Round.started_at getter)
-//   ended_at     (integer | null, ms)   — null if the round is still in progress
-//   max_duration (integer, ms)          — millisecond duration limit for this round
-//   score        (object)               — keys are competitor UUIDs, values are integer scores
-//   result       (object)               — { winner: User | null, method: { type: string | null, value: string | integer | null } }
-// Timestamps are serialized as milliseconds (integer) via ServerController._formatJSONBody.
+//   id             (UUID string)               — this.id
+//   started_at     (ISO 8601 string)           — mapped from this.created_at (see Round.started_at getter)
+//   ended_at       (ISO 8601 string | null)    — null if the round is still in progress
+//   max_duration   (integer, seconds)          — duration limit for this round in seconds
+//   time_remaining (integer | null, seconds)   — seconds remaining; null if round has ended
+//   score          (object)                    — keys are competitor UUIDs, values are integer scores
+//   result         (object)                    — { winner: User | null, method: { type: string | null, value: string | null } }
+// Timestamps are serialized as ISO 8601 strings via ServerController._formatJSONBody (Date.toISOString()).
 
 const Round = {
     type: "object",
@@ -18,16 +19,26 @@ const Round = {
             description: "Unique identifier for the round"
         },
         started_at: {
-            type: "integer",
-            description: "Timestamp (ms since epoch) when the round started (mapped from created_at)"
+            type: "string",
+            format: "date-time",
+            description: "ISO 8601 timestamp when the round started (mapped from created_at)"
         },
         ended_at: {
-            type: ["integer", "null"],
-            description: "Timestamp (ms since epoch) when the round ended, or null if still ongoing"
+            type: ["string", "null"],
+            format: "date-time",
+            description: "ISO 8601 timestamp when the round ended, or null if still ongoing"
         },
         max_duration: {
             type: "integer",
-            description: "Maximum allowed duration for this round in milliseconds"
+            description: "Maximum allowed duration for this round in seconds"
+        },
+        paused: {
+            type: "boolean",
+            description: "Whether the round is currently paused"
+        },
+        time_remaining: {
+            type: ["integer", "null"],
+            description: "Seconds remaining in the round; null if the round has ended"
         },
         score: {
             type: "object",
@@ -51,12 +62,12 @@ const Round = {
                     properties: {
                         type: {
                             type: ["string", "null"],
-                            enum: ["submission", "points", "tie", null],
+                            enum: ["submission", "points", "tie", "tech-fall", null],
                             description: "How the round was won"
                         },
                         value: {
-                            type: ["string", "integer", "null"],
-                            description: "The submission name or point score; null if round is ongoing"
+                            type: ["string", "null"],
+                            description: "The submission name or point score as a string; null if round is ongoing"
                         }
                     },
                     required: ["type", "value"],
@@ -67,7 +78,7 @@ const Round = {
             description: "The result of the round including winner and win method"
         }
     },
-    required: ["id", "started_at", "ended_at", "max_duration", "score", "result"]
+    required: ["id", "started_at", "ended_at", "max_duration", "paused", "time_remaining", "score", "result"]
 };
 
 module.exports = { Round };

@@ -73,7 +73,9 @@ class ServerController {
     #processedRequestDataValue(value) {
         if (typeof value !== 'string') return value;
         try {
-            return JSON.parse(value);
+            const parsed = JSON.parse(value);
+            if (typeof parsed === 'object' && parsed !== null) return parsed;
+            return value;
         } catch(err) {
             return value;
         }
