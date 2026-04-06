@@ -3,7 +3,6 @@ package dev.jvmname.accord.ui.session.judging
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +25,6 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalIconButton
@@ -54,13 +52,12 @@ import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.color
-import dev.jvmname.accord.domain.control.buttonHold
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.StubVibrator
-import dev.jvmname.accord.ui.common.IconTextButton
+import dev.jvmname.accord.ui.common.HoldingButton
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.JudgeSessionEvent
 import dev.jvmname.accord.ui.session.JudgeSessionEvent.ButtonPress
@@ -124,6 +121,13 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
                         text = it,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                if (state.matchState.roundInfo?.state == RoundEvent.RoundState.ENDED) {
+                    Text(
+                        text = "Break – Waiting for next round…",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -252,33 +256,15 @@ private fun PlayerControl(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        IconTextButton(
+        HoldingButton(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth()
-                .clickable(false) {
-                    Logger.d { "Clicked not pressed" }
-                    eventSink(ButtonPress(player))
-                    eventSink(ButtonRelease(player))
-                }
-                .buttonHold(
-                    onPress = {
-                        Logger.d { "UI press $player" }
-                        eventSink(ButtonPress(player))
-                    },
-                    onRelease = {
-                        Logger.d { "UI press $player" }
-                        eventSink(ButtonRelease(player))
-                    }
-                ),
+                .fillMaxWidth(),
             icon = Icons.Default.MoveUp,
             text = "$playerName controlling",
-            colors = ButtonDefaults.buttonColors(containerColor = color),
-            onClick = {
-                Logger.d { "Clicked not pressed" }
-                eventSink(ButtonPress(player))
-                eventSink(ButtonRelease(player))
-            }
+            containerColor = color,
+            onPress = { eventSink(ButtonPress(player)) },
+            onRelease = { eventSink(ButtonRelease(player)) },
         )
     }
 }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.NextPlan
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.Pause
@@ -35,6 +36,7 @@ import com.slack.circuit.overlay.OverlayEffect
 import com.slack.circuitx.overlays.BottomSheetOverlay
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.ui.common.IconTextButton
 import dev.jvmname.accord.ui.common.StandardScaffold
@@ -144,6 +146,15 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             }
 
             // Control buttons
+            if (state.matchState.roundInfo?.state == RoundEvent.RoundState.ENDED) {
+                IconTextButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.AutoMirrored.Outlined.NextPlan,
+                    text = "Start Next Round",
+                    onClick = { state.eventSink(MasterSessionEvent.StartRound) }
+                )
+            }
+
             if (!state.isMatchStarted && !state.isMatchEnded) {
                 IconTextButton(
                     modifier = Modifier.fillMaxWidth(),

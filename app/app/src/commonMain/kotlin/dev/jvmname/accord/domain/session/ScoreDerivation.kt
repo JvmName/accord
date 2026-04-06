@@ -8,6 +8,7 @@ import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.network.remainingDuration
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -58,6 +59,23 @@ internal fun deriveRoundEventFromMatch(match: Match, config: MatchConfig): Round
                 state = RoundState.MATCH_ENDED,
             )
         }
-        else -> null
+        else -> {
+            // Between rounds: round N just ended, round N+1 hasn't started — count down the break.
+            val lastRound = match.rounds.lastOrNull() ?: return null
+            val completedRounds = match.rounds.size
+            val completedRoundInfo = config.getRound(completedRounds) ?: return null
+            val breakInfo = config.rounds
+                .getOrNull(config.rounds.indexOf(completedRoundInfo) + 1) as? RoundInfo.Break
+                ?: return null
+            val elapsed = Clock.System.now() - lastRound.endedAt!!
+            val remaining = (breakInfo.duration - elapsed).coerceAtLeast(Duration.ZERO)
+            RoundEvent(
+                remaining = remaining,
+                roundNumber = completedRounds,
+                totalRounds = totalRounds,
+                round = breakInfo,
+                state = if (remaining > Duration.ZERO) RoundState.STARTED else RoundState.ENDED,
+            )
+        }
     }
 }

@@ -12,7 +12,6 @@ import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.network.CompetitorColor
-import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.network.MatchId
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
@@ -21,6 +20,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @Inject
@@ -51,12 +52,13 @@ class NetworkJudgeSession(
 
     init {
         scope.launch {
-            matchManager.observeCurrentMatch().collect { match ->
-                match ?: return@collect
-                currentMatchId = match.id
-                _score.value = deriveScoreFromMatch(match)
-                _roundEvent.value = deriveRoundEventFromMatch(match)
-            }
+            matchManager.observeCurrentMatch()
+                .filterNotNull()
+                .collect { match ->
+                    currentMatchId = match.id
+                    _score.update { deriveScoreFromMatch(match) }
+                    _roundEvent.update { deriveRoundEventFromMatch(match, config) }
+                }
         }
 
         scope.launch {
@@ -76,14 +78,15 @@ class NetworkJudgeSession(
                         }
                     }
 
-                    is ButtonEvent.Release -> {
+                    is ButtonEvent.SteadyState -> {
+                        val vote = activeVote ?: return@collect
                         activeVote = null
                         scope.launch {
-                            log.d { "button released → endVote competitor=${event.competitor}" }
+                            log.d { "button released → endVote competitor=${vote}" }
                             currentMatchId?.let {
                                 matchManager.endRidingTimeVote(
                                     it,
-                                    event.competitor.toCompetitorColor()
+                                    vote.toCompetitorColor()
                                 )
                             }
                         }
@@ -110,9 +113,6 @@ class NetworkJudgeSession(
     override fun resume() {
         scope.launch { currentMatchId?.let { matchManager.resumeRound(it) } }
     }
-
-    private fun deriveRoundEventFromMatch(match: Match): RoundEvent? =
-        deriveRoundEventFromMatch(match, config)
 
     private fun Competitor.toCompetitorColor(): CompetitorColor = when (this) {
         Competitor.RED -> CompetitorColor.RED

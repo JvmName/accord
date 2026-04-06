@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 @Inject
@@ -33,8 +34,9 @@ class NetworkViewerSession(
 
     init {
         scope.launch {
-            matchManager.observeCurrentMatch().collect { match ->
-                match ?: return@collect
+            matchManager.observeCurrentMatch()
+                .filterNotNull()
+                .collect { match ->
                 _score.value = deriveScoreFromMatch(match)
                 _roundEvent.value = deriveRoundEventFromMatch(match)
             }
