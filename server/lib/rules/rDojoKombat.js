@@ -19,6 +19,11 @@ const RDojoKombatRules = {
     },
 
 
+    getBreakDuration(roundIndex) {
+        return this.breakDurations[roundIndex - 1] ?? 0;
+    },
+
+
     techFallThreshold(roundNumber) {
         if (roundNumber == 1) return 24;
         if (roundNumber == 2) return 16;

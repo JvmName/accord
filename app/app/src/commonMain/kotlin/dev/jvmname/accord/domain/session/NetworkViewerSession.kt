@@ -10,13 +10,12 @@ import dev.jvmname.accord.network.Match
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 @Inject
 @SingleIn(MatchScope::class)
@@ -31,6 +30,7 @@ class NetworkViewerSession(
     private val _roundEvent = MutableStateFlow<RoundEvent?>(null)
     override val roundEvent: StateFlow<RoundEvent?> = _roundEvent.asStateFlow()
     override val hapticEvents: SharedFlow<HapticEvent> = MutableSharedFlow()
+    private var countdownJob: Job? = null
 
     init {
         scope.launch {
@@ -38,7 +38,31 @@ class NetworkViewerSession(
                 .filterNotNull()
                 .collect { match ->
                 _score.value = deriveScoreFromMatch(match)
-                _roundEvent.value = deriveRoundEventFromMatch(match)
+                val event = deriveRoundEventFromMatch(match)
+                _roundEvent.value = event
+                if (event?.state == RoundEvent.RoundState.STARTED) {
+                    startCountdown(event.remaining)
+                } else {
+                    countdownJob?.cancel()
+                    countdownJob = null
+                }
+            }
+        }
+    }
+
+    private fun startCountdown(initialRemaining: Duration) {
+        countdownJob?.cancel()
+        countdownJob = scope.launch {
+            var remaining = initialRemaining
+            while (remaining > Duration.ZERO) {
+                delay(1.seconds)
+                remaining -= 1.seconds
+                val current = _roundEvent.value ?: return@launch
+                if (current.state == RoundEvent.RoundState.STARTED) {
+                    _roundEvent.value = current.copy(remaining = remaining)
+                } else {
+                    return@launch
+                }
             }
         }
     }

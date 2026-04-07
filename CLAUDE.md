@@ -80,17 +80,21 @@ RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
   - Each match has its own room: `match:${matchId}`
   - Authentication via `socket.handshake.auth.apiToken`
 
-- **Worker process** (`/server/bin/worker <workerToken>`): Separate process that connects via WebSocket using `workerToken`. Runs two background jobs every 1 second:
-  - `MatchUpdateWorker`: Broadcasts `match.update` for every open (not-yet-ended) round
+- **Worker process** (`/server/bin/worker <workerToken>`): Separate process that connects via WebSocket using `workerToken`. Runs three background jobs every 1 second:
+  - `MatchUpdateWorker`: Broadcasts `match.update` for every open (not-yet-ended) round **and** for every match currently in a break
   - `TechFallTrackerWorker`: Checks open rounds for tech fall threshold; if reached, ends the round in the DB and broadcasts `round.tech-fall`
-  - **Critical**: `match.update` is only sent while a round is open. Once a round ends (e.g. via tech fall), only `round.tech-fall` is sent — `match.update` stops for that match.
+  - `BreakTransitionWorker`: Checks matches in break state; when break expires, starts the next round and broadcasts `break.ended`
+  - **Critical**: Controllers never emit WebSocket events directly — all WebSocket emissions go through the worker process exclusively.
 
-- **Server→Client events** (both carry the full Match payload):
-  - `match.update` — periodic score/state updates while round is active
+- **Break lifecycle**: When a round ends and the match is not over, `Round.end()` sets `break_started_at` and `break_duration` on the match. `MatchUpdateWorker` picks this up within 1 second and starts broadcasting `match.update` with `break_remaining` (computed seconds). `BreakTransitionWorker` auto-starts the next round when elapsed >= `break_duration` and emits `break.ended`.
+
+- **Server→Client events** (all carry the full Match payload):
+  - `match.update` — periodic score/state updates while a round is active or a break is in progress
   - `round.tech-fall` — fired once when tech fall threshold is reached and round is ended
+  - `break.ended` — fired once when a break expires and the next round has been auto-started
 
 - **Client**: Flow-based observation (`/app/app/src/commonMain/kotlin/dev/jvmname/accord/network/SocketClient.kt`)
-  - `observeMatch(matchId): Flow<Match>` auto-joins room on collection and listens to **both** `match.update` and `round.tech-fall`
+  - `observeMatch(matchId): Flow<Match>` auto-joins room on collection and listens to `match.update`, `round.tech-fall`, and `break.ended`
   - Auto-leaves room on cancellation
 
 ### Server Architecture
@@ -149,7 +153,7 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 **Server** (JavaScript with Sequelize):
 - `User`: `id`, `name`, `api_token`
 - `Mat`: `id`, `name`, `judge_count`, `creator_id`
-- `Match`: `id`, `mat_id`, `creator_id`, `red_competitor_id`, `blue_competitor_id`, `red_score`, `blue_score`, `started_at`, `ended_at`
+- `Match`: `id`, `mat_id`, `creator_id`, `red_competitor_id`, `blue_competitor_id`, `red_score`, `blue_score`, `started_at`, `ended_at`, `break_started_at`, `break_duration`
 - `Round`: `id`, `match_id`, `ended_at`, `submission`, `submission_by`
 - `RidingTimeVote`: `id`, `round_id`, `judge_id`, `competitor_id`, `ended_at`
 - `RoundPause`: `id`, `round_id`, `paused_at`, `resumed_at`

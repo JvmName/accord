@@ -216,6 +216,18 @@ module.exports = {
             "allowNull": false,
             "primaryKey": false,
             "unique": false
+        },
+        "break_started_at": {
+            "type": "DATETIME",
+            "allowNull": true,
+            "primaryKey": false,
+            "unique": false
+        },
+        "break_duration": {
+            "type": "INTEGER",
+            "allowNull": true,
+            "primaryKey": false,
+            "unique": false
         }
     },
     "riding_time_votes": {

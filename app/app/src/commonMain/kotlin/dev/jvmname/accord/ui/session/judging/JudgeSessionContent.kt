@@ -3,19 +3,8 @@ package dev.jvmname.accord.ui.session.judging
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement.spacedBy
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.HeartBroken
@@ -24,16 +13,7 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Start
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedIconButton
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -54,6 +34,7 @@ import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.color
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
+import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.StubVibrator
@@ -124,9 +105,9 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
                     )
                 }
 
-                if (state.matchState.roundInfo?.state == RoundEvent.RoundState.ENDED) {
+                if (state.matchState.roundInfo?.round is RoundInfo.Break && state.matchState.roundInfo.state == RoundEvent.RoundState.ENDED) {
                     Text(
-                        text = "Break – Waiting for next round…",
+                        text = "Next round starting…",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

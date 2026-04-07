@@ -3,28 +3,14 @@ package dev.jvmname.accord.network
 import co.touchlab.kermit.Logger
 import dev.jvmname.accord.ui.catchRunning
 import dev.jvmname.accord.ui.onEither
-import dev.zacsweers.metro.AppScope
-import dev.zacsweers.metro.Assisted
-import dev.zacsweers.metro.AssistedFactory
-import dev.zacsweers.metro.AssistedInject
-import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.*
 import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.shareIn
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.coroutines.flow.*
+import kotlinx.serialization.json.*
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -105,6 +91,7 @@ actual class SocketClient actual constructor(
                 log.i { "joining room match:$matchId" }
                 socket.on("match.update", listener)
                     .on("round.tech-fall", listener)
+                    .on("break.ended", listener)
                     .emit("match.join", matchId.id)
 
                 awaitClose {
@@ -113,6 +100,7 @@ actual class SocketClient actual constructor(
                     socket.emit("match.leave", matchId.id)
                     socket.off("match.update", listener)
                     socket.off("round.tech-fall", listener)
+                    socket.off("break.ended", listener)
                 }
             }.shareIn(
                 scope = scope,

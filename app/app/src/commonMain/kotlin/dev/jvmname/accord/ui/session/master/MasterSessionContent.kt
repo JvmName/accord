@@ -1,29 +1,13 @@
 package dev.jvmname.accord.ui.session.master
 
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.NextPlan
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Password
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.StopCircle
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +21,7 @@ import com.slack.circuitx.overlays.BottomSheetOverlay
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
+import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.ui.common.IconTextButton
 import dev.jvmname.accord.ui.common.StandardScaffold
@@ -146,7 +131,9 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             }
 
             // Control buttons
-            if (state.matchState.roundInfo?.state == RoundEvent.RoundState.ENDED) {
+            val roundInfo = state.matchState.roundInfo
+            val isActiveBreak = roundInfo?.round is RoundInfo.Break && roundInfo.state == RoundEvent.RoundState.STARTED
+            if (!isActiveBreak && roundInfo?.state == RoundEvent.RoundState.ENDED) {
                 IconTextButton(
                     modifier = Modifier.fillMaxWidth(),
                     icon = Icons.AutoMirrored.Outlined.NextPlan,

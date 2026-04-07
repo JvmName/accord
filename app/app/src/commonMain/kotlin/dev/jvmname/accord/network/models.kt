@@ -134,6 +134,9 @@ class Match(
     val mat: Mat? = null,
     val judges: List<User> = emptyList(),
     val rounds: List<Round> = emptyList(),
+    @SerialName("break_started_at") val breakStartedAt: Instant? = null,
+    @SerialName("break_duration") val breakDuration: Int? = null,
+    @SerialName("break_remaining") val breakRemaining: Int? = null,
 ) : CommonParcelable
 
 @[Poko Serializable]

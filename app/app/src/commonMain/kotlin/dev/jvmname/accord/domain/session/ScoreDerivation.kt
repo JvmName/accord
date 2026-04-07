@@ -61,14 +61,18 @@ internal fun deriveRoundEventFromMatch(match: Match, config: MatchConfig): Round
         }
         else -> {
             // Between rounds: round N just ended, round N+1 hasn't started — count down the break.
-            val lastRound = match.rounds.lastOrNull() ?: return null
             val completedRounds = match.rounds.size
             val completedRoundInfo = config.getRound(completedRounds) ?: return null
             val breakInfo = config.rounds
                 .getOrNull(config.rounds.indexOf(completedRoundInfo) + 1) as? RoundInfo.Break
                 ?: return null
-            val elapsed = Clock.System.now() - lastRound.endedAt!!
-            val remaining = (breakInfo.duration - elapsed).coerceAtLeast(Duration.ZERO)
+            val remaining = if (match.breakRemaining != null) {
+                match.breakRemaining.seconds
+            } else {
+                val lastRound = match.rounds.lastOrNull() ?: return null
+                val elapsed = Clock.System.now() - lastRound.endedAt!!
+                (breakInfo.duration - elapsed).coerceAtLeast(Duration.ZERO)
+            }
             RoundEvent(
                 remaining = remaining,
                 roundNumber = completedRounds,

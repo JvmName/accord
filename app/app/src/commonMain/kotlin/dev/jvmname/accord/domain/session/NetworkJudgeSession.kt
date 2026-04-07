@@ -16,13 +16,12 @@ import dev.jvmname.accord.network.MatchId
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 @Inject
 @SingleIn(MatchScope::class)
@@ -41,6 +40,7 @@ class NetworkJudgeSession(
     override val score: StateFlow<Score> = _score.asStateFlow()
     private val _roundEvent = MutableStateFlow<RoundEvent?>(null)
     override val roundEvent: StateFlow<RoundEvent?> = _roundEvent.asStateFlow()
+    private var countdownJob: Job? = null
 
     private val hapticHelper = hapticFactory.create(
         buttonEvents = buttonPressTracker.buttonEvents,
@@ -57,7 +57,14 @@ class NetworkJudgeSession(
                 .collect { match ->
                     currentMatchId = match.id
                     _score.update { deriveScoreFromMatch(match) }
-                    _roundEvent.update { deriveRoundEventFromMatch(match, config) }
+                    val event = deriveRoundEventFromMatch(match, config)
+                    _roundEvent.value = event
+                    if (event?.state == RoundEvent.RoundState.STARTED) {
+                        startCountdown(event.remaining)
+                    } else {
+                        countdownJob?.cancel()
+                        countdownJob = null
+                    }
                 }
         }
 
@@ -112,6 +119,23 @@ class NetworkJudgeSession(
 
     override fun resume() {
         scope.launch { currentMatchId?.let { matchManager.resumeRound(it) } }
+    }
+
+    private fun startCountdown(initialRemaining: Duration) {
+        countdownJob?.cancel()
+        countdownJob = scope.launch {
+            var remaining = initialRemaining
+            while (remaining > Duration.ZERO) {
+                delay(1.seconds)
+                remaining -= 1.seconds
+                val current = _roundEvent.value ?: return@launch
+                if (current.state == RoundEvent.RoundState.STARTED) {
+                    _roundEvent.value = current.copy(remaining = remaining)
+                } else {
+                    return@launch
+                }
+            }
+        }
     }
 
     private fun Competitor.toCompetitorColor(): CompetitorColor = when (this) {

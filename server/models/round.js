@@ -165,7 +165,17 @@ class Round extends BaseRecord {
             await match.end();
         } else {
             const winner = await match.getWinner();
-            if (winner) await match.end()
+            if (winner) {
+                await match.end();
+            } else {
+                const breakDuration = match.rules.getBreakDuration(allRounds.length);
+                if (breakDuration > 0) {
+                    match.break_started_at = new Date();
+                    match.break_duration   = breakDuration;
+                    await match.save();
+                    match.clearCachedAssociation('rounds');
+                }
+            }
         }
     }
 
