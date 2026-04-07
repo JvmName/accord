@@ -199,6 +199,9 @@ enum class RoundResultType {
 
     @SerialName("tie")
     TIE,
+
+    @SerialName("tech-fall")
+    TECH_FALL,
 }
 
 @[Poko Serializable]

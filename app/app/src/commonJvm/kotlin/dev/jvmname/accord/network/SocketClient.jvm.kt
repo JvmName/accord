@@ -95,7 +95,7 @@ actual class SocketClient actual constructor(
                             trySend(match)
                         },
                         failure = { error ->
-                            val rawSnippet = args?.firstOrNull()?.toString()?.take(200)
+                            val rawSnippet = args?.firstOrNull()?.toString()
                             log.e(throwable = error) { "Websocket parse error matchId=$matchId raw=$rawSnippet" }
                         }
                     )
@@ -104,13 +104,15 @@ actual class SocketClient actual constructor(
                 // Register listener and join match room
                 log.i { "joining room match:$matchId" }
                 socket.on("match.update", listener)
-                socket.emit("match.join", matchId.id)
+                    .on("round.tech-fall", listener)
+                    .emit("match.join", matchId.id)
 
                 awaitClose {
                     // Leave match room and unregister listener
                     log.i { "leaving room match:$matchId" }
                     socket.emit("match.leave", matchId.id)
                     socket.off("match.update", listener)
+                    socket.off("round.tech-fall", listener)
                 }
             }.shareIn(
                 scope = scope,
