@@ -9,9 +9,7 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.JsonDecoder
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.*
 
 class ApiResultSerializer<T>(private val dataSerializer: KSerializer<T>) :
     KSerializer<ApiResult<T>> {
@@ -44,23 +42,25 @@ class ApiResultSerializer<T>(private val dataSerializer: KSerializer<T>) :
                 val data = jsonDecoder.json.decodeFromJsonElement(dataSerializer, dataElement)
                 ApiResult.Success(data)
             }
-            else -> {
-                val dataObject = dataElement.jsonObject
-                val errors = when {
-                    dataObject.containsKey("errors") -> {
+
+            else -> ApiResult.Error(
+                when (dataElement) {
+                    JsonNull -> TODO()
+                    JsonObject if (dataElement.jsonObject.containsKey("errors")) -> {
                         val errorsSerializer = MapSerializer(
                             String.serializer(),
                             ListSerializer(String.serializer())
                         )
-                        jsonDecoder.json.decodeFromJsonElement(errorsSerializer, dataObject["errors"]!!)
+                        jsonDecoder.json.decodeFromJsonElement(errorsSerializer, dataElement.jsonObject["errors"]!!)
                     }
-                    dataObject.containsKey("error") -> {
-                        mapOf("error" to listOf(dataObject["error"]!!.jsonPrimitive.content))
+
+                    else if (dataElement.jsonObject.containsKey("errors")) -> {
+                        mapOf("error" to listOf(dataElement.jsonObject["error"]!!.jsonPrimitive.content))
                     }
+
                     else -> throw SerializationException("Missing 'errors'/'error' field in error response")
                 }
-                ApiResult.Error(errors)
-            }
+            )
         }
     }
 }
