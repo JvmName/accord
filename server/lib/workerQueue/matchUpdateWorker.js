@@ -8,7 +8,7 @@ const RENDER_OPTIONS = { includeMat: true, includeMatchJudges: true, includeRoun
 class MatchUpdateWorker extends Worker {
     async performJob() {
         const rounds = await Round.getOpenRounds();
-        logger.debug(`Broadcasting match updates for ${rounds.length} open round(s)`);
+        logger.debug(`Broadcasting match updates for ${rounds.length} open round(s): [${rounds.map(r => r.match_id).join(', ')}]`);
         await Promise.all(rounds.map(round => this.#broadcastMatchUpdate(round)));
     }
 

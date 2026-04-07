@@ -1,4 +1,5 @@
 const { endRoundValidations } = require('../lib/controllers/roundsControllerHelpers');
+const { logger }              = require('../lib/logger');
 const { Mat }                 = require('../models/mat');
 const { Match }               = require('../models/match');
 const { ServerController }    = require('../lib/server');
@@ -44,6 +45,7 @@ class MatchesController extends ServerController {
         }
 
         await this.currentMatch.start();
+        logger.info(`Match started: match=${this.currentMatch.id} by user=${this.currentUser.id}`);
         const renderOptions = {includeMat: true, includeMatchJudges: true, includeRounds: true};
         await this.render({match: this.currentMatch}, renderOptions);
     }
@@ -63,6 +65,8 @@ class MatchesController extends ServerController {
         }
 
         await this.currentMatch.end(this.params);
+        const submission = this.params.submission ? ` submission=${this.params.submission} by=${this.params.submitter}` : '';
+        logger.info(`Match ended: match=${this.currentMatch.id} by user=${this.currentUser.id}${submission}`);
         const renderOptions = {includeMat: true, includeMatchJudges: true, includeRounds: true};
         await this.render({match: this.currentMatch}, renderOptions);
     }

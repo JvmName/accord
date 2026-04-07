@@ -1,4 +1,5 @@
 const { BaseRecord }          = require('../lib/activeRecord');
+const { logger }              = require('../lib/logger');
 const { RidingTimeVote }      = require('./ridingTimeVote');
 const { RoundPause }          = require('./roundPause');
 const { RDojoKombatRules }    = require('../lib/rules');
@@ -153,6 +154,11 @@ class Round extends BaseRecord {
 
         this.ended_at = new Date();
         await this.save();
+
+        const redScore  = await this.getRedScore();
+        const blueScore = await this.getBlueScore();
+        const sub       = submission ? ` submission=${submission} by=${submitter}` : '';
+        logger.info(`Round ended: match=${this.match_id} round=${this.id} red=${redScore} blue=${blueScore}${sub}`);
 
         const allRounds = await match.getRounds();
         if (allRounds.length == match.maxRounds) {

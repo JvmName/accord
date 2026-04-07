@@ -29,13 +29,18 @@ class WebSocket extends AbstractWebSocket {
 
     async handleMatchJoined(matchId) {
         const match = await Match.find(matchId)
-        if (!await this.authorizer.can('view', match)) return;
+        if (!await this.authorizer.can('view', match)) {
+            logger.warn(`WS match.join denied: user=${this.currentUser?.id} match=${matchId} socket=${this.id}`);
+            return;
+        }
 
+        logger.info(`WS match.join: user=${this.currentUser.id} match=${matchId} socket=${this.id}`);
         this.join(this.roomForMatch(matchId));
     }
 
 
     handleMatchLeft(matchId) {
+        logger.info(`WS match.leave: user=${this.currentUser?.id} match=${matchId} socket=${this.id}`);
         this.leave(this.roomForMatch(matchId));
     }
 

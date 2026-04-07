@@ -66,12 +66,15 @@ class WebSocketServer {
         } else if (query?.workerToken) {
             socket = new WorkerWebSocket(ioSocket, this);
         } else {
+            logger.warn(`WebSocket rejected: no token (${ioSocket.id})`);
             ioSocket.disconnect();
             return next();
         }
 
         try {
             await socket.init();
+            const type = auth?.apiToken ? 'client' : 'worker';
+            logger.info(`WebSocket initialized as ${type} (${ioSocket.id})`);
             next();
         } catch(err) {
             if (CONSTANTS.ENV != 'test') logger.error(err);

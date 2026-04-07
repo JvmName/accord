@@ -1,4 +1,5 @@
 const { BaseRecord }       = require('../lib/activeRecord');
+const { logger }           = require('../lib/logger');
 const { Mat }              = require('./mat');
 const { RDojoKombatRules } = require('../lib/rules');
 const { Round }            = require('./round');
@@ -107,6 +108,7 @@ class Match extends BaseRecord {
         }
 
         const newRound = await Round.create({match_id: this.id});
+        logger.info(`Round created: match=${this.id} round=${newRound.id}`);
         this.clearCachedAssociation('rounds')
     }
 
