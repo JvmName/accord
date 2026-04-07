@@ -3,7 +3,8 @@
 const { logger }                = require('../lib/logger');
 const { BreakTransitionWorker,
         TechFallTrackerWorker,
-        MatchUpdateWorker }     = require('../lib/workerQueue');
+        MatchUpdateWorker,
+        RoundTimerWorker }      = require('../lib/workerQueue');
 
 
 
@@ -12,6 +13,7 @@ if (workerToken) {
     new TechFallTrackerWorker(workerToken).start();
     new MatchUpdateWorker(workerToken).start();
     new BreakTransitionWorker(workerToken).start();
+    new RoundTimerWorker(workerToken).start();
 } else {
     logger.error('Missing worker token. Unable to start worker');
 }
