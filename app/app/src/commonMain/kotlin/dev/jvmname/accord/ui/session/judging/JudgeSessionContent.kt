@@ -17,13 +17,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.NextPlan
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.HeartBroken
 import androidx.compose.material.icons.filled.MoveUp
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Start
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -282,7 +282,7 @@ fun RoundControlsSheet(modifier: Modifier = Modifier, actions: MatchActions) {
 
             val actionsList = remember(actions) {
                 listOf(
-                    actions.startRound to Icons.AutoMirrored.Outlined.NextPlan,
+                    actions.startRound to Icons.Outlined.Start,
                     actions.resume to Icons.Outlined.PlayArrow,
                     actions.pause to Icons.Outlined.PauseCircle,
                     actions.endRound to Icons.Default.HeartBroken,

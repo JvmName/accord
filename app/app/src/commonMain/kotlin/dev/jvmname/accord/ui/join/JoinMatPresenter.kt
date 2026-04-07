@@ -81,9 +81,12 @@ class JoinMatPresenter(
                                     navigator.goTo(next)
                                 },
                                 failure = {
-                                    val errorMessage = it.message ?: "Failed to join mat"
-                                    log.w { "join failed: $errorMessage" }
-                                    error = errorMessage
+                                    error = when {
+                                        it.containsKey("matCode") -> "Error joining — check the code for typos"
+                                        else -> it.message
+                                    }.also {
+                                        log.w { "join failed: $it" }
+                                    }
                                 }
                             )
                         loading = false

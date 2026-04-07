@@ -26,13 +26,12 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.slack.circuit.codegen.annotations.CircuitInject
-import dev.jvmname.accord.ui.common.LocalCoroutineScope
-import dev.jvmname.accord.ui.common.LocalSnackbarHostState
+import com.slack.circuit.overlay.OverlayEffect
+import com.slack.circuitx.overlays.BottomSheetOverlay
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.theme.AccordTheme
 import dev.jvmname.accord.ui.theme.wordChipColors
 import dev.zacsweers.metro.AppScope
-import kotlinx.coroutines.launch
 
 @[Composable CircuitInject(JoinMatScreen::class, AppScope::class)]
 fun JoinMatContent(state: JoinMatState, modifier: Modifier = Modifier) {
@@ -41,10 +40,25 @@ fun JoinMatContent(state: JoinMatState, modifier: Modifier = Modifier) {
         onBackClick = { state.eventSink(JoinMatEvent.Back) },
         modifier = modifier.fillMaxSize(),
     ) { padding ->
-        state.error?.let {
-            val snackbar = LocalSnackbarHostState.current
-            LocalCoroutineScope.current.launch {
-                snackbar.showSnackbar(it)
+
+
+        state.error?.let { error ->
+            OverlayEffect(state.error) {
+                show(BottomSheetOverlay(model = Unit, onDismiss = {}) { _, _ ->
+                    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Text(
+                            "Error joining mat",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(bottom = 12.dp),
+                        )
+                        Text(
+                            error, style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                })
             }
         }
 

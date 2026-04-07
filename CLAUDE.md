@@ -78,11 +78,19 @@ RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
 
 - **Server**: Socket.IO with room-based broadcasting (`/server/lib/server/webSocketServer.js`)
   - Each match has its own room: `match:${matchId}`
-  - Updates sent every 1 second to all clients in room
   - Authentication via `socket.handshake.auth.apiToken`
 
+- **Worker process** (`/server/bin/worker <workerToken>`): Separate process that connects via WebSocket using `workerToken`. Runs two background jobs every 1 second:
+  - `MatchUpdateWorker`: Broadcasts `match.update` for every open (not-yet-ended) round
+  - `TechFallTrackerWorker`: Checks open rounds for tech fall threshold; if reached, ends the round in the DB and broadcasts `round.tech-fall`
+  - **Critical**: `match.update` is only sent while a round is open. Once a round ends (e.g. via tech fall), only `round.tech-fall` is sent — `match.update` stops for that match.
+
+- **Server→Client events** (both carry the full Match payload):
+  - `match.update` — periodic score/state updates while round is active
+  - `round.tech-fall` — fired once when tech fall threshold is reached and round is ended
+
 - **Client**: Flow-based observation (`/app/app/src/commonMain/kotlin/dev/jvmname/accord/network/SocketClient.kt`)
-  - `observeMatch(matchId): Flow<Match>` auto-joins room on collection
+  - `observeMatch(matchId): Flow<Match>` auto-joins room on collection and listens to **both** `match.update` and `round.tech-fall`
   - Auto-leaves room on cancellation
 
 ### Server Architecture

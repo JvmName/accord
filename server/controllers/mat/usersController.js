@@ -117,6 +117,11 @@ class UsersController extends ServerController {
     * HELPERS
     ***********************************************************************************************/
     async addUser() {
+        if (!this.currentMatCode) {
+            await this.renderErrors({matCode: ['not found']}, 404);
+            return;
+        }
+
         if (!this.currentUser) {
             const name       = this.params.name || 'Anonymous';
             this.currentUser = await User.create({name: name});
