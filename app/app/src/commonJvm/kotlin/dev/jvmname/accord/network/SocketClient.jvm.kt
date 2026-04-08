@@ -3,34 +3,20 @@ package dev.jvmname.accord.network
 import co.touchlab.kermit.Logger
 import dev.jvmname.accord.ui.catchRunning
 import dev.jvmname.accord.ui.onEither
-import dev.zacsweers.metro.AppScope
-import dev.zacsweers.metro.Assisted
-import dev.zacsweers.metro.AssistedFactory
-import dev.zacsweers.metro.AssistedInject
-import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.*
 import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.shareIn
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.coroutines.flow.*
+import kotlinx.serialization.json.*
 import org.json.JSONArray
 import org.json.JSONObject
 
 @AssistedInject
 actual class SocketClient actual constructor(
-    baseUrl: BaseUrl,
+    private val baseUrl: BaseUrl,
     @Assisted token: AuthToken,
     private val json: Json,
     private val scope: CoroutineScope,
@@ -40,6 +26,8 @@ actual class SocketClient actual constructor(
     actual interface Factory {
         actual fun create(token: AuthToken): SocketClient
     }
+
+    private val log = Logger.withTag("Net/Socket")
 
     private val socket: Socket
 
@@ -53,9 +41,22 @@ actual class SocketClient actual constructor(
             //TODO websocketfactory
         }
         socket = IO.socket(baseUrl.baseUrl, options)
+
+        socket.on(Socket.EVENT_CONNECT) {
+            log.i { "socket connected" }
+        }
+        socket.on(Socket.EVENT_DISCONNECT) { args ->
+            val reason = args?.firstOrNull()?.toString() ?: "unknown"
+            log.i { "socket disconnected reason=$reason" }
+        }
+        socket.on(Socket.EVENT_CONNECT_ERROR) { args ->
+            val error = args?.firstOrNull()?.toString() ?: "unknown"
+            log.e { "socket connect error: $error" }
+        }
     }
 
     actual fun connect() {
+        log.i { "connecting to ${baseUrl.baseUrl}" }
         if (!socket.connected()) {
             socket.connect()
         }
@@ -75,19 +76,31 @@ actual class SocketClient actual constructor(
                         val el = args[0].toJsonElement()
                         json.decodeFromJsonElement<Match>(el)
                     }.onEither(
-                        success = { trySend(it) },
-                        failure = { Logger.e(throwable = it) { "Websocket parse error: " } }
+                        success = { match ->
+                            log.d { "match update matchId=$matchId rounds=${match.rounds.size}" }
+                            trySend(match)
+                        },
+                        failure = { error ->
+                            val rawSnippet = args?.firstOrNull()?.toString()
+                            log.e(throwable = error) { "Websocket parse error matchId=$matchId raw=$rawSnippet" }
+                        }
                     )
                 }
 
                 // Register listener and join match room
+                log.i { "joining room match:$matchId" }
                 socket.on("match.update", listener)
-                socket.emit("match.join", matchId.id)
+                    .on("round.tech-fall", listener)
+                    .on("break.ended", listener)
+                    .emit("match.join", matchId.id)
 
                 awaitClose {
                     // Leave match room and unregister listener
+                    log.i { "leaving room match:$matchId" }
                     socket.emit("match.leave", matchId.id)
                     socket.off("match.update", listener)
+                    socket.off("round.tech-fall", listener)
+                    socket.off("break.ended", listener)
                 }
             }.shareIn(
                 scope = scope,

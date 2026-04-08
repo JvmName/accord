@@ -1,5 +1,6 @@
 const { endRoundValidations } = require('../../lib/controllers/roundsControllerHelpers');
 const { ServerController }    = require('../../lib/server');
+const { logger }              = require('../../lib/logger');
 
 class RoundsController extends ServerController {
     setupCallbacks() {
@@ -11,6 +12,7 @@ class RoundsController extends ServerController {
     async postStartRound() {
         try {
             await this.currentMatch.startRound();
+            logger.info(`Round started: match=${this.currentMatch.id} by user=${this.currentUser.id}`);
             const options = {includeRounds: true, includeJudges: true, includeMat: true};
             await this.render({match: this.currentMatch}, options);
         } catch(err) {
@@ -25,6 +27,10 @@ class RoundsController extends ServerController {
 
         try {
             await this.currentMatch.endRound(this.params);
+            const submission = this.params.submission ? ` submission=${this.params.submission} by=${this.params.submitter}` : '';
+            const stoppage   = this.params.stoppage   ? ` stoppage by=${this.params.stopper}` : '';
+            logger.info(`Round ended: match=${this.currentMatch.id} by user=${this.currentUser.id}${submission}${stoppage}`);
+
             const options = {includeRounds: true, includeJudges: true, includeMat: true};
             await this.render({match: this.currentMatch}, options);
         } catch(err) {
@@ -44,6 +50,7 @@ class RoundsController extends ServerController {
 
         try {
             await round.pause();
+            logger.info(`Round paused: match=${this.currentMatch.id} round=${round.id} by user=${this.currentUser.id}`);
             const options = {includeRounds: true, includeJudges: true, includeMat: true};
             await this.render({match: this.currentMatch}, options);
         } catch(err) {
@@ -63,6 +70,7 @@ class RoundsController extends ServerController {
 
         try {
             await round.resume();
+            logger.info(`Round resumed: match=${this.currentMatch.id} round=${round.id} by user=${this.currentUser.id}`);
             const options = {includeRounds: true, includeJudges: true, includeMat: true};
             await this.render({match: this.currentMatch}, options);
         } catch(err) {

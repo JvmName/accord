@@ -3,7 +3,7 @@
 // Note: red_score and blue_score exist in the DB but are intentionally excluded from apiSafeKeys.
 // Match.toApiResponse() always adds: red_competitor, blue_competitor, winner.
 // Optional associations (present in properties but not required): mat, judges, rounds.
-// Timestamps are serialized as milliseconds (integer) via ServerController._formatJSONBody.
+// Timestamps are serialized as ISO 8601 strings via ServerController._formatJSONBody (Date.toISOString()).
 
 const Match = {
     type: "object",
@@ -24,12 +24,14 @@ const Match = {
             description: "UUID of the mat this match belongs to"
         },
         started_at: {
-            type: ["integer", "null"],
-            description: "Timestamp (ms since epoch) when the match started, or null if not yet started"
+            type: ["string", "null"],
+            format: "date-time",
+            description: "ISO 8601 timestamp when the match started, or null if not yet started"
         },
         ended_at: {
-            type: ["integer", "null"],
-            description: "Timestamp (ms since epoch) when the match ended, or null if still ongoing"
+            type: ["string", "null"],
+            format: "date-time",
+            description: "ISO 8601 timestamp when the match ended, or null if still ongoing"
         },
         red_competitor: {
             $ref: "#/components/schemas/User",

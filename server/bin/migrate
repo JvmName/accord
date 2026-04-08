@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const   migration = require('../lib/active_record/db/migration');
+const   migration = require('../lib/activeRecord/db/migration');
 const { Command } = require('commander');
 
 

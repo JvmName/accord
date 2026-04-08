@@ -3,39 +3,17 @@ package dev.jvmname.accord.ui.session.judging
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement.spacedBy
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.NextPlan
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.HeartBroken
 import androidx.compose.material.icons.filled.MoveUp
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedIconButton
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.outlined.Start
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -54,21 +32,20 @@ import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.color
-import dev.jvmname.accord.domain.control.buttonHold
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.StubVibrator
-import dev.jvmname.accord.ui.common.IconTextButton
+import dev.jvmname.accord.ui.common.HoldingButton
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.JudgeSessionEvent
 import dev.jvmname.accord.ui.session.JudgeSessionEvent.ButtonPress
 import dev.jvmname.accord.ui.session.JudgeSessionEvent.ButtonRelease
-import dev.jvmname.accord.ui.session.JudgeSessionEvent.ManualEdit
 import dev.jvmname.accord.ui.session.ManualEditAction
 import dev.jvmname.accord.ui.session.MatchActions
+import dev.jvmname.accord.ui.session.MatchState
 import dev.jvmname.accord.ui.theme.AccordTheme
 import top.ltfan.multihaptic.compose.rememberVibrator
 import kotlin.time.Duration.Companion.minutes
@@ -113,32 +90,25 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
             ) {
                 Spacer(modifier = Modifier.height(32.dp))
 
-                val remainingTime = remember(state.matchState.roundInfo) {
-                    state.matchState
-                        .roundInfo
-                        ?.remainingHumanTime()
-                        ?: "0:00"
-                }
                 Text(
-                    remainingTime,
+                    state.matchState.timerDisplay,
                     style = MaterialTheme.typography.displayLargeEmphasized,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                val roundNumber = remember(state.matchState.roundInfo) {
-                    val roundInfo = state.matchState.roundInfo
-                    when (val round = roundInfo?.round) {
-                        null -> null
-                        is RoundInfo.Break -> "Break"
-                        is RoundInfo.Round -> "Round ${round.index} of ${roundInfo.totalRounds}"
-                    }
-                }
-                roundNumber?.let {
+                state.matchState.roundLabel?.let {
                     Text(
                         text = it,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                if (state.matchState.roundInfo?.round is RoundInfo.Break && state.matchState.roundInfo.state == RoundEvent.RoundState.ENDED) {
+                    Text(
+                        text = "Next round starting…",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -152,11 +122,10 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
                         PlayerControl(
                             modifier = Modifier.weight(1f),
                             points = state.matchState.score.getPoints(competitor),
-                            controlDuration = state.matchState.score.controlTimeHumanReadable(competitor),
+                            controlDuration = state.matchState.controlDurations[competitor],
                             color = competitor.color,
                             playerName = competitor.nameStr,
-                            shouldShowPointControls = state.matchState.roundInfo?.state == RoundEvent.RoundState.PAUSED
-                                    && state.matchState.score.techFallWin == null,
+                            manualEdit = state.actions.manualEdit,
                             eventSink = state.eventSink,
                             player = competitor
                         )
@@ -168,7 +137,7 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
             }
         }
 
-        if (state.isMatchEnded) {
+        state.matchResult?.let { matchResult ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -181,7 +150,15 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = spacedBy(16.dp)
                     ) {
-                        Text("Match Over", style = MaterialTheme.typography.headlineMedium)
+                        Text("Match Over", style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.padding(bottom = 16.dp))
+
+                        Text(
+                            matchResult.toText(),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+
                         Button(
                             onClick = { state.eventSink(JudgeSessionEvent.Back) },
                             modifier = Modifier.fillMaxWidth()
@@ -192,6 +169,7 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
                 }
             }
         }
+
     }
 }
 
@@ -203,7 +181,7 @@ private fun PlayerControl(
     color: Color,
     playerName: String,
     player: Competitor,
-    shouldShowPointControls: Boolean,
+    manualEdit: ((Competitor, ManualEditAction) -> Unit)?,
     eventSink: EventSink,
     modifier: Modifier = Modifier,
 ) {
@@ -217,13 +195,11 @@ private fun PlayerControl(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = spacedBy(6.dp)
         ) {
-            AnimatedVisibility(shouldShowPointControls) {
+            AnimatedVisibility(manualEdit != null) {
                 CompositionLocalProvider(LocalContentColor provides color) {
                     OutlinedIconButton(
                         onClick = {
-                            if (points > 0) eventSink(
-                                ManualEdit(player, ManualEditAction.DECREMENT)
-                            )
+                            if (points > 0) manualEdit?.invoke(player, ManualEditAction.DECREMENT)
                         },
                         enabled = points > 0
                     ) {
@@ -243,11 +219,9 @@ private fun PlayerControl(
                 fontWeight = FontWeight.Medium
             )
             CompositionLocalProvider(LocalContentColor provides color) {
-                AnimatedVisibility(shouldShowPointControls) {
+                AnimatedVisibility(manualEdit != null) {
                     OutlinedIconButton(
-                        onClick = {
-                            eventSink(ManualEdit(player, ManualEditAction.INCREMENT))
-                        },
+                        onClick = { manualEdit?.invoke(player, ManualEditAction.INCREMENT) },
                     ) {
                         Icon(
                             Icons.Default.Add,
@@ -272,33 +246,15 @@ private fun PlayerControl(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        IconTextButton(
+        HoldingButton(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth()
-                .clickable(false) {
-                    Logger.d { "Clicked not pressed" }
-                    eventSink(ButtonPress(player))
-                    eventSink(ButtonRelease(player))
-                }
-                .buttonHold(
-                    onPress = {
-                        Logger.d { "UI press $player" }
-                        eventSink(ButtonPress(player))
-                    },
-                    onRelease = {
-                        Logger.d { "UI press $player" }
-                        eventSink(ButtonRelease(player))
-                    }
-                ),
+                .fillMaxWidth(),
             icon = Icons.Default.MoveUp,
             text = "$playerName controlling",
-            colors = ButtonDefaults.buttonColors(containerColor = color),
-            onClick = {
-                Logger.d { "Clicked not pressed" }
-                eventSink(ButtonPress(player))
-                eventSink(ButtonRelease(player))
-            }
+            containerColor = color,
+            onPress = { eventSink(ButtonPress(player)) },
+            onRelease = { eventSink(ButtonRelease(player)) },
         )
     }
 }
@@ -316,7 +272,7 @@ fun RoundControlsSheet(modifier: Modifier = Modifier, actions: MatchActions) {
 
             val actionsList = remember(actions) {
                 listOf(
-                    actions.startRound to Icons.AutoMirrored.Outlined.NextPlan,
+                    actions.startRound to Icons.Outlined.Start,
                     actions.resume to Icons.Outlined.PlayArrow,
                     actions.pause to Icons.Outlined.PauseCircle,
                     actions.endRound to Icons.Default.HeartBroken,
@@ -362,7 +318,11 @@ private fun JudgeSessionContentPreview() {
                         totalRounds = 3,
                         round = MatchConfig.RdojoKombat.rounds[0],
                         state = RoundEvent.RoundState.STARTED
-                    )
+                    ),
+                    timerDisplay = "2:30",
+                    roundLabel = "Round 1 of 3",
+                    controlDurations = emptyMap(),
+                    roundScores = emptyMap(),
                 ),
                 actions = MatchActions(),
                 eventSink = { },
@@ -394,7 +354,11 @@ private fun JudgeSessionContentPreview_Paused() {
                         totalRounds = 3,
                         round = MatchConfig.RdojoKombat.rounds[0],
                         state = RoundEvent.RoundState.PAUSED
-                    )
+                    ),
+                    timerDisplay = "2:30",
+                    roundLabel = "Round 1 of 3",
+                    controlDurations = emptyMap(),
+                    roundScores = emptyMap(),
                 ),
                 actions = MatchActions(),
                 eventSink = { },
@@ -427,6 +391,10 @@ private fun JudgeSessionContentPreview_Holding() {
                         round = MatchConfig.RdojoKombat.rounds[0],
                         state = RoundEvent.RoundState.STARTED
                     ),
+                    timerDisplay = "2:30",
+                    roundLabel = "Round 1 of 3",
+                    controlDurations = mapOf(Competitor.BLUE to "(3)"),
+                    roundScores = emptyMap(),
                 ),
                 actions = MatchActions(),
                 eventSink = { },

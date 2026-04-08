@@ -78,11 +78,25 @@ RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
 
 - **Server**: Socket.IO with room-based broadcasting (`/server/lib/server/webSocketServer.js`)
   - Each match has its own room: `match:${matchId}`
-  - Updates sent every 1 second to all clients in room
   - Authentication via `socket.handshake.auth.apiToken`
 
+- **Worker process** (`/server/bin/worker <workerToken>`): Separate process that connects via WebSocket using `workerToken`. Runs four background jobs every 1 second:
+  - `MatchUpdateWorker`: Broadcasts `match.update` for every open (not-yet-ended) round **and** for every match currently in a break
+  - `TechFallTrackerWorker`: Checks open rounds for tech fall threshold; if reached, ends the round in the DB and broadcasts `round.tech-fall`
+  - `BreakTransitionWorker`: Checks matches in break state; when break expires, starts the next round and broadcasts `break.ended`
+  - `RoundTimerWorker`: Checks open rounds for timer expiry; if elapsed time (minus pauses) ≥ max duration, ends the round and broadcasts `match.update`
+  - **Critical**: Controllers never emit WebSocket events directly — all WebSocket emissions go through the worker process exclusively.
+  - **Warning**: An unhandled exception in any worker's `performJob()` will silently kill that worker — it stops re-queuing with no log output. Always handle errors inside `performJob()` or the affected rounds/matches will never auto-advance.
+
+- **Break lifecycle**: When a round ends and the match is not over, `Round.end()` sets `break_started_at` and `break_duration` on the match. `MatchUpdateWorker` picks this up within 1 second and starts broadcasting `match.update` with `break_remaining` (computed seconds). `BreakTransitionWorker` auto-starts the next round when elapsed >= `break_duration` and emits `break.ended`.
+
+- **Server→Client events** (all carry the full Match payload):
+  - `match.update` — periodic score/state updates while a round is active or a break is in progress
+  - `round.tech-fall` — fired once when tech fall threshold is reached and round is ended
+  - `break.ended` — fired once when a break expires and the next round has been auto-started
+
 - **Client**: Flow-based observation (`/app/app/src/commonMain/kotlin/dev/jvmname/accord/network/SocketClient.kt`)
-  - `observeMatch(matchId): Flow<Match>` auto-joins room on collection
+  - `observeMatch(matchId): Flow<Match>` auto-joins room on collection and listens to `match.update`, `round.tech-fall`, and `break.ended`
   - Auto-leaves room on cancellation
 
 ### Server Architecture
@@ -141,7 +155,7 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 **Server** (JavaScript with Sequelize):
 - `User`: `id`, `name`, `api_token`
 - `Mat`: `id`, `name`, `judge_count`, `creator_id`
-- `Match`: `id`, `mat_id`, `creator_id`, `red_competitor_id`, `blue_competitor_id`, `red_score`, `blue_score`, `started_at`, `ended_at`
+- `Match`: `id`, `mat_id`, `creator_id`, `red_competitor_id`, `blue_competitor_id`, `red_score`, `blue_score`, `started_at`, `ended_at`, `break_started_at`, `break_duration`
 - `Round`: `id`, `match_id`, `ended_at`, `submission`, `submission_by`
 - `RidingTimeVote`: `id`, `round_id`, `judge_id`, `competitor_id`, `ended_at`
 - `RoundPause`: `id`, `round_id`, `paused_at`, `resumed_at`
@@ -162,6 +176,16 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 4. **Stateless Server**: Judge state stored in database, not in-memory - enables horizontal scaling
 
 5. **Room-Based Broadcasting**: WebSocket rooms keep server scalable; all interested clients receive updates atomically
+
+6. **Match Extensions in `models_ext.kt`**: All winner/score derivation from `Match` belongs in `/app/app/src/commonMain/kotlin/dev/jvmname/accord/network/models_ext.kt`, not inlined in presenters. Key extensions: `Match.winner(roundIndex)`, `Match.winnerCompetitor`, `Match.roundScore()`, `Match.toMatchResult()`.
+
+7. **`MatchResult` is shared across screens**: Defined in `JudgeSessionScreen.kt` but imported by `MasterSessionScreen.kt` as well. `winner` field is `Pair<User, Competitor>` (not just `Competitor`).
+
+8. **Judge vs Master role separation**: Judges only vote on control time — they do NOT handle meta-round actions (submission, stoppage, manual score edits are master-only). `JudgeSessionEvent.EndRound` is a simple `data object` that ends the round with no params. All structured end-round actions (submission name, who submitted/stopped, stoppage vs submission choice) belong exclusively in the master session.
+
+9. **Master session overlay pattern**: The master uses Circuit's `OverlayEffect` + `BottomSheetOverlay` for dialogs (not `AlertDialog`). The end-round dialog is `SubmissionDialog` in `/app/.../ui/session/master/overlay.kt`, which returns a `SubmissionResult` sealed class. `SubmissionResult.Confirmed` carries both submission and stoppage paths. The content maps the result to `MasterSessionEvent.EndRound` which carries `submission`, `submitter`, `stoppage`, and `stopper` fields.
+
+10. **End-round method routing**: `RoundController.endRound(winner, submission, stoppage)` — `winner` doubles as submitter (submission path) or stopper (stoppage path). `MasterSession` routes to the correct `MatchManager.endRound` overload based on the `stoppage` flag. The server API uses `{ submission, submitter }` for submissions and `{ stoppage: true, stopper }` for stoppages.
 
 ## Testing
 

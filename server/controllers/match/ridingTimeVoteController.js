@@ -1,5 +1,6 @@
 const { RidingTimeVote }   = require('../../models/ridingTimeVote');
 const { ServerController } = require('../../lib/server');
+const { logger }           = require('../../lib/logger');
 
 
 class RidingTimeVoteController extends ServerController {
@@ -24,6 +25,7 @@ class RidingTimeVoteController extends ServerController {
             return false;
         }
 
+        logger.info(`Vote started: judge=${this.currentUser.id} rider=${this.params.rider} match=${this.currentMatch.id} round=${this.#currentRound.id}`);
         const options = {includeRounds: true, includeJudges: true, includeMat: true};
         await this.render({match: this.currentMatch}, options);
     }
@@ -37,6 +39,7 @@ class RidingTimeVoteController extends ServerController {
             return false;
         }
 
+        logger.info(`Vote ended: judge=${this.currentUser.id} rider=${this.params.rider} match=${this.currentMatch.id} round=${this.#currentRound.id}`);
         const options = {includeRounds: true, includeJudges: true, includeMat: true};
         await this.render({match: this.currentMatch}, options);
     }

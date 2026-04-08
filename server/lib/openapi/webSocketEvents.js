@@ -4,7 +4,7 @@
 
 const webSocketEvents = [
 
-  // Implemented in: server/lib/server/webSocketEventHandlers/matchEventHandlers.js
+  // Implemented in: server/lib/server/webSocket.js
   {
     name:        'match.join',
     direction:   'client->server',
@@ -18,7 +18,7 @@ const webSocketEvents = [
     }
   },
 
-  // Implemented in: server/lib/server/webSocketEventHandlers/matchEventHandlers.js
+  // Implemented in: server/lib/server/webSocket.js
   {
     name:        'match.leave',
     direction:   'client->server',
@@ -32,7 +32,7 @@ const webSocketEvents = [
     }
   },
 
-  // Implemented in: server/lib/server/webSocketEventHandlers/matchEventHandlers.js
+  // Implemented in: server/lib/server/webSocket.js
   {
     name:        'match.update',
     direction:   'server->client',

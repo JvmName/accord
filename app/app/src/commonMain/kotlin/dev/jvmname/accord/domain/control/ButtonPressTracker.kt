@@ -1,10 +1,5 @@
 package dev.jvmname.accord.domain.control
 
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import co.touchlab.kermit.Logger
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
@@ -221,23 +216,6 @@ class RealButtonPressTracker(
     }
 
 }
-
-fun Modifier.buttonHold(
-    onPress: () -> Unit,
-    onRelease: () -> Unit,
-): Modifier = pointerInput(onPress, onRelease) {
-    awaitEachGesture {
-        awaitFirstDown(requireUnconsumed = false).also {
-            onPress()
-            it.consume()
-        }
-        waitForUpOrCancellation()?.also {
-            it.consume()
-            onRelease()
-        }
-    }
-}
-
 
 private val ButtonEvent.competitor: Competitor?
     get() = when (this) {

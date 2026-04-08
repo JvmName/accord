@@ -1,4 +1,5 @@
 const { BaseRecord }       = require('../lib/activeRecord');
+const { logger }           = require('../lib/logger');
 const { Mat }              = require('./mat');
 const { RDojoKombatRules } = require('../lib/rules');
 const { Round }            = require('./round');
@@ -86,7 +87,9 @@ class Match extends BaseRecord {
         if (!this.started) throw new Error("This match has already not started");
 
         await Match.transaction(async () => {
-            this.ended_at = new Date();
+            this.ended_at          = new Date();
+            this.break_started_at  = null;
+            this.break_duration    = null;
             await this.save();
             await this.endRound({safe: true});
         });
@@ -107,6 +110,7 @@ class Match extends BaseRecord {
         }
 
         const newRound = await Round.create({match_id: this.id});
+        logger.info(`Round created: match=${this.id} round=${newRound.id}`);
         this.clearCachedAssociation('rounds')
     }
 
@@ -132,7 +136,14 @@ class Match extends BaseRecord {
     * API AND PROPERTIES
     ***********************************************************************************************/
     get apiSafeKeys() {
-        return ['creator_id', 'id', 'mat_id', 'started_at', 'ended_at'];
+        return ['creator_id', 'id', 'mat_id', 'started_at', 'ended_at', 'break_started_at', 'break_duration'];
+    }
+
+
+    get breakRemaining() {
+        if (!this.break_started_at || !this.break_duration) return null;
+        const elapsed = Math.floor((Date.now() - new Date(this.break_started_at).getTime()) / 1000);
+        return Math.max(0, this.break_duration - elapsed);
     }
 
 
@@ -141,18 +152,19 @@ class Match extends BaseRecord {
         response.red_competitor  = await this.getRedCompetitor();
         response.blue_competitor = await this.getBlueCompetitor();
         response.winner          = await this.getWinner();
+        response.break_remaining = this.breakRemaining;
 
         if (options.includeMat) {
             const mat    = await this.getMat();
-            response.mat = mat.toApiResponse(options);
+            response.mat = await mat.toApiResponse(options);
         }
         if (options.includeMatchJudges) {
             const judges    = await this.getJudges()
-            response.judges = judges.map(j => j.toApiResponse(options));
+            response.judges = await Promise.all(judges.map(j => j.toApiResponse(options)));
         }
         if (options.includeRounds) {
             const rounds    = await this.getRounds();
-            response.rounds = rounds.map(r => r.toApiResponse(options));
+            response.rounds = await Promise.all(rounds.map(r => r.toApiResponse(options)));
         }
 
         return response;

@@ -57,20 +57,24 @@ class WebSocketServer {
 
 
     async _initWebSocket(ioSocket, next) {
-        const query = ioSocket.handshake.query
+        const auth  = ioSocket.handshake.auth;
+        const query = ioSocket.handshake.query;
         let socket;
 
-        if (query?.apiToken) {
+        if (auth?.apiToken) {
             socket = new WebSocket(ioSocket, this);
         } else if (query?.workerToken) {
             socket = new WorkerWebSocket(ioSocket, this);
         } else {
-            ioSocket.close();
+            logger.warn(`WebSocket rejected: no token (${ioSocket.id})`);
+            ioSocket.disconnect();
             return next();
         }
 
         try {
             await socket.init();
+            const type = auth?.apiToken ? 'client' : 'worker';
+            logger.info(`WebSocket initialized as ${type} (${ioSocket.id})`);
             next();
         } catch(err) {
             if (CONSTANTS.ENV != 'test') logger.error(err);

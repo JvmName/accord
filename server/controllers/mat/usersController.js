@@ -1,3 +1,4 @@
+const { logger }           = require('../../lib/logger');
 const { Mat }              = require('../../models/mat');
 const { MatCode }          = require('../../models/matCode');
 const { ServerController } = require('../../lib/server');
@@ -117,6 +118,11 @@ class UsersController extends ServerController {
     * HELPERS
     ***********************************************************************************************/
     async addUser() {
+        if (!this.currentMatCode) {
+            await this.renderErrors({matCode: ['not found']}, 404);
+            return;
+        }
+
         if (!this.currentUser) {
             const name       = this.params.name || 'Anonymous';
             this.currentUser = await User.create({name: name});
@@ -136,8 +142,10 @@ class UsersController extends ServerController {
             await this.authorize("assign",            this.currentMat);
             await this.authorize("be assigned judge", this.currentMat);
             await this.currentMat.removeJudge(this.currentUser);
+            logger.info(`Judge removed: user=${this.currentUser.id} mat=${this.currentMat.id}`);
         } else {
             await this.currentMat.removeViewer(this.currentUser);
+            logger.info(`Viewer removed: user=${this.currentUser.id} mat=${this.currentMat.id}`);
         }
     }
 
@@ -157,6 +165,7 @@ class UsersController extends ServerController {
             return;
         }
         await this.currentMat.addJudge(this.currentUser);
+        logger.info(`Judge added: user=${this.currentUser.id} mat=${this.currentMat.id}`);
     }
 
 
@@ -167,6 +176,7 @@ class UsersController extends ServerController {
             return;
         }
         await this.currentMat.addViewer(this.currentUser);
+        logger.info(`Viewer added: user=${this.currentUser.id} mat=${this.currentMat.id}`);
     }
 
 

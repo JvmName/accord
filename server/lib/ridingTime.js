@@ -79,6 +79,8 @@ class RidingTimeCalculator {
 
         if (this.controlActive && !this.#paused) {
             this.#endControlPeriod(this.#endAt);
+        } else if (this.#paused && this.#pendingControlTime > 0) {
+            this.#controlPeriods.push(this.#pendingControlTime / 1000);
         }
     }
 

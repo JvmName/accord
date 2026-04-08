@@ -3,11 +3,14 @@ package dev.jvmname.accord.domain.session
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
+import dev.jvmname.accord.domain.control.rounds.RoundEvent.RoundState
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.network.remainingDuration
+import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 internal fun deriveScoreFromMatch(match: Match): Score {
     val activeRound = match.rounds.lastOrNull { it.endedAt == null }
@@ -39,11 +42,11 @@ internal fun deriveRoundEventFromMatch(match: Match, config: MatchConfig): Round
             val roundInfo = config.getRound(roundNumber)
                 ?: RoundInfo.Round(index = roundNumber, maxPoints = 0, duration = Duration.ZERO)
             RoundEvent(
-                remaining = activeRound.remainingDuration ?: Duration.ZERO,
+                remaining = activeRound.remainingDuration ?: activeRound.maxDuration.seconds,
                 roundNumber = roundNumber,
                 totalRounds = totalRounds,
                 round = roundInfo,
-                state = RoundEvent.RoundState.STARTED,
+                state = if (activeRound.paused) RoundState.PAUSED else RoundState.STARTED,
             )
         }
         match.endedAt != null -> {
@@ -53,9 +56,30 @@ internal fun deriveRoundEventFromMatch(match: Match, config: MatchConfig): Round
                 roundNumber = roundNumber,
                 totalRounds = totalRounds,
                 round = RoundInfo.Round(index = roundNumber, maxPoints = 0, duration = Duration.ZERO),
-                state = RoundEvent.RoundState.MATCH_ENDED,
+                state = RoundState.MATCH_ENDED,
             )
         }
-        else -> null
+        else -> {
+            // Between rounds: round N just ended, round N+1 hasn't started — count down the break.
+            val completedRounds = match.rounds.size
+            val completedRoundInfo = config.getRound(completedRounds) ?: return null
+            val breakInfo = config.rounds
+                .getOrNull(config.rounds.indexOf(completedRoundInfo) + 1) as? RoundInfo.Break
+                ?: return null
+            val remaining = if (match.breakRemaining != null) {
+                match.breakRemaining.seconds
+            } else {
+                val lastRound = match.rounds.lastOrNull() ?: return null
+                val elapsed = Clock.System.now() - lastRound.endedAt!!
+                (breakInfo.duration - elapsed).coerceAtLeast(Duration.ZERO)
+            }
+            RoundEvent(
+                remaining = remaining,
+                roundNumber = completedRounds,
+                totalRounds = totalRounds,
+                round = breakInfo,
+                state = if (remaining > Duration.ZERO) RoundState.STARTED else RoundState.ENDED,
+            )
+        }
     }
 }

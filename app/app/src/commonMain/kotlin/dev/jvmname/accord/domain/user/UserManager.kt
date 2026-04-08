@@ -1,7 +1,8 @@
 package dev.jvmname.accord.domain.user
 
+import co.touchlab.kermit.Logger
 import com.github.michaelbull.result.map
-import com.github.michaelbull.result.onSuccess
+import com.github.michaelbull.result.onOk
 import dev.jvmname.accord.network.AccordClient
 import dev.jvmname.accord.network.NetworkResult
 import dev.jvmname.accord.network.User
@@ -13,12 +14,15 @@ class UserManager(
     private val prefs: Prefs,
     private val apiClient: AccordClient,
 ) {
+    private val log = Logger.withTag("Domain/UserManager")
 
     suspend fun createUser(name: String): NetworkResult<User> {
+        log.i { "creating user name='$name'" }
         return apiClient.createUser(name)
-            .onSuccess {
+            .onOk {
                 prefs.setAuthToken(it.authToken)
                 prefs.updateMainUser(it.user)
+                log.i { "user created id=${it.user.id}, token cached" }
             }
             .map { it.user }
     }

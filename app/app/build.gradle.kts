@@ -48,11 +48,13 @@ kotlin {
                 implementation(libs.ktor.core)
                 implementation(libs.ktor.negotiation)
                 implementation(libs.ktor.json)
+                implementation(libs.ktor.logging)
                 implementation(libs.serialization.json)
                 implementation(libs.androidx.datastore)
 
                 implementation(libs.kotlin.result)
                 implementation(libs.kotlin.result.coroutines)
+                implementation(libs.kotlin.result.retry)
 
                 implementation(libs.multihaptic)
                 implementation(libs.kermit)
@@ -141,8 +143,8 @@ android {
         applicationId = "com.rdojo.kombat"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 3
-        versionName = "0.0.3"
+        versionCode = 4
+        versionName = "0.0.4"
     }
     signingConfigs {
         create("release") {
@@ -162,16 +164,12 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
-
     }
 }
 

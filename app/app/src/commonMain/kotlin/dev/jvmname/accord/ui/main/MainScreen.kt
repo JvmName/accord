@@ -13,6 +13,7 @@ data class MainScreen(val mat: Mat? = null) : ParcelableScreen
 @Immutable
 data class MainState(
     val mat: Mat?,
+    val canRejoin: Boolean = false,
     val eventSink: (MainEvent) -> Unit
 ) : CircuitUiState
 
@@ -20,6 +21,7 @@ sealed interface MainEvent : CircuitUiEvent {
     data object CreateMat : MainEvent
     data object JoinMat : MainEvent
     data object ContinueMat : MainEvent
+    data object RejoinMat : MainEvent
 
     data object SoloRideTime : MainEvent
 }

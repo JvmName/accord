@@ -5,6 +5,7 @@ import dev.jvmname.accord.parcel.CommonParcelable
 import dev.jvmname.accord.parcel.CommonParcelize
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonIgnoreUnknownKeys
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -41,7 +42,7 @@ value class RoundId(val id: String) : CommonParcelable
 // User Models
 // ============================================================================
 
-@[Poko Serializable CommonParcelize]
+@[Poko Serializable CommonParcelize JsonIgnoreUnknownKeys]
 class User(
     val id: UserId,
     val name: String,
@@ -133,6 +134,9 @@ class Match(
     val mat: Mat? = null,
     val judges: List<User> = emptyList(),
     val rounds: List<Round> = emptyList(),
+    @SerialName("break_started_at") val breakStartedAt: Instant? = null,
+    @SerialName("break_duration") val breakDuration: Int? = null,
+    @SerialName("break_remaining") val breakRemaining: Int? = null,
 ) : CommonParcelable
 
 @[Poko Serializable]
@@ -172,6 +176,7 @@ class Round(
     @SerialName("started_at") val startedAt: Instant,
     @SerialName("ended_at") val endedAt: Instant?,
     val score: Map<UserId, Int>,
+    val paused: Boolean = false,
     @SerialName("time_remaining") val timeRemaining: Int? = null,
     val result: RoundResult,
 ) : CommonParcelable
@@ -192,17 +197,25 @@ enum class RoundResultType {
     @SerialName("submission")
     SUBMISSION,
 
+    @SerialName("stoppage")
+    STOPPAGE,
+
     @SerialName("points")
     POINTS,
 
     @SerialName("tie")
     TIE,
+
+    @SerialName("tech-fall")
+    TECH_FALL,
 }
 
 @[Poko Serializable]
 class EndRoundRequest(
     val submission: String? = null,
     val submitter: CompetitorColor? = null,
+    val stoppage: Boolean? = null,
+    val stopper: CompetitorColor? = null,
 )
 
 // ============================================================================
@@ -221,20 +234,20 @@ class StartRidingTimeVoteRequest(
 @[JvmInline Serializable]
 value class CreateUserResponseData(val data: CreateUserResponse)
 
-@[JvmInline Serializable]
-value class MatResponseData(val mat: Mat)
+@[Poko Serializable]
+class MatResponseData(val mat: Mat)
 
 @[JvmInline Serializable]
 value class JoinMatResponseData(val data: JoinMatResult)
 
-@[JvmInline Serializable]
-value class MatchResponseData(val match: Match)
+@[Poko Serializable]
+class MatchResponseData(val match: Match)
 
-@[JvmInline Serializable]
-value class JudgesResponseData(val judges: List<User>)
+@[Poko Serializable]
+class JudgesResponseData(val judges: List<User>)
 
-@[JvmInline Serializable]
-value class ViewersResponseData(val viewers: List<User>)
+@[Poko Serializable]
+class ViewersResponseData(val viewers: List<User>)
 
 val Round.remainingDuration: Duration?
     get() = timeRemaining?.seconds

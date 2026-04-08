@@ -61,6 +61,7 @@ class TechFallRoundChecker {
 
 
     async endRound() {
+        logger.info(`Tech fall threshold reached: ending round ${this.currentRoundLabel}`);
         await this.#currentMatch.endRound();
     }
 

@@ -11,7 +11,7 @@ const webSocketEvents = require('./webSocketEvents');
 
 const MATCH_EVENT_HANDLERS_PATH = path.resolve(
     __dirname,
-    '../server/webSocketEventHandlers/matchEventHandlers.js'
+    '../server/webSocket.js'
 );
 
 

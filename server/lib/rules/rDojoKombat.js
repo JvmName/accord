@@ -4,6 +4,7 @@ const { calculateRidingTime } = require('../ridingTime');
 const RDojoKombatRules = {
     maxRounds: 3,
     roundDurations: [180, 120, 60],
+    breakDurations: [60, 60],
 
     scoreRound(red, blue, judges, votes, pauses = []) {
         const redVotes    = votes.filter(vote => vote.competitor_id == red.id);
@@ -16,6 +17,11 @@ const RDojoKombatRules = {
         const blueScore = bluePeriods.reduce((sum, d) => sum + Math.floor(d / 3), 0);
 
         return { redScore, blueScore };
+    },
+
+
+    getBreakDuration(roundIndex) {
+        return this.breakDurations[roundIndex - 1] ?? 0;
     },
 
 
@@ -39,14 +45,18 @@ const RDojoKombatRules = {
             method.type  = 'submission'
             method.value = round.submission;
 
+        } else if (round.stoppage_by) {
+            winner      = red.id == round.stoppage_by ? red : blue;
+            method.type = 'stoppage';
+
         } else if (redScore != blueScore) {
             const score  = Math.max(redScore, blueScore);
             winner       = score == redScore ? red : blue;
             method.type  = score >= threshold ? 'tech-fall' : 'points';
-            method.value = score;
+            method.value = String(score);
         } else {
             method.type  = 'tie'
-            method.value = redScore;
+            method.value = String(redScore);
         }
 
         return { winner, method };

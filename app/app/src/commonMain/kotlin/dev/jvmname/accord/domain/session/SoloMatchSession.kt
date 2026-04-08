@@ -1,6 +1,7 @@
 package dev.jvmname.accord.domain.session
 
 import co.touchlab.kermit.Logger
+import com.github.michaelbull.result.Err
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.ButtonEvent
@@ -12,21 +13,14 @@ import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.rounds.Timer
 import dev.jvmname.accord.domain.control.score.Score
+import dev.jvmname.accord.network.Match
+import dev.jvmname.accord.network.NetworkResult
 import dev.jvmname.accord.ui.session.ManualEditAction
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.dropWhile
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.runningFold
-import kotlinx.coroutines.flow.scan
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.time.Duration
@@ -49,6 +43,7 @@ class SoloMatchSession(
     private val _roundEvent = MutableStateFlow<RoundEvent?>(null)
     override val roundEvent: StateFlow<RoundEvent?> = _roundEvent.asStateFlow()
 
+    private var timerCollectionJob: Job? = null
     private var latestRoundEvent = AtomicReference<RoundEvent?>(null)
     private val _score = MutableStateFlow(Score(0, 0, null, null, null))
     override val score: StateFlow<Score> = _score.asStateFlow()
@@ -147,7 +142,7 @@ class SoloMatchSession(
                 .drop(1)
                 .collect { (prev, current) ->
                     if (prev == null && current != null) {
-                        endRound()
+                        endRound(current, null)
                     }
                 }
         }
@@ -159,6 +154,11 @@ class SoloMatchSession(
 
     override fun recordRelease(competitor: Competitor) {
         buttonPressTracker.recordRelease(competitor)
+    }
+
+    override suspend fun startMatch(): NetworkResult<Match> {
+        startRound()
+        return Err(mapOf("solo" to listOf("no server match in solo mode")))
     }
 
     override fun startRound() {
@@ -190,7 +190,7 @@ class SoloMatchSession(
         timer.resume()
     }
 
-    override fun endRound() {
+    override fun endRound(winner: Competitor?, submission: String?, stoppage: Boolean) {
         timer.cancel()
 
         _roundEvent.update {
@@ -204,6 +204,13 @@ class SoloMatchSession(
             )
         }
     }
+
+    override suspend fun endMatch(): NetworkResult<Match> {
+        endRound(null, null)
+        //TODO unclear if this is helpful, maybe Ok(Match)?
+        return Err(mapOf("solo" to listOf("no server match in solo mode")))
+    }
+
 
     private fun nextRound() {
         overallIndex++
@@ -228,13 +235,14 @@ class SoloMatchSession(
     }
 
     private fun runTimer(baseRound: RoundInfo) {
-        scope.launch {
+        timerCollectionJob?.cancel()
+        timerCollectionJob = scope.launch {
             timer.start(baseRound.duration, 500.milliseconds)
                 .dropWhile { it == Duration.ZERO }
                 .collect { remaining ->
                     when (remaining) {
                         Duration.ZERO -> {
-                            endRound()
+                            endRound(null, null)
                             startRound()
                         }
 

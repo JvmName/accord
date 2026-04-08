@@ -10,6 +10,7 @@ import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -44,19 +45,24 @@ class ApiResultSerializer<T>(private val dataSerializer: KSerializer<T>) :
                 val data = jsonDecoder.json.decodeFromJsonElement(dataSerializer, dataElement)
                 ApiResult.Success(data)
             }
-            else -> {
-                // Error case: deserialize data.errors as Map<String, List<String>>
-                val dataObject = dataElement.jsonObject
-                val errorsElement = dataObject["errors"]
-                    ?: throw SerializationException("Missing 'errors' field in error response")
 
-                val errorsSerializer = MapSerializer(
-                    String.serializer(),
-                    ListSerializer(String.serializer())
-                )
-                val errors = jsonDecoder.json.decodeFromJsonElement(errorsSerializer, errorsElement)
-                ApiResult.Error(errors)
-            }
+            else -> ApiResult.Error(
+                when (dataElement) {
+                    is JsonObject if (dataElement.jsonObject.containsKey("errors")) -> {
+                        val errorsSerializer = MapSerializer(
+                            String.serializer(),
+                            ListSerializer(String.serializer())
+                        )
+                        jsonDecoder.json.decodeFromJsonElement(errorsSerializer, dataElement.jsonObject["errors"]!!)
+                    }
+
+                    else if (dataElement.jsonObject.containsKey("error")) -> {
+                        mapOf("error" to listOf(dataElement.jsonObject["error"]!!.jsonPrimitive.content))
+                    }
+
+                    else -> throw SerializationException("Missing 'errors'/'error' field in error response")
+                }
+            )
         }
     }
 }

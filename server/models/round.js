@@ -1,4 +1,5 @@
 const { BaseRecord }          = require('../lib/activeRecord');
+const { logger }              = require('../lib/logger');
 const { RidingTimeVote }      = require('./ridingTimeVote');
 const { RoundPause }          = require('./roundPause');
 const { RDojoKombatRules }    = require('../lib/rules');
@@ -135,7 +136,7 @@ class Round extends BaseRecord {
     }
 
 
-    async end({submission, submitter}={}) {
+    async end({submission, submitter, stoppage, stopper}={}) {
         const where = {ended_at: null};
         const ridingTimeVotes = await this.getRidingTimeVotes({ where });
         for (const vote of ridingTimeVotes) {
@@ -149,17 +150,43 @@ class Round extends BaseRecord {
             const competitor   = await match.competitorForColor(submitter);
             this.submission    = submission;
             this.submission_by = competitor?.id;
+        } else if (stoppage) {
+            const competitor   = await match.competitorForColor(stopper);
+            this.stoppage_by   = competitor?.id;
         }
 
         this.ended_at = new Date();
         await this.save();
 
+        const redScore  = await this.getRedScore();
+        const blueScore = await this.getBlueScore();
+        const sub       = submission ? ` submission=${submission} by=${submitter}` : '';
+        const stop      = stoppage   ? ` stoppage by=${stopper}` : '';
+        logger.info(`Round ended: match=${this.match_id} round=${this.id} red=${redScore} blue=${blueScore}${sub}${stop}`);
+
         const allRounds = await match.getRounds();
+        logger.info(`Round transition: match=${this.match_id} completedRounds=${allRounds.length} maxRounds=${match.maxRounds}`);
+
         if (allRounds.length == match.maxRounds) {
+            logger.info(`Match ending: match=${this.match_id} reason=max-rounds-reached`);
             await match.end();
         } else {
             const winner = await match.getWinner();
-            if (winner) await match.end()
+            logger.info(`Match winner check: match=${this.match_id} winner=${winner?.id ?? 'none'}`);
+            if (winner) {
+                logger.info(`Match ending: match=${this.match_id} reason=winner-determined winner=${winner.id}`);
+                await match.end();
+            } else {
+                const breakDuration = match.rules.getBreakDuration(allRounds.length);
+                logger.info(`Break check: match=${this.match_id} breakDuration=${breakDuration}`);
+                if (breakDuration > 0) {
+                    match.break_started_at = new Date();
+                    match.break_duration   = breakDuration;
+                    await match.save();
+                    match.clearCachedAssociation('rounds');
+                    logger.info(`Break started: match=${this.match_id} duration=${breakDuration}s`);
+                }
+            }
         }
     }
 
@@ -244,6 +271,18 @@ class Round extends BaseRecord {
         const winner      = await this.getWinner();
         const method      = await this.getWinMethod();
         const maxDuration = await this.getMaxDuration();
+        const pauses      = await this.getPauses();
+        const currentPause = pauses.slice().reverse().find(p => p.isOpen) || null;
+
+        let timeRemaining = null;
+        if (!this.ended_at) {
+            const ref = currentPause ? new Date(currentPause.paused_at) : new Date();
+            let pausedMs = 0;
+            for (const p of pauses) {
+                if (p.resumed_at) pausedMs += new Date(p.resumed_at) - new Date(p.paused_at);
+            }
+            timeRemaining = Math.max(0, maxDuration - Math.floor((ref - new Date(this.started_at) - pausedMs) / 1000));
+        }
 
         const score = {
             [match.red_competitor_id]:  redScore,
@@ -253,11 +292,12 @@ class Round extends BaseRecord {
         const result = { winner, method };
 
         const response = {
-            id:           this.id,
-            started_at:   this.started_at,
-            ended_at:     this.ended_at,
-            max_duration: maxDuration,
-            paused:       await this.isPaused(),
+            id:             this.id,
+            started_at:     this.started_at,
+            ended_at:       this.ended_at,
+            max_duration:   maxDuration,
+            paused:         !!currentPause,
+            time_remaining: timeRemaining,
             score,
             result,
         }

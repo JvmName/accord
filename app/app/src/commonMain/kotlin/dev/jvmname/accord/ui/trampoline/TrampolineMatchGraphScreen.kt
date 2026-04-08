@@ -12,7 +12,7 @@ import dev.jvmname.accord.parcel.ParcelableScreen
 @CommonParcelize
 data class TrampolineMatchGraphScreen(
     val innerRoot: ParcelableScreen,
-    val match: Match?,
+    val match: Match,
     val matchConfig: MatchConfig,
     val matchRole: MatchRole,
 ) : ParcelableScreen

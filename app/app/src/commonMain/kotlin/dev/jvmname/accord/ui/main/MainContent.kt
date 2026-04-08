@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallMerge
 import androidx.compose.material.icons.automirrored.outlined.NoteAdd
+import androidx.compose.material.icons.filled.AddCircleOutline
+import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
@@ -29,6 +31,7 @@ import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.main.MainEvent.ContinueMat
 import dev.jvmname.accord.ui.main.MainEvent.CreateMat
 import dev.jvmname.accord.ui.main.MainEvent.JoinMat
+import dev.jvmname.accord.ui.main.MainEvent.RejoinMat
 import dev.jvmname.accord.ui.main.MainEvent.SoloRideTime
 import dev.jvmname.accord.ui.theme.AccordTheme
 import dev.zacsweers.metro.AppScope
@@ -48,9 +51,17 @@ fun MainContent(state: MainState, modifier: Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (state.canRejoin && state.mat != null) {
+                    ActionCard(
+                        icon = Icons.Default.Replay,
+                        title = "Rejoin Mat",
+                        description = "Return to ${state.mat.name}",
+                        onClick = { state.eventSink(RejoinMat) }
+                    )
+                }
                 if (state.mat != null) {
                     ActionCard(
-                        icon = Icons.AutoMirrored.Filled.CallMerge,
+                        icon = Icons.Default.AddCircleOutline,
                         title = "New Match",
                         description = "Start a new match on ${state.mat.name}",
                         onClick = { state.eventSink(ContinueMat) }

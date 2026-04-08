@@ -1,15 +1,17 @@
 package dev.jvmname.accord.ui.session.judging
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.slack.circuit.runtime.CircuitUiState
-import dev.drewhamilton.poko.Poko
+import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.domain.asEmoji
 import dev.jvmname.accord.domain.control.HapticEvent
-import dev.jvmname.accord.domain.control.rounds.RoundEvent
-import dev.jvmname.accord.domain.control.score.Score
+import dev.jvmname.accord.network.User
 import dev.jvmname.accord.parcel.CommonParcelize
 import dev.jvmname.accord.parcel.ParcelableScreen
 import dev.jvmname.accord.ui.session.JudgeSessionEvent
 import dev.jvmname.accord.ui.session.MatchActions
+import dev.jvmname.accord.ui.session.MatchState
 
 
 @CommonParcelize
@@ -21,12 +23,22 @@ data class JudgeSessionState(
     val matchState: MatchState,
     val hapticEvent: HapticEvent? = null,
     val actions: MatchActions,
-    val isMatchEnded: Boolean = false,
+    val matchResult: MatchResult? = null,
     val eventSink: (JudgeSessionEvent) -> Unit,
 ) : CircuitUiState
 
-@Poko
-class MatchState(
-    val score: Score,
-    val roundInfo: RoundEvent?,
-)
+
+@Immutable
+data class MatchResult(
+    val winner: Pair<User, Competitor>,
+    val winnerScore: Int,
+    val loserScore: Int,
+    val winConditions: String
+) {
+    fun toText(): String {
+        return buildString {
+            append("Winner: ", winner.first.name, ' ', winner.second.asEmoji).appendLine()
+            append("Score: ", winnerScore, " to ", loserScore, "(", winConditions, ")").appendLine()
+        }
+    }
+}
