@@ -80,11 +80,13 @@ RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
   - Each match has its own room: `match:${matchId}`
   - Authentication via `socket.handshake.auth.apiToken`
 
-- **Worker process** (`/server/bin/worker <workerToken>`): Separate process that connects via WebSocket using `workerToken`. Runs three background jobs every 1 second:
+- **Worker process** (`/server/bin/worker <workerToken>`): Separate process that connects via WebSocket using `workerToken`. Runs four background jobs every 1 second:
   - `MatchUpdateWorker`: Broadcasts `match.update` for every open (not-yet-ended) round **and** for every match currently in a break
   - `TechFallTrackerWorker`: Checks open rounds for tech fall threshold; if reached, ends the round in the DB and broadcasts `round.tech-fall`
   - `BreakTransitionWorker`: Checks matches in break state; when break expires, starts the next round and broadcasts `break.ended`
+  - `RoundTimerWorker`: Checks open rounds for timer expiry; if elapsed time (minus pauses) ≥ max duration, ends the round and broadcasts `match.update`
   - **Critical**: Controllers never emit WebSocket events directly — all WebSocket emissions go through the worker process exclusively.
+  - **Warning**: An unhandled exception in any worker's `performJob()` will silently kill that worker — it stops re-queuing with no log output. Always handle errors inside `performJob()` or the affected rounds/matches will never auto-advance.
 
 - **Break lifecycle**: When a round ends and the match is not over, `Round.end()` sets `break_started_at` and `break_duration` on the match. `MatchUpdateWorker` picks this up within 1 second and starts broadcasting `match.update` with `break_remaining` (computed seconds). `BreakTransitionWorker` auto-starts the next round when elapsed >= `break_duration` and emits `break.ended`.
 
@@ -174,6 +176,10 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 4. **Stateless Server**: Judge state stored in database, not in-memory - enables horizontal scaling
 
 5. **Room-Based Broadcasting**: WebSocket rooms keep server scalable; all interested clients receive updates atomically
+
+6. **Match Extensions in `models_ext.kt`**: All winner/score derivation from `Match` belongs in `/app/app/src/commonMain/kotlin/dev/jvmname/accord/network/models_ext.kt`, not inlined in presenters. Key extensions: `Match.winner(roundIndex)`, `Match.winnerCompetitor`, `Match.roundScore()`, `Match.toMatchResult()`.
+
+7. **`MatchResult` is shared across screens**: Defined in `JudgeSessionScreen.kt` but imported by `MasterSessionScreen.kt` as well. `winner` field is `Pair<User, Competitor>` (not just `Competitor`).
 
 ## Testing
 

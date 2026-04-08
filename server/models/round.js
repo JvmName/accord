@@ -136,7 +136,7 @@ class Round extends BaseRecord {
     }
 
 
-    async end({submission, submitter}={}) {
+    async end({submission, submitter, stoppage, stopper}={}) {
         const where = {ended_at: null};
         const ridingTimeVotes = await this.getRidingTimeVotes({ where });
         for (const vote of ridingTimeVotes) {
@@ -150,6 +150,9 @@ class Round extends BaseRecord {
             const competitor   = await match.competitorForColor(submitter);
             this.submission    = submission;
             this.submission_by = competitor?.id;
+        } else if (stoppage) {
+            const competitor   = await match.competitorForColor(stopper);
+            this.stoppage_by   = competitor?.id;
         }
 
         this.ended_at = new Date();
@@ -158,7 +161,8 @@ class Round extends BaseRecord {
         const redScore  = await this.getRedScore();
         const blueScore = await this.getBlueScore();
         const sub       = submission ? ` submission=${submission} by=${submitter}` : '';
-        logger.info(`Round ended: match=${this.match_id} round=${this.id} red=${redScore} blue=${blueScore}${sub}`);
+        const stop      = stoppage   ? ` stoppage by=${stopper}` : '';
+        logger.info(`Round ended: match=${this.match_id} round=${this.id} red=${redScore} blue=${blueScore}${sub}${stop}`);
 
         const allRounds = await match.getRounds();
         logger.info(`Round transition: match=${this.match_id} completedRounds=${allRounds.length} maxRounds=${match.maxRounds}`);

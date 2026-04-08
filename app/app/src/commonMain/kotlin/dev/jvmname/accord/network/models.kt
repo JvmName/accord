@@ -197,6 +197,9 @@ enum class RoundResultType {
     @SerialName("submission")
     SUBMISSION,
 
+    @SerialName("stoppage")
+    STOPPAGE,
+
     @SerialName("points")
     POINTS,
 

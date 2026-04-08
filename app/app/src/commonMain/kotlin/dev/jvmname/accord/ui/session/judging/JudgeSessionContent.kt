@@ -137,7 +137,7 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
             }
         }
 
-        if (state.isMatchEnded) {
+        state.matchResult?.let { matchResult ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -150,7 +150,15 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = spacedBy(16.dp)
                     ) {
-                        Text("Match Over", style = MaterialTheme.typography.headlineMedium)
+                        Text("Match Over", style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.padding(bottom = 16.dp))
+
+                        Text(
+                            matchResult.toText(),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+
                         Button(
                             onClick = { state.eventSink(JudgeSessionEvent.Back) },
                             modifier = Modifier.fillMaxWidth()

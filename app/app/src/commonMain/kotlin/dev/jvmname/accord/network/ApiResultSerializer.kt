@@ -9,7 +9,10 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class ApiResultSerializer<T>(private val dataSerializer: KSerializer<T>) :
     KSerializer<ApiResult<T>> {
@@ -45,8 +48,7 @@ class ApiResultSerializer<T>(private val dataSerializer: KSerializer<T>) :
 
             else -> ApiResult.Error(
                 when (dataElement) {
-                    JsonNull -> TODO()
-                    JsonObject if (dataElement.jsonObject.containsKey("errors")) -> {
+                    is JsonObject if (dataElement.jsonObject.containsKey("errors")) -> {
                         val errorsSerializer = MapSerializer(
                             String.serializer(),
                             ListSerializer(String.serializer())
@@ -54,7 +56,7 @@ class ApiResultSerializer<T>(private val dataSerializer: KSerializer<T>) :
                         jsonDecoder.json.decodeFromJsonElement(errorsSerializer, dataElement.jsonObject["errors"]!!)
                     }
 
-                    else if (dataElement.jsonObject.containsKey("errors")) -> {
+                    else if (dataElement.jsonObject.containsKey("error")) -> {
                         mapOf("error" to listOf(dataElement.jsonObject["error"]!!.jsonPrimitive.content))
                     }
 

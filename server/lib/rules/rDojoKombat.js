@@ -4,6 +4,7 @@ const { calculateRidingTime } = require('../ridingTime');
 const RDojoKombatRules = {
     maxRounds: 3,
     roundDurations: [180, 120, 60],
+    breakDurations: [60, 60],
 
     scoreRound(red, blue, judges, votes, pauses = []) {
         const redVotes    = votes.filter(vote => vote.competitor_id == red.id);
@@ -43,6 +44,10 @@ const RDojoKombatRules = {
             winner       = red.id == round.submission_by ? red : blue;
             method.type  = 'submission'
             method.value = round.submission;
+
+        } else if (round.stoppage_by) {
+            winner      = red.id == round.stoppage_by ? red : blue;
+            method.type = 'stoppage';
 
         } else if (redScore != blueScore) {
             const score  = Math.max(redScore, blueScore);

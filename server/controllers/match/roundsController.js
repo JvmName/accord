@@ -28,7 +28,8 @@ class RoundsController extends ServerController {
         try {
             await this.currentMatch.endRound(this.params);
             const submission = this.params.submission ? ` submission=${this.params.submission} by=${this.params.submitter}` : '';
-            logger.info(`Round ended: match=${this.currentMatch.id} by user=${this.currentUser.id}${submission}`);
+            const stoppage   = this.params.stoppage   ? ` stoppage by=${this.params.stopper}` : '';
+            logger.info(`Round ended: match=${this.currentMatch.id} by user=${this.currentUser.id}${submission}${stoppage}`);
 
             const options = {includeRounds: true, includeJudges: true, includeMat: true};
             await this.render({match: this.currentMatch}, options);

@@ -23,11 +23,14 @@ import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
+import dev.jvmname.accord.network.User
+import dev.jvmname.accord.network.UserId
 import dev.jvmname.accord.ui.common.IconTextButton
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.MasterSessionEvent
 import dev.jvmname.accord.ui.session.MatchActions
 import dev.jvmname.accord.ui.session.MatchState
+import dev.jvmname.accord.ui.session.judging.MatchResult
 import dev.jvmname.accord.ui.theme.AccordTheme
 
 @[Composable CircuitInject(MasterSessionScreen::class, MatchScope::class)]
@@ -142,7 +145,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                 )
             }
 
-            if (!state.isMatchStarted && !state.isMatchEnded) {
+            if (!state.isMatchStarted && state.matchResult == null) {
                 IconTextButton(
                     modifier = Modifier.fillMaxWidth(),
                     icon = Icons.Outlined.PlayArrow,
@@ -175,7 +178,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                     onClick = resume
                 )
             }
-            if (state.isMatchStarted && !state.isMatchEnded) {
+            if (state.isMatchStarted && state.matchResult == null) {
                 IconTextButton(
                     modifier = Modifier.fillMaxWidth(),
                     icon = Icons.Default.StopCircle,
@@ -185,9 +188,19 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                 )
             }
 
-            if (state.isMatchEnded) {
-                Text("Match Complete", style = MaterialTheme.typography.headlineMedium)
-                // TODO: show winner — pass winner through state
+            state.matchResult?.let { matchResult ->
+                Text(
+                    "Match Complete",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                Text(
+                    matchResult.toText(),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
                 IconTextButton(
                     modifier = Modifier.fillMaxWidth(),
                     icon = Icons.Default.Home,
@@ -234,7 +247,7 @@ private fun MasterSessionContent_ActiveRound_Preview() {
                     roundScores = emptyMap(),
                 ),
                 isMatchStarted = true,
-                isMatchEnded = false,
+                matchResult = null,
                 actions = MatchActions(pause = {}, endRound = {}),
                 showEndRoundDialog = false,
                 showScoresOverlay = false,
@@ -273,7 +286,7 @@ private fun MasterSessionContent_BetweenRounds_Preview() {
                     roundScores = emptyMap(),
                 ),
                 isMatchStarted = true,
-                isMatchEnded = false,
+                matchResult = null,
                 actions = MatchActions(),
                 showEndRoundDialog = false,
                 showScoresOverlay = false,
@@ -303,7 +316,7 @@ private fun MasterSessionContent_Start_Preview() {
                     roundScores = emptyMap(),
                 ),
                 isMatchStarted = false,
-                isMatchEnded = false,
+                matchResult = null,
                 actions = MatchActions(),
                 showEndRoundDialog = false,
                 showScoresOverlay = false,
@@ -333,7 +346,12 @@ private fun MasterSessionContent_Ended_Preview() {
                     roundScores = emptyMap(),
                 ),
                 isMatchStarted = true,
-                isMatchEnded = true,
+                matchResult = MatchResult(
+                    winner = User(UserId("1"), "Alice") to Competitor.RED,
+                    winnerScore = 2,
+                    loserScore = 1,
+                    winConditions = "Points (12s), Points (9s)",
+                ),
                 actions = MatchActions(),
                 showEndRoundDialog = false,
                 showScoresOverlay = false,
@@ -367,7 +385,7 @@ private fun MasterSessionContent_Dialog_Preview() {
                     roundScores = emptyMap(),
                 ),
                 isMatchStarted = true,
-                isMatchEnded = false,
+                matchResult = null,
                 actions = MatchActions(),
                 showEndRoundDialog = true,
                 showScoresOverlay = false,
@@ -397,7 +415,7 @@ private fun MasterSessionContent_Paused_Preview() {
                     roundScores = emptyMap(),
                 ),
                 isMatchStarted = true,
-                isMatchEnded = false,
+                matchResult = null,
                 actions = MatchActions(resume = {}),
                 showEndRoundDialog = false,
                 showScoresOverlay = false,
@@ -427,7 +445,7 @@ private fun MasterSessionContent_Error_Preview() {
                     roundScores = emptyMap(),
                 ),
                 isMatchStarted = true,
-                isMatchEnded = false,
+                matchResult = null,
                 actions = MatchActions(pause = {}, endRound = {}),
                 showEndRoundDialog = false,
                 showScoresOverlay = false,

@@ -1,12 +1,6 @@
 package dev.jvmname.accord.ui.session.master
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
@@ -19,9 +13,7 @@ import dev.jvmname.accord.domain.MatchManager
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.session.MasterSession
-import dev.jvmname.accord.network.Mat
-import dev.jvmname.accord.network.adminCode
-import dev.jvmname.accord.network.message
+import dev.jvmname.accord.network.*
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.onEither
 import dev.jvmname.accord.ui.session.MasterSessionEvent
@@ -64,32 +56,22 @@ class MasterSessionPresenter(
         var showScoresOverlay by remember { mutableStateOf(false) }
 
         val isMatchStarted = currentMatch?.startedAt != null
-        val isMatchEnded = currentMatch?.endedAt != null
+        val matchResult = currentMatch?.endedAt?.let { currentMatch?.toMatchResult() }
 
         val timerDisplay = roundEvent?.remainingHumanTime() ?: "0:00"
         val roundLabel = when (val round = roundEvent?.round) {
             null -> null
-            is RoundInfo.Break -> "Break"
+            is RoundInfo.Break -> "Break ${roundEvent!!.roundNumber} of ${roundEvent!!.totalRounds - 1}"
             is RoundInfo.Round -> "Round ${round.index} of ${roundEvent!!.totalRounds}"
         }
-        val roundScores = currentMatch?.let { match ->
-            mapOf(
-                Competitor.RED to match.rounds.count { it.result.winner?.id == match.red.id },
-                Competitor.BLUE to match.rounds.count { it.result.winner?.id == match.blue.id },
-            )
-        } ?: mapOf(Competitor.RED to 0, Competitor.BLUE to 0)
+        val roundScores = currentMatch?.roundScore() ?: mapOf(Competitor.RED to 0, Competitor.BLUE to 0)
 
         val roundDisplays = currentMatch?.let { match ->
             match.rounds.mapIndexed { index, round ->
-                val winner = when (round.result.winner?.id) {
-                    match.red.id -> Competitor.RED
-                    match.blue.id -> Competitor.BLUE
-                    else -> null
-                }
                 RoundDisplayInfo(
                     roundNumber = index + 1,
                     isInProgress = round.endedAt == null,
-                    winner = winner,
+                    winner = match.winner(index),
                     redScore = round.score[match.red.id] ?: 0,
                     blueScore = round.score[match.blue.id] ?: 0,
                 )
@@ -199,7 +181,7 @@ class MasterSessionPresenter(
             blueName = currentMatch?.blue?.name ?: "Blue",
             matchState = matchState,
             isMatchStarted = isMatchStarted,
-            isMatchEnded = isMatchEnded,
+            matchResult = matchResult,
             actions = actions,
             showEndRoundDialog = showEndRoundDialog,
             showScoresOverlay = showScoresOverlay,

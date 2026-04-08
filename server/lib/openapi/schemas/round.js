@@ -62,7 +62,7 @@ const Round = {
                     properties: {
                         type: {
                             type: ["string", "null"],
-                            enum: ["submission", "points", "tie", "tech-fall", null],
+                            enum: ["submission", "stoppage", "points", "tie", "tech-fall", null],
                             description: "How the round was won"
                         },
                         value: {

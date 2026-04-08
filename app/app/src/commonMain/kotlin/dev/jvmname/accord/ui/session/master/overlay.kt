@@ -1,27 +1,12 @@
 package dev.jvmname.accord.ui.session.master
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -29,6 +14,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.slack.circuit.overlay.OverlayNavigator
 import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.domain.asEmoji
 import dev.jvmname.accord.domain.color
 import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.theme.AccordTheme
@@ -139,8 +125,8 @@ internal fun RoundRow(round: RoundDisplayInfo, redName: String, blueName: String
             )
         } else {
             val (emoji, name) = when (round.winner) {
-                Competitor.RED -> "🟥" to redName
-                Competitor.BLUE -> "🟦" to blueName
+                Competitor.RED -> round.winner.asEmoji to redName
+                Competitor.BLUE -> round.winner.asEmoji to blueName
                 null -> "—" to "Tie"
             }
             Text(
