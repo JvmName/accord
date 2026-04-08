@@ -181,6 +181,12 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 
 7. **`MatchResult` is shared across screens**: Defined in `JudgeSessionScreen.kt` but imported by `MasterSessionScreen.kt` as well. `winner` field is `Pair<User, Competitor>` (not just `Competitor`).
 
+8. **Judge vs Master role separation**: Judges only vote on control time — they do NOT handle meta-round actions (submission, stoppage, manual score edits are master-only). `JudgeSessionEvent.EndRound` is a simple `data object` that ends the round with no params. All structured end-round actions (submission name, who submitted/stopped, stoppage vs submission choice) belong exclusively in the master session.
+
+9. **Master session overlay pattern**: The master uses Circuit's `OverlayEffect` + `BottomSheetOverlay` for dialogs (not `AlertDialog`). The end-round dialog is `SubmissionDialog` in `/app/.../ui/session/master/overlay.kt`, which returns a `SubmissionResult` sealed class. `SubmissionResult.Confirmed` carries both submission and stoppage paths. The content maps the result to `MasterSessionEvent.EndRound` which carries `submission`, `submitter`, `stoppage`, and `stopper` fields.
+
+10. **End-round method routing**: `RoundController.endRound(winner, submission, stoppage)` — `winner` doubles as submitter (submission path) or stopper (stoppage path). `MasterSession` routes to the correct `MatchManager.endRound` overload based on the `stoppage` flag. The server API uses `{ submission, submitter }` for submissions and `{ stoppage: true, stopper }` for stoppages.
+
 ## Testing
 
 ### Server Tests
