@@ -7,6 +7,10 @@ jest.mock('../../models/round', () => ({
     Round: { getOpenRounds: jest.fn() }
 }));
 
+jest.mock('../../models/match', () => ({
+    Match: { where: jest.fn().mockResolvedValue([]), get Operators() { return { ne: Symbol('ne') }; } }
+}));
+
 // Prevent Worker constructor from touching socket.io-client
 jest.mock('socket.io-client', () => ({ io: jest.fn(() => ({ on: jest.fn(), emit: jest.fn() })) }));
 

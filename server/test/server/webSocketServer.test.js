@@ -37,7 +37,7 @@ describe('WebSocketServer', () => {
     describe('WebSocketServer#_initWebSocket', () => {
         it ('creates a new WebSocket', async () => {
             const server   = new WebSocketServer();
-            const ioSocket = {close: jest.fn(), handshake: {query: {apiToken: 'token'}}};
+            const ioSocket = {close: jest.fn(), disconnect: jest.fn(), handshake: {auth: {apiToken: 'token'}, query: {}}};
             const next     = jest.fn();
 
             await server._initWebSocket(ioSocket, next);
@@ -55,7 +55,7 @@ describe('WebSocketServer', () => {
             const error    = new Error();
             WebSocket.prototype.init.mockImplementation(() => { throw error });
 
-            await server._initWebSocket({close: jest.fn(), handshake: {query: {apiToken: 'token'}}}, next);
+            await server._initWebSocket({close: jest.fn(), disconnect: jest.fn(), handshake: {auth: {apiToken: 'token'}, query: {}}}, next);
 
             expect(next).toHaveBeenCalledTimes(1);
             expect(next).toHaveBeenCalledWith(error);

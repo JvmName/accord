@@ -128,16 +128,19 @@ function makeRound(attrs = {}) {
 
     // Stub getMatch so end() doesn't need a real match
     round.getMatch = jest.fn().mockResolvedValue({
-        competitorForColor: jest.fn(),
-        getRounds:          jest.fn().mockResolvedValue([round]),
-        getWinner:          jest.fn().mockResolvedValue(null),
-        maxRounds:          999,
-        end:                jest.fn(),
-        red_competitor_id:  'red-1',
-        blue_competitor_id: 'blue-1',
-        getJudges:          jest.fn().mockResolvedValue([]),
-        getRedCompetitor:   jest.fn().mockResolvedValue(null),
-        getBlueCompetitor:  jest.fn().mockResolvedValue(null),
+        competitorForColor:      jest.fn(),
+        getRounds:               jest.fn().mockResolvedValue([round]),
+        getWinner:               jest.fn().mockResolvedValue(null),
+        maxRounds:               999,
+        end:                     jest.fn(),
+        save:                    jest.fn().mockResolvedValue(null),
+        clearCachedAssociation:  jest.fn(),
+        rules:                   { getBreakDuration: jest.fn().mockReturnValue(0) },
+        red_competitor_id:       'red-1',
+        blue_competitor_id:      'blue-1',
+        getJudges:               jest.fn().mockResolvedValue([]),
+        getRedCompetitor:        jest.fn().mockResolvedValue(null),
+        getBlueCompetitor:       jest.fn().mockResolvedValue(null),
     });
 
     // Stub getRidingTimeVotes so end() doesn't need a real DB
