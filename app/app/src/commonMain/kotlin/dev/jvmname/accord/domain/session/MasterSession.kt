@@ -19,16 +19,7 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.runningFold
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -111,8 +102,13 @@ class MasterSession(
         scope.launch { matchManager.startRound() }
     }
 
-    override fun endRound(winner: Competitor?, submission: String?) {
-        scope.launch { currentMatchId?.let { matchManager.endRound(it, submission, winner) } }
+    override fun endRound(winner: Competitor?, submission: String?, stoppage: Boolean) {
+        scope.launch {
+            currentMatchId?.let {
+                if (stoppage) matchManager.endRound(it, stoppage = true, stopper = winner)
+                else matchManager.endRound(it, submission, winner)
+            }
+        }
     }
 
     override fun pause() {

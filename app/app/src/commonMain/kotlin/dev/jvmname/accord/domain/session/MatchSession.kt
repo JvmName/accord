@@ -30,7 +30,7 @@ interface RoundController : PausableSession {
     suspend fun startMatch(): NetworkResult<Match>
     suspend fun endMatch(): NetworkResult<Match>
     fun startRound()
-    fun endRound(winner: Competitor?, submission: String?)
+    fun endRound(winner: Competitor?, submission: String?, stoppage: Boolean = false)
     fun manualEdit(competitor: Competitor, action: ManualEditAction)
 }
 

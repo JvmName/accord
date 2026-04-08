@@ -107,19 +107,12 @@ class JudgeSessionPresenter(
                         }
                     }
 
-                    JudgeSessionEvent.Pause -> {
-                        session.pause()
-                    }
-
+                    JudgeSessionEvent.Pause -> session.pause()
+                    JudgeSessionEvent.Resume -> session.resume()
                     JudgeSessionEvent.Reset -> TODO()
-                    JudgeSessionEvent.Resume -> {
-                        session.resume()
-                    }
-
-                    is JudgeSessionEvent.EndRound -> {
+                    JudgeSessionEvent.EndRound -> {
                         (session as? RoundController)?.endRound(null, null)
                     }
-
                 }
             }
         }
@@ -131,7 +124,7 @@ class JudgeSessionPresenter(
             onPause = { eventSink(JudgeSessionEvent.Pause) },
             onResume = { eventSink(JudgeSessionEvent.Resume) },
             onStartRound = { eventSink(JudgeSessionEvent.StartRound) },
-            onEndRound = { eventSink(JudgeSessionEvent.EndRound()) },
+            onEndRound = { eventSink(JudgeSessionEvent.EndRound) },
             onReset = { eventSink(JudgeSessionEvent.Reset) },
             onManualEdit = if (session is SoloSession && isPaused && score.techFallWin == null) {
                 { competitor, action -> eventSink(JudgeSessionEvent.ManualEdit(competitor, action)) }

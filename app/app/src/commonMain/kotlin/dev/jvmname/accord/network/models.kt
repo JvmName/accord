@@ -214,6 +214,8 @@ enum class RoundResultType {
 class EndRoundRequest(
     val submission: String? = null,
     val submitter: CompetitorColor? = null,
+    val stoppage: Boolean? = null,
+    val stopper: CompetitorColor? = null,
 )
 
 // ============================================================================

@@ -8,13 +8,9 @@ import com.github.michaelbull.result.onOk
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.delete
-import io.ktor.client.request.get
-import io.ktor.client.request.parameter
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.request.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -224,13 +220,15 @@ class AccordClient(private val httpClient: HttpClient) {
     suspend fun endRound(
         matchId: MatchId,
         submission: String? = null,
-        submitter: CompetitorColor? = null
+        submitter: CompetitorColor? = null,
+        stoppage: Boolean = false,
+        stopper: CompetitorColor? = null,
     ): NetworkResult<Match> {
-        log.d { "endRound matchId=$matchId submission=${submission != null} submitter=$submitter" }
+        log.d { "endRound matchId=$matchId submission=${submission != null} submitter=$submitter stoppage=$stoppage stopper=$stopper" }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.post("match/${matchId.id}/rounds/end") {
-                    setBody(EndRoundRequest(submission, submitter))
+                    setBody(EndRoundRequest(submission, submitter, stoppage.takeIf { it }, stopper))
                 }.body<ApiResult<MatchResponseData>>()
             }
                 .unwrapApiResult()

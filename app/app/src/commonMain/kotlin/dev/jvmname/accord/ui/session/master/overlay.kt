@@ -21,12 +21,20 @@ import dev.jvmname.accord.ui.theme.AccordTheme
 
 internal sealed class SubmissionResult {
     data object Dismissed : SubmissionResult()
-    data class Confirmed(val submission: String?, val submitter: Competitor?) : SubmissionResult()
+    data class Confirmed(
+        val submission: String?,
+        val submitter: Competitor?,
+        val stoppage: Boolean,
+        val stopper: Competitor?,
+    ) : SubmissionResult()
 }
+
+private enum class EndRoundMethod { SUBMISSION, STOPPAGE }
 
 @Composable
 internal fun SubmissionDialog(overlayNavigator: OverlayNavigator<SubmissionResult>) {
     val submissionText = rememberTextFieldState()
+    var method by remember { mutableStateOf(EndRoundMethod.SUBMISSION) }
     var selected by remember { mutableStateOf<Competitor?>(null) }
 
     Column(
@@ -39,14 +47,32 @@ internal fun SubmissionDialog(overlayNavigator: OverlayNavigator<SubmissionResul
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(bottom = 4.dp),
         )
-        OutlinedTextField(
-            state = submissionText,
-            label = { Text("Submission (optional)") },
-            placeholder = { Text("e.g. rear naked choke") },
-            lineLimits = TextFieldLineLimits.SingleLine,
-            modifier = Modifier.fillMaxWidth(),
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            EndRoundMethod.entries.forEachIndexed { index, m ->
+                SegmentedButton(
+                    shape = SegmentedButtonDefaults.itemShape(index, 2),
+                    onClick = {
+                        method = m
+                        selected = null
+                    },
+                    selected = method == m,
+                    label = { Text(m.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                )
+            }
+        }
+        if (method == EndRoundMethod.SUBMISSION) {
+            OutlinedTextField(
+                state = submissionText,
+                label = { Text("Submission (optional)") },
+                placeholder = { Text("e.g. rear naked choke") },
+                lineLimits = TextFieldLineLimits.SingleLine,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        Text(
+            text = if (method == EndRoundMethod.SUBMISSION) "Who submitted?" else "Who wins?",
+            style = MaterialTheme.typography.bodyMedium,
         )
-        Text("Winner:", style = MaterialTheme.typography.bodyMedium)
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
             Competitor.entries.forEachIndexed { index, competitor ->
                 SegmentedButton(
@@ -65,10 +91,20 @@ internal fun SubmissionDialog(overlayNavigator: OverlayNavigator<SubmissionResul
             TextButton(onClick = { overlayNavigator.finish(SubmissionResult.Dismissed) }) { Text("Cancel") }
             TextButton(onClick = {
                 overlayNavigator.finish(
-                    SubmissionResult.Confirmed(
-                        submission = submissionText.text.ifBlank { null }?.toString(),
-                        submitter = selected,
-                    )
+                    when (method) {
+                        EndRoundMethod.SUBMISSION -> SubmissionResult.Confirmed(
+                            submission = submissionText.text.ifBlank { null }?.toString(),
+                            submitter = selected,
+                            stoppage = false,
+                            stopper = null,
+                        )
+                        EndRoundMethod.STOPPAGE -> SubmissionResult.Confirmed(
+                            submission = null,
+                            submitter = null,
+                            stoppage = true,
+                            stopper = selected,
+                        )
+                    }
                 )
             }) { Text("Confirm") }
         }

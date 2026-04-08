@@ -2,8 +2,6 @@ package dev.jvmname.accord.ui.session
 
 import com.slack.circuit.runtime.CircuitUiEvent
 import dev.jvmname.accord.domain.Competitor
-import dev.jvmname.accord.network.CompetitorColor
-
 sealed interface SessionEvent : CircuitUiEvent
 
 // Capability markers — mirror domain interfaces in MatchSession.kt
@@ -20,10 +18,7 @@ sealed interface JudgeSessionEvent : SessionEvent {
     data class ButtonPress(val competitor: Competitor) : JudgeSessionEvent, JudgingEvent
     data class ButtonRelease(val competitor: Competitor) : JudgeSessionEvent, JudgingEvent
     data object StartRound : JudgeSessionEvent, RoundControlEvent
-    data class EndRound(
-        val submission: String? = null,
-        val submitter: CompetitorColor? = null,
-    ) : JudgeSessionEvent, RoundControlEvent
+    data object EndRound : JudgeSessionEvent, RoundControlEvent
     data class ManualEdit(
         val competitor: Competitor,
         val action: ManualEditAction,
@@ -43,6 +38,8 @@ sealed interface MasterSessionEvent : SessionEvent {
     data class EndRound(
         val submission: String? = null,
         val submitter: Competitor? = null,
+        val stoppage: Boolean = false,
+        val stopper: Competitor? = null,
     ) : MasterSessionEvent, RoundControlEvent
     data object ShowEndRoundDialog : MasterSessionEvent
     data object DismissEndRoundDialog : MasterSessionEvent

@@ -45,7 +45,12 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             )
             when (result) {
                 is SubmissionResult.Confirmed -> state.eventSink(
-                    MasterSessionEvent.EndRound(result.submission, result.submitter)
+                    MasterSessionEvent.EndRound(
+                        submission = result.submission,
+                        submitter = result.submitter,
+                        stoppage = result.stoppage,
+                        stopper = result.stopper,
+                    )
                 )
 
                 SubmissionResult.Dismissed -> state.eventSink(MasterSessionEvent.DismissEndRoundDialog)
@@ -165,8 +170,8 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             state.actions.endRound?.let { endRound ->
                 IconTextButton(
                     modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.Default.Stop,
-                    text = "End Round",
+                    icon = Icons.Default.HeartBroken,
+                    text = "Stop Round",
                     onClick = endRound
                 )
             }

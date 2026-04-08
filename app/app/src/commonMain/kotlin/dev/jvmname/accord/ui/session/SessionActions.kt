@@ -5,7 +5,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import dev.jvmname.accord.domain.Competitor
-
 typealias MatchAction = () -> Unit
 operator fun MatchAction?.invoke() = this?.invoke()
 
@@ -24,10 +23,10 @@ fun rememberMatchActions(
     isActive: Boolean,
     isPaused: Boolean,
     hasRound: Boolean,
-    onPause: () -> Unit,
-    onResume: () -> Unit,
-    onStartRound: () -> Unit,
-    onEndRound: () -> Unit,
+    onPause: MatchAction? = null,
+    onResume: MatchAction? = null,
+    onStartRound: MatchAction? = null,
+    onEndRound: MatchAction? = null,
     onReset: (() -> Unit)? = null,
     onManualEdit: ((Competitor, ManualEditAction) -> Unit)? = null,
 ): MatchActions {
@@ -41,9 +40,9 @@ fun rememberMatchActions(
     return remember(isActive, isPaused, hasRound) {
         MatchActions(
             startRound = { onStartState.value() },
-            resume = { onResumeState.value() }.takeIf { isPaused },
-            pause = { onPauseState.value() }.takeIf { isActive },
-            endRound = { onEndState.value() }.takeIf { isActive },
+            resume = onResumeState.value.takeIf { isPaused },
+            pause = onPauseState.value.takeIf { isActive },
+            endRound = onEndState.value.takeIf { isActive },
             reset = { onResetState.value?.invoke() ?: Unit }.takeIf { hasRound },
             manualEdit = onManualEditState.value?.let { fn -> { c, a -> fn(c, a) } },
         )

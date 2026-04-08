@@ -121,9 +121,9 @@ class MasterSessionPresenter(
                     }
 
                     is MasterSessionEvent.EndRound -> {
-                        log.i { "ending round submission=${event.submission}" }
+                        log.i { "ending round submission=${event.submission} stoppage=${event.stoppage}" }
                         showEndRoundDialog = false
-                        session.endRound(event.submitter, event.submission)
+                        session.endRound(event.submitter ?: event.stopper, event.submission, event.stoppage)
                     }
 
                     MasterSessionEvent.StartRound -> {
