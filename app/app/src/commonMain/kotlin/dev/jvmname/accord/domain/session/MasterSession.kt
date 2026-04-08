@@ -105,8 +105,10 @@ class MasterSession(
     override fun endRound(winner: Competitor?, submission: String?, stoppage: Boolean) {
         scope.launch {
             currentMatchId?.let {
-                if (stoppage) matchManager.endRound(it, stoppage = true, stopper = winner)
-                else matchManager.endRound(it, submission, winner)
+                when {
+                    stoppage -> matchManager.endRound(it, stoppage = true, stopper = winner)
+                    else -> matchManager.endRound(it, submission.orEmpty(), winner)
+                }
             }
         }
     }
