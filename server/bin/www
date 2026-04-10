@@ -8,7 +8,6 @@ const server = new ApplicationServer();
 const workerArgs = ['run', 'worker', server.workerToken];
 const workerEnv  = {
     ...process.env,
-    HOST: server.host,
     PORT: server.port,
     PROC_NAME: 'WORKER'
 };

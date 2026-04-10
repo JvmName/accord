@@ -20,16 +20,14 @@ const { generateDocs,
 class ApplicationServer {
     #controllerClasses;
     #_expressServer;
-    #host;
     #_httpServer;
     #port;
     #webSocketServer;
     #workerToken;
 
 
-    constructor({ port, host }={}) {
+    constructor({ port }={}) {
         this.#port = port || process.env.PORT || 3000;
-        this.#host = host || process.env.HOST || 'localhost';
         this.setupMiddleware();
     }
 
@@ -49,8 +47,9 @@ class ApplicationServer {
         this.startWebSocketServer();
 
         this.#httpServer.on('error', this.onError.bind(this));
-        this.#httpServer.listen(this.#port, this.#host, () => {
-            this.logger.info(`Server is running on port ${this.#port}`);
+        this.#httpServer.listen(this.#port, () => {
+            const { address, port } = this.#httpServer.address();
+            this.logger.info(`Server is running on ${address}:${port}`);
         });
     }
 
@@ -61,7 +60,6 @@ class ApplicationServer {
     }
 
 
-    get host()   { return this.#host; }
     get port()   { return this.#port; }
     get logger() { return logger; }
 
