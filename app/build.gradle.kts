@@ -12,4 +12,5 @@ plugins {
     alias(libs.plugins.metro) apply false
     alias(libs.plugins.poko) apply false
     alias(libs.plugins.ksp) apply false
+    alias(libs.plugins.buildconfig) apply false
 }
