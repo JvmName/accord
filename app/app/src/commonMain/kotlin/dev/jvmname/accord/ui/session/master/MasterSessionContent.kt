@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.overlay.OverlayEffect
 import com.slack.circuitx.overlays.BottomSheetOverlay
@@ -32,6 +33,7 @@ import dev.jvmname.accord.ui.session.MatchActions
 import dev.jvmname.accord.ui.session.MatchState
 import dev.jvmname.accord.ui.session.judging.MatchResult
 import dev.jvmname.accord.ui.theme.AccordTheme
+import dev.jvmname.accord.ui.theme.TabletMainNumber
 
 @[Composable CircuitInject(MasterSessionScreen::class, MatchScope::class)]
 fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifier) {
@@ -109,11 +111,14 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             Text(
                 state.matchState.timerDisplay,
                 style = MaterialTheme.typography.displayLargeEmphasized,
+                fontSize = 84.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            state.matchState.roundLabel?.let { Text(it) }
+            state.matchState.roundLabel?.let {
+                Text(it, style = MaterialTheme.typography.displayLarge)
+            }
 
             // Score row
             Row(
@@ -121,18 +126,19 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(state.redName, style = MaterialTheme.typography.bodyMedium)
+                    Text(state.redName, style = MaterialTheme.typography.displayLarge)
                     Text(
                         "${state.matchState.score.redPoints}",
-                        style = MaterialTheme.typography.displayLarge,
+                        style = MaterialTheme.typography.TabletMainNumber,
                         color = Color.Red
                     )
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(state.blueName, style = MaterialTheme.typography.bodyMedium)
+                    Text(state.blueName, style = MaterialTheme.typography.displayLarge)
                     Text(
                         "${state.matchState.score.bluePoints}",
-                        style = MaterialTheme.typography.displayLarge,
+                        style = MaterialTheme.typography.TabletMainNumber,
+                        fontSize = 84.sp,
                         color = Color.Blue,
                     )
                 }
@@ -140,7 +146,8 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
 
             // Control buttons
             val roundInfo = state.matchState.roundInfo
-            val isActiveBreak = roundInfo?.round is RoundInfo.Break && roundInfo.state == RoundEvent.RoundState.STARTED
+            val isActiveBreak =
+                roundInfo?.round is RoundInfo.Break && roundInfo.state == RoundEvent.RoundState.STARTED
             if (!isActiveBreak && roundInfo?.state == RoundEvent.RoundState.ENDED) {
                 IconTextButton(
                     modifier = Modifier.fillMaxWidth(),
@@ -228,7 +235,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
 
 
 // Match started, active round in progress — pause + end round + end match visible
-@Preview
+@Preview(device = "id:medium_tablet")
 @Composable
 private fun MasterSessionContent_ActiveRound_Preview() {
     AccordTheme {
@@ -246,7 +253,7 @@ private fun MasterSessionContent_ActiveRound_Preview() {
                         techFallWin = null,
                     ),
                     roundInfo = null,
-                    timerDisplay = "02:07",
+                    timerDisplay = "2:07",
                     roundLabel = "Round 2",
                     controlDurations = emptyMap(),
                     roundScores = emptyMap(),
@@ -267,7 +274,7 @@ private fun MasterSessionContent_ActiveRound_Preview() {
 }
 
 // Match started, between rounds — only end match visible
-@Preview
+@Preview(device = "id:medium_tablet")
 @Composable
 private fun MasterSessionContent_BetweenRounds_Preview() {
     AccordTheme {
@@ -303,7 +310,7 @@ private fun MasterSessionContent_BetweenRounds_Preview() {
     }
 }
 
-@Preview
+@Preview(device = "id:medium_tablet")
 @Composable
 private fun MasterSessionContent_Start_Preview() {
     AccordTheme {
@@ -333,7 +340,7 @@ private fun MasterSessionContent_Start_Preview() {
     }
 }
 
-@Preview
+@Preview(device = "id:medium_tablet")
 @Composable
 private fun MasterSessionContent_Ended_Preview() {
     AccordTheme {
@@ -372,7 +379,7 @@ private fun MasterSessionContent_Ended_Preview() {
     }
 }
 
-@Preview
+@Preview(device = "id:medium_tablet")
 @Composable
 private fun MasterSessionContent_Dialog_Preview() {
     AccordTheme {
@@ -402,7 +409,7 @@ private fun MasterSessionContent_Dialog_Preview() {
     }
 }
 
-@Preview
+@Preview(device = "id:medium_tablet")
 @Composable
 private fun MasterSessionContent_Paused_Preview() {
     AccordTheme {
@@ -432,7 +439,7 @@ private fun MasterSessionContent_Paused_Preview() {
     }
 }
 
-@Preview
+@Preview(device = "id:medium_tablet")
 @Composable
 private fun MasterSessionContent_Error_Preview() {
     AccordTheme {
