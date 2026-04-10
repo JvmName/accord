@@ -39,7 +39,6 @@ data class MatchResult(
         return buildString {
 //            append("Winner: ", winner.first.name, ' ', winner.second.asEmoji).appendLine()
 //            append("Score: ", winnerScore, " to ", loserScore, "(", winConditions, ")").appendLine()
-            append("Results: ")
             roundWinners.forEach {
                 append(it.asEmoji).append(' ')
             }
