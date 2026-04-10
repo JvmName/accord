@@ -224,9 +224,7 @@ buildConfig {
             "BASE_URL",
             if (isRelease) "https://rdk.api.jvmname.dev" else "http://[fec0::2]:3000"
         )
-
     }
-
 }
 
 dependencies {
