@@ -1,13 +1,29 @@
 package dev.jvmname.accord.ui.session.master
 
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.NextPlan
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.HeartBroken
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Password
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material3.*
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,8 +39,6 @@ import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
-import dev.jvmname.accord.network.User
-import dev.jvmname.accord.network.UserId
 import dev.jvmname.accord.ui.common.IconTextButton
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.MasterSessionEvent
@@ -196,13 +210,13 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             state.matchResult?.let { matchResult ->
                 Text(
                     "Match Complete",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineLargeEmphasized,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
                 Text(
                     matchResult.toText(),
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
@@ -352,10 +366,8 @@ private fun MasterSessionContent_Ended_Preview() {
                 ),
                 isMatchStarted = true,
                 matchResult = MatchResult(
-                    winner = User(UserId("1"), "Alice") to Competitor.RED,
-                    winnerScore = 2,
-                    loserScore = 1,
                     winConditions = "Points (12s), Points (9s)",
+                    roundWinners = listOf(Competitor.RED, Competitor.BLUE, Competitor.RED)
                 ),
                 actions = MatchActions(),
                 showEndRoundDialog = false,
