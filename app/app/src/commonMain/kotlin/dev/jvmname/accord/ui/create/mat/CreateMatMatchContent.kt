@@ -72,15 +72,12 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
                 .padding(vertical = 32.dp, horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val masterNameState = rememberTextFieldState()
             val matNameState = rememberTextFieldState()
             val redNameState = rememberTextFieldState()
             val blueNameState = rememberTextFieldState()
-            var judgeCount by remember { mutableIntStateOf(1) }
-            var isJudging by remember { mutableStateOf(false) }
+            var judgeCount by remember { mutableIntStateOf(3) }
             var hasAttemptedSubmit by remember { mutableStateOf(false) }
 
-            val masterNameError = hasAttemptedSubmit && masterNameState.text.isBlank()
             val matNameError = hasAttemptedSubmit && matNameState.text.isBlank()
             val redNameError = hasAttemptedSubmit && redNameState.text.isBlank()
             val blueNameError = hasAttemptedSubmit && blueNameState.text.isBlank()
@@ -88,22 +85,6 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
             Text("Mat Info", style = AccordTypography.titleLarge)
 
             Spacer(Modifier.height(16.dp))
-
-            OutlinedTextField(
-                masterNameState,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Jane Smith") },
-                label = { Text("Your Name *") },
-                isError = masterNameError,
-                supportingText = if (masterNameError) {
-                    { Text("Required") }
-                } else null,
-                lineLimits = TextFieldLineLimits.SingleLine,
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    capitalization = KeyboardCapitalization.Words,
-                    imeAction = ImeAction.Next,
-                ),
-            )
 
             Spacer(Modifier.height(16.dp))
 
@@ -175,17 +156,13 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
                 },
                 onClick = {
                     hasAttemptedSubmit = true
-                    if (masterNameState.text.isBlank() || matNameState.text.isBlank() ||
-                        redNameState.text.isBlank() || blueNameState.text.isBlank()
-                    ) return@Button
+                    if (matNameState.text.isBlank() || redNameState.text.isBlank() || blueNameState.text.isBlank()) return@Button
                     state.eventSink(
                         CreateMatMatchEvent.CreateMat(
-                            masterName = masterNameState.text.toString(),
                             matName = matNameState.text.toString(),
                             judgeCount = judgeCount,
                             redName = redNameState.text.toString(),
                             blueName = blueNameState.text.toString(),
-//                            isJudging = isJudging,
                         )
                     )
                 },
