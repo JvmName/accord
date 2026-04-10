@@ -16,9 +16,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.NextPlan
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.HeartBroken
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Password
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material3.*
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,8 +43,6 @@ import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
-import dev.jvmname.accord.network.User
-import dev.jvmname.accord.network.UserId
 import dev.jvmname.accord.ui.common.IconTextButton
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.MasterSessionEvent
@@ -387,10 +394,8 @@ private fun MasterSessionContent_Ended_Preview() {
                 ),
                 isMatchStarted = true,
                 matchResult = MatchResult(
-                    winner = User(UserId("1"), "Alice") to Competitor.RED,
-                    winnerScore = 2,
-                    loserScore = 1,
                     winConditions = "Points (12s), Points (9s)",
+                    roundWinners = listOf(Competitor.RED, Competitor.BLUE, Competitor.RED)
                 ),
                 actions = MatchActions(),
                 showEndRoundDialog = false,
