@@ -37,8 +37,11 @@ data class MatchResult(
 ) {
     fun toText(): String {
         return buildString {
-            append("Winner: ", winner.first.name, ' ', winner.second.asEmoji).appendLine()
-            append("Score: ", winnerScore, " to ", loserScore, "(", winConditions, ")").appendLine()
+//            append("Winner: ", winner.first.name, ' ', winner.second.asEmoji).appendLine()
+//            append("Score: ", winnerScore, " to ", loserScore, "(", winConditions, ")").appendLine()
+            roundWinners.forEach {
+                append(it.asEmoji).append(' ')
+            }
         }
     }
 }

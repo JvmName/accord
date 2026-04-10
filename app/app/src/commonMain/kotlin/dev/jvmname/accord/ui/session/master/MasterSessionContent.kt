@@ -1,7 +1,18 @@
 package dev.jvmname.accord.ui.session.master
 
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.NextPlan
@@ -15,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.overlay.OverlayEffect
 import com.slack.circuitx.overlays.BottomSheetOverlay
@@ -33,8 +43,11 @@ import dev.jvmname.accord.ui.session.MatchActions
 import dev.jvmname.accord.ui.session.MatchState
 import dev.jvmname.accord.ui.session.judging.MatchResult
 import dev.jvmname.accord.ui.theme.AccordTheme
-import dev.jvmname.accord.ui.theme.TabletMainNumber
+import dev.jvmname.accord.ui.theme.TabletCompetitor
+import dev.jvmname.accord.ui.theme.TabletScore
+import dev.jvmname.accord.ui.theme.TabletTimeDisplay
 
+@OptIn(ExperimentalLayoutApi::class)
 @[Composable CircuitInject(MasterSessionScreen::class, MatchScope::class)]
 fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifier) {
     if (state.showEndRoundDialog) {
@@ -108,38 +121,46 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            Text(
-                state.matchState.timerDisplay,
-                style = MaterialTheme.typography.displayLargeEmphasized,
-                fontSize = 84.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            state.matchState.roundLabel?.let {
-                Text(it, style = MaterialTheme.typography.displayLarge)
-            }
-
-            // Score row
+            // Combined scores + timer/label row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(state.redName, style = MaterialTheme.typography.displayLarge)
+                Column(
+                    modifier = Modifier.weight(0.31f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(state.redName, style = MaterialTheme.typography.TabletCompetitor)
                     Text(
-                        "${state.matchState.score.redPoints}",
-                        style = MaterialTheme.typography.TabletMainNumber,
-                        color = Color.Red
+                        "${10 + state.matchState.score.redPoints}",
+                        style = MaterialTheme.typography.TabletScore,
+                        color = Color.Red,
+                        softWrap = false,
                     )
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(state.blueName, style = MaterialTheme.typography.displayLarge)
+                Column(
+                    modifier = Modifier.weight(0.38f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
                     Text(
-                        "${state.matchState.score.bluePoints}",
-                        style = MaterialTheme.typography.TabletMainNumber,
-                        fontSize = 84.sp,
+                        state.matchState.timerDisplay,
+                        style = MaterialTheme.typography.TabletTimeDisplay,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    state.matchState.roundLabel?.let {
+                        Text(it, style = MaterialTheme.typography.displayLarge)
+                    }
+                }
+                Column(
+                    modifier = Modifier.weight(0.31f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(state.blueName, style = MaterialTheme.typography.TabletCompetitor)
+                    Text(
+                        "${10 + state.matchState.score.bluePoints}",
+                        style = MaterialTheme.typography.TabletScore,
                         color = Color.Blue,
+                        softWrap = false,
                     )
                 }
             }
@@ -148,73 +169,80 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             val roundInfo = state.matchState.roundInfo
             val isActiveBreak =
                 roundInfo?.round is RoundInfo.Break && roundInfo.state == RoundEvent.RoundState.STARTED
-            if (!isActiveBreak && roundInfo?.state == RoundEvent.RoundState.ENDED) {
-                IconTextButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.AutoMirrored.Outlined.NextPlan,
-                    text = "Start Next Round",
-                    onClick = { state.eventSink(MasterSessionEvent.StartRound) }
-                )
-            }
+            val buttonModifier = Modifier.width(200.dp).height(80.dp)
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (!isActiveBreak && roundInfo?.state == RoundEvent.RoundState.ENDED) {
+                    IconTextButton(
+                        modifier = buttonModifier,
+                        icon = Icons.AutoMirrored.Outlined.NextPlan,
+                        text = "Start Next Round",
+                        onClick = { state.eventSink(MasterSessionEvent.StartRound) }
+                    )
+                }
 
-            if (!state.isMatchStarted && state.matchResult == null) {
-                IconTextButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.Outlined.PlayArrow,
-                    text = "Start Match",
-                    onClick = { state.eventSink(MasterSessionEvent.StartMatch) }
-                )
-            }
+                if (!state.isMatchStarted && state.matchResult == null) {
+                    IconTextButton(
+                        modifier = buttonModifier,
+                        icon = Icons.Outlined.PlayArrow,
+                        text = "Start Match",
+                        onClick = { state.eventSink(MasterSessionEvent.StartMatch) }
+                    )
+                }
 
-            state.actions.pause?.let { pause ->
-                IconTextButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.Default.Pause,
-                    text = "Pause",
-                    onClick = pause,
-                )
-            }
-            state.actions.endRound?.let { endRound ->
-                IconTextButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.Default.HeartBroken,
-                    text = "Stop Round",
-                    onClick = endRound
-                )
-            }
-            state.actions.resume?.let { resume ->
-                IconTextButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.Outlined.PlayArrow,
-                    text = "Resume",
-                    onClick = resume
-                )
-            }
-            if (state.isMatchStarted && state.matchResult == null) {
-                IconTextButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.Default.StopCircle,
-                    text = "End Match",
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    onClick = { state.eventSink(MasterSessionEvent.EndMatch) }
-                )
+                state.actions.pause?.let { pause ->
+                    IconTextButton(
+                        modifier = buttonModifier,
+                        icon = Icons.Default.Pause,
+                        text = "Pause",
+                        onClick = pause,
+                    )
+                }
+                state.actions.endRound?.let { endRound ->
+                    IconTextButton(
+                        modifier = buttonModifier,
+                        icon = Icons.Default.HeartBroken,
+                        text = "Stop Round",
+                        onClick = endRound
+                    )
+                }
+                state.actions.resume?.let { resume ->
+                    IconTextButton(
+                        modifier = buttonModifier,
+                        icon = Icons.Outlined.PlayArrow,
+                        text = "Resume",
+                        onClick = resume
+                    )
+                }
+                if (state.isMatchStarted && state.matchResult == null) {
+                    IconTextButton(
+                        modifier = buttonModifier,
+                        icon = Icons.Default.StopCircle,
+                        text = "End Match",
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        onClick = { state.eventSink(MasterSessionEvent.EndMatch) }
+                    )
+                }
             }
 
             state.matchResult?.let { matchResult ->
                 Text(
                     "Match Complete",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.displayLargeEmphasized,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
                 Text(
                     matchResult.toText(),
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.displayLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 IconTextButton(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = buttonModifier,
                     icon = Icons.Default.Home,
                     text = "Return to Main",
                     onClick = { state.eventSink(MasterSessionEvent.ReturnToMain) }
@@ -246,7 +274,7 @@ private fun MasterSessionContent_ActiveRound_Preview() {
                 blueName = "Bob",
                 matchState = MatchState(
                     score = Score(
-                        redPoints = 3,
+                        redPoints = 13,
                         bluePoints = 1,
                         activeControlTime = null,
                         activeCompetitor = null,
@@ -286,7 +314,7 @@ private fun MasterSessionContent_BetweenRounds_Preview() {
                 matchState = MatchState(
                     score = Score(
                         redPoints = 3,
-                        bluePoints = 1,
+                        bluePoints = 14,
                         activeControlTime = null,
                         activeCompetitor = null,
                         techFallWin = null,
