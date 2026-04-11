@@ -79,7 +79,7 @@ val RoundResultType.toHumanString: String
     }
 
 fun Match.toMatchResult(): MatchResult? {
-    val winner = winner!!
+    val winner = winner?: return null
     val winnerC = winnerCompetitor ?: return null
     val scores = roundScore()
     val loser = if (winnerC == Competitor.RED) Competitor.BLUE else Competitor.RED

@@ -8,9 +8,13 @@ import com.github.michaelbull.result.onOk
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.request.*
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.request.delete
+import io.ktor.client.request.get
+import io.ktor.client.request.parameter
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -182,15 +186,12 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun endMatch(
         matchId: MatchId,
-        submission: String? = null,
-        submitter: CompetitorColor? = null,
     ): NetworkResult<Match> {
-        log.d { "endMatch matchId=$matchId submission=${submission != null} submitter=$submitter" }
+        log.d { "endMatch matchId=$matchId " }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
-                httpClient.post("match/${matchId.id}/end") {
-                    setBody(EndMatchRequest(submission, submitter))
-                }.body<ApiResult<MatchResponseData>>()
+                httpClient.post("match/${matchId.id}/end")
+                    .body<ApiResult<MatchResponseData>>()
             }
                 .unwrapApiResult()
                 .map { it.match }
@@ -219,16 +220,14 @@ class AccordClient(private val httpClient: HttpClient) {
 
     suspend fun endRound(
         matchId: MatchId,
-        submission: String? = null,
-        submitter: CompetitorColor? = null,
-        stoppage: Boolean = false,
-        stopper: CompetitorColor? = null,
+        winner: CompetitorColor?,
+        stoppage: Boolean,
     ): NetworkResult<Match> {
-        log.d { "endRound matchId=$matchId submission=${submission != null} submitter=$submitter stoppage=$stoppage stopper=$stopper" }
+        log.d { "endRound matchId=$matchId winner=$winner stoppage=$stoppage" }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 httpClient.post("match/${matchId.id}/rounds/end") {
-                    setBody(EndRoundRequest(submission, submitter, stoppage.takeIf { it }, stopper))
+                    setBody(EndRoundRequest(winner = winner, stoppage = stoppage))
                 }.body<ApiResult<MatchResponseData>>()
             }
                 .unwrapApiResult()
