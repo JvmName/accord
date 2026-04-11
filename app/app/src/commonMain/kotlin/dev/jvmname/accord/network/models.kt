@@ -159,12 +159,6 @@ enum class CompetitorColor {
     val humanName = name.lowercase()
 }
 
-@[Poko Serializable]
-class EndMatchRequest(
-    val submission: String? = null,
-    val submitter: CompetitorColor? = null,
-)
-
 // ============================================================================
 // Round Models
 // ============================================================================
@@ -212,10 +206,8 @@ enum class RoundResultType {
 
 @[Poko Serializable]
 class EndRoundRequest(
-    val submission: String? = null,
-    val submitter: CompetitorColor? = null,
+    val winner: CompetitorColor? = null,
     val stoppage: Boolean? = null,
-    val stopper: CompetitorColor? = null,
 )
 
 // ============================================================================
