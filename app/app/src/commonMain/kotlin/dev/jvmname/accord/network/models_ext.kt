@@ -78,17 +78,10 @@ val RoundResultType.toHumanString: String
         RoundResultType.TECH_FALL -> "Techfall"
     }
 
-fun Match.toMatchResult(): MatchResult? {
-    val winner = winner?: return null
-    val winnerC = winnerCompetitor ?: return null
-    val scores = roundScore()
-    val loser = if (winnerC == Competitor.RED) Competitor.BLUE else Competitor.RED
+fun Match.toMatchResult(): MatchResult {
     return MatchResult(
-//        winner = winner to winnerC,
-//        winnerScore = scores[winnerC] ?: 0,
-//        loserScore = scores[loser] ?: 0,
         winConditions = rounds
-            .filter { it.endedAt != null && it.result.winner == winner && it.result.method.type != null }
+            .filter { it.endedAt != null && it.result.method.type != null }
             .joinToString { it.result.method.type!!.toHumanString },
         roundWinners = rounds.indices.mapNotNull { winner(it) }
     )

@@ -36,6 +36,7 @@ data class MatchResult(
     val roundWinners: List<Competitor>,
 ) {
     fun toText(): String {
+        if (roundWinners.isEmpty()) return "🔲 🔲 🔲"
         return buildString {
 //            append("Winner: ", winner.first.name, ' ', winner.second.asEmoji).appendLine()
 //            append("Score: ", winnerScore, " to ", loserScore, "(", winConditions, ")").appendLine()
