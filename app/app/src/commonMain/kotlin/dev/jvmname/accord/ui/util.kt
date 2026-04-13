@@ -2,6 +2,7 @@ package dev.jvmname.accord.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.RememberObserver
+
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.annotation.UnsafeResultErrorAccess
 import com.github.michaelbull.result.annotation.UnsafeResultValueAccess
@@ -16,6 +17,10 @@ import top.ltfan.multihaptic.vibrator.Vibrator
 import java.util.Locale
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+
+
+@Composable
+expect fun LockLandscape()
 
 // https://chrisbanes.me/posts/retaining-beyond-viewmodels/
 @Composable

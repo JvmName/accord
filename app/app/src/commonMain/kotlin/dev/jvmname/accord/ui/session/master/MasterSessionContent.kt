@@ -43,6 +43,7 @@ import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
+import dev.jvmname.accord.ui.LockLandscape
 import dev.jvmname.accord.ui.common.IconTextButton
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.MasterSessionEvent
@@ -57,6 +58,7 @@ import dev.jvmname.accord.ui.theme.TabletTimeDisplay
 @OptIn(ExperimentalLayoutApi::class)
 @[Composable CircuitInject(MasterSessionScreen::class, MatchScope::class)]
 fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifier) {
+    LockLandscape()
     if (state.showEndRoundDialog) {
         OverlayEffect(state.showEndRoundDialog) {
             val result = show(
@@ -137,7 +139,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                 ) {
                     Text(state.redName, style = MaterialTheme.typography.TabletCompetitor)
                     Text(
-                        "${10 + state.matchState.score.redPoints}",
+                        state.matchState.score.redPoints.toString(),
                         style = MaterialTheme.typography.TabletScore,
                         color = Color.Red,
                         softWrap = false,
@@ -162,7 +164,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                 ) {
                     Text(state.blueName, style = MaterialTheme.typography.TabletCompetitor)
                     Text(
-                        "${10 + state.matchState.score.bluePoints}",
+                        "${state.matchState.score.bluePoints}",
                         style = MaterialTheme.typography.TabletScore,
                         color = Color.Blue,
                         softWrap = false,
@@ -268,7 +270,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
 
 
 // Match started, active round in progress — pause + end round + end match visible
-@Preview(device = "id:medium_tablet")
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_ActiveRound_Preview() {
     AccordTheme {
@@ -307,7 +309,7 @@ private fun MasterSessionContent_ActiveRound_Preview() {
 }
 
 // Match started, between rounds — only end match visible
-@Preview(device = "id:medium_tablet")
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_BetweenRounds_Preview() {
     AccordTheme {
@@ -343,7 +345,7 @@ private fun MasterSessionContent_BetweenRounds_Preview() {
     }
 }
 
-@Preview(device = "id:medium_tablet")
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_Start_Preview() {
     AccordTheme {
@@ -373,7 +375,7 @@ private fun MasterSessionContent_Start_Preview() {
     }
 }
 
-@Preview(device = "id:medium_tablet")
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_Ended_Preview() {
     AccordTheme {
@@ -410,7 +412,7 @@ private fun MasterSessionContent_Ended_Preview() {
     }
 }
 
-@Preview(device = "id:medium_tablet")
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_Dialog_Preview() {
     AccordTheme {
@@ -440,7 +442,7 @@ private fun MasterSessionContent_Dialog_Preview() {
     }
 }
 
-@Preview(device = "id:medium_tablet")
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_Paused_Preview() {
     AccordTheme {
@@ -470,7 +472,7 @@ private fun MasterSessionContent_Paused_Preview() {
     }
 }
 
-@Preview(device = "id:medium_tablet")
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_Error_Preview() {
     AccordTheme {
