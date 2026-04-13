@@ -136,7 +136,7 @@ class Round extends BaseRecord {
     }
 
 
-    async end({winner, stoppage = false}={}) {
+    async end() {
         const where = {ended_at: null};
         const ridingTimeVotes = await this.getRidingTimeVotes({ where });
         for (const vote of ridingTimeVotes) {
@@ -147,19 +147,12 @@ class Round extends BaseRecord {
 
         const match = await this.getMatch();
 
-        if (winner) {
-            const competitor        = await match.competitorForColor(winner);
-            this.declared_winner_id = competitor?.id;
-            this.stoppage           = stoppage;
-        }
-
         this.ended_at = new Date();
         await this.save();
 
         const redScore  = await this.getRedScore();
         const blueScore = await this.getBlueScore();
-        const winLog    = winner ? ` winner=${winner} stoppage=${stoppage}` : '';
-        logger.info(`Round ended: match=${this.match_id} round=${this.id} red=${redScore} blue=${blueScore}${winLog}`);
+        logger.info(`Round ended: match=${this.match_id} round=${this.id} red=${redScore} blue=${blueScore}`);
 
         const allRounds = await match.getRounds();
         logger.info(`Round transition: match=${this.match_id} completedRounds=${allRounds.length} maxRounds=${match.maxRounds}`);
@@ -185,6 +178,23 @@ class Round extends BaseRecord {
                 }
             }
         }
+    }
+
+
+    async setResult({ winner, stoppage = false } = {}) {
+        if (!this.ended) throw new Error('Cannot set result on a round that has not ended');
+
+        if (winner) {
+            const match             = await this.getMatch();
+            const competitor        = await match.competitorForColor(winner);
+            this.declared_winner_id = competitor?.id;
+            this.stoppage           = stoppage;
+        } else {
+            this.declared_winner_id = null;
+            this.stoppage           = null;
+        }
+
+        await this.save();
     }
 
 
