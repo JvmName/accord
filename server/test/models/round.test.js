@@ -358,3 +358,142 @@ describe('round.end()', () => {
         expect(round.ended_at).toBeInstanceOf(Date);
     });
 });
+
+
+// ===========================================================================
+// round.end() — match transition (all 3 rounds always run)
+// ===========================================================================
+describe('round.end() — match transition', () => {
+    function makeRoundWithMatch(matchOverrides = {}) {
+        const round = makeRound();
+        mockRoundPauseFindAll.mockResolvedValue([]);
+        round.save = jest.fn().mockResolvedValue(round);
+
+        const matchDefaults = {
+            competitorForColor:      jest.fn(),
+            getRounds:               jest.fn().mockResolvedValue([round]),
+            getWinner:               jest.fn().mockResolvedValue(null),
+            maxRounds:               3,
+            end:                     jest.fn(),
+            save:                    jest.fn().mockResolvedValue(null),
+            clearCachedAssociation:  jest.fn(),
+            rules:                   { getBreakDuration: jest.fn().mockReturnValue(0) },
+            red_competitor_id:       'red-1',
+            blue_competitor_id:      'blue-1',
+            getJudges:               jest.fn().mockResolvedValue([]),
+            getRedCompetitor:        jest.fn().mockResolvedValue(null),
+            getBlueCompetitor:       jest.fn().mockResolvedValue(null),
+        };
+        round.getMatch = jest.fn().mockResolvedValue({ ...matchDefaults, ...matchOverrides });
+        return round;
+    }
+
+    it('ends the match after the 3rd round (max-rounds-reached)', async () => {
+        const round1 = makeRound();
+        const round2 = makeRound();
+        const round3 = makeRound();
+        const endMock = jest.fn();
+        round3.getMatch = jest.fn().mockResolvedValue({
+            competitorForColor:      jest.fn(),
+            getRounds:               jest.fn().mockResolvedValue([round1, round2, round3]),
+            maxRounds:               3,
+            end:                     endMock,
+            save:                    jest.fn().mockResolvedValue(null),
+            clearCachedAssociation:  jest.fn(),
+            rules:                   { getBreakDuration: jest.fn().mockReturnValue(0) },
+            red_competitor_id:       'red-1',
+            blue_competitor_id:      'blue-1',
+            getJudges:               jest.fn().mockResolvedValue([]),
+            getRedCompetitor:        jest.fn().mockResolvedValue(null),
+            getBlueCompetitor:       jest.fn().mockResolvedValue(null),
+        });
+        mockRoundPauseFindAll.mockResolvedValue([]);
+        round3.save = jest.fn().mockResolvedValue(round3);
+
+        await round3.end();
+
+        expect(endMock).toHaveBeenCalled();
+    });
+
+    it('does NOT end the match after round 1 even if one competitor has won', async () => {
+        const round1 = makeRound();
+        const endMock = jest.fn();
+        round1.getMatch = jest.fn().mockResolvedValue({
+            competitorForColor:      jest.fn(),
+            getRounds:               jest.fn().mockResolvedValue([round1]),
+            getWinner:               jest.fn().mockResolvedValue({ id: 'red-competitor' }),
+            maxRounds:               3,
+            end:                     endMock,
+            save:                    jest.fn().mockResolvedValue(null),
+            clearCachedAssociation:  jest.fn(),
+            rules:                   { getBreakDuration: jest.fn().mockReturnValue(60) },
+            red_competitor_id:       'red-1',
+            blue_competitor_id:      'blue-1',
+            getJudges:               jest.fn().mockResolvedValue([]),
+            getRedCompetitor:        jest.fn().mockResolvedValue(null),
+            getBlueCompetitor:       jest.fn().mockResolvedValue(null),
+        });
+        mockRoundPauseFindAll.mockResolvedValue([]);
+        round1.save = jest.fn().mockResolvedValue(round1);
+
+        await round1.end();
+
+        expect(endMock).not.toHaveBeenCalled();
+    });
+
+    it('does NOT end the match after round 2 even if one competitor has won twice', async () => {
+        const round1 = makeRound();
+        const round2 = makeRound();
+        const endMock = jest.fn();
+        round2.getMatch = jest.fn().mockResolvedValue({
+            competitorForColor:      jest.fn(),
+            getRounds:               jest.fn().mockResolvedValue([round1, round2]),
+            getWinner:               jest.fn().mockResolvedValue({ id: 'red-competitor' }),
+            maxRounds:               3,
+            end:                     endMock,
+            save:                    jest.fn().mockResolvedValue(null),
+            clearCachedAssociation:  jest.fn(),
+            rules:                   { getBreakDuration: jest.fn().mockReturnValue(60) },
+            red_competitor_id:       'red-1',
+            blue_competitor_id:      'blue-1',
+            getJudges:               jest.fn().mockResolvedValue([]),
+            getRedCompetitor:        jest.fn().mockResolvedValue(null),
+            getBlueCompetitor:       jest.fn().mockResolvedValue(null),
+        });
+        mockRoundPauseFindAll.mockResolvedValue([]);
+        round2.save = jest.fn().mockResolvedValue(round2);
+
+        await round2.end();
+
+        expect(endMock).not.toHaveBeenCalled();
+    });
+
+    it('starts a break after round 1 (not the final round)', async () => {
+        const round1 = makeRound();
+        const matchSave = jest.fn().mockResolvedValue(null);
+        const breakDurationFn = jest.fn().mockReturnValue(60);
+        round1.getMatch = jest.fn().mockResolvedValue({
+            competitorForColor:      jest.fn(),
+            getRounds:               jest.fn().mockResolvedValue([round1]),
+            maxRounds:               3,
+            end:                     jest.fn(),
+            save:                    matchSave,
+            clearCachedAssociation:  jest.fn(),
+            rules:                   { getBreakDuration: breakDurationFn },
+            red_competitor_id:       'red-1',
+            blue_competitor_id:      'blue-1',
+            getJudges:               jest.fn().mockResolvedValue([]),
+            getRedCompetitor:        jest.fn().mockResolvedValue(null),
+            getBlueCompetitor:       jest.fn().mockResolvedValue(null),
+        });
+        mockRoundPauseFindAll.mockResolvedValue([]);
+        round1.save = jest.fn().mockResolvedValue(round1);
+
+        await round1.end();
+
+        const match = await round1.getMatch();
+        expect(match.break_duration).toBe(60);
+        expect(match.break_started_at).toBeInstanceOf(Date);
+        expect(matchSave).toHaveBeenCalled();
+    });
+});
