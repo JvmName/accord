@@ -27,9 +27,8 @@ class RoundsController extends ServerController {
 
         try {
             await this.currentMatch.endRound(this.params);
-            const submission = this.params.submission ? ` submission=${this.params.submission} by=${this.params.submitter}` : '';
-            const stoppage   = this.params.stoppage   ? ` stoppage by=${this.params.stopper}` : '';
-            logger.info(`Round ended: match=${this.currentMatch.id} by user=${this.currentUser.id}${submission}${stoppage}`);
+            const winLog = this.params.winner ? ` winner=${this.params.winner} stoppage=${this.params.stoppage}` : '';
+            logger.info(`Round ended: match=${this.currentMatch.id} by user=${this.currentUser.id}${winLog}`);
 
             const options = {includeRounds: true, includeJudges: true, includeMat: true};
             await this.render({match: this.currentMatch}, options);
@@ -104,15 +103,15 @@ class RoundsController extends ServerController {
                 }
             },
             postEndRound: {
-                description: 'End the current round for the specified match, optionally recording a submission and submitter.',
+                description: 'End the current round for the specified match, optionally recording a winner and whether it was by stoppage.',
                 tags: ['match/rounds'],
                 request: {
                     params: {
                         matchId: { type: 'string', required: true }
                     },
                     body: {
-                        submission: { type: 'string' },
-                        submitter:  { type: 'string', enum: ['red', 'blue'] }
+                        winner:   { type: 'string', enum: ['red', 'blue'] },
+                        stoppage: { type: 'boolean' }
                     }
                 },
                 response: {

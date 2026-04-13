@@ -40,13 +40,13 @@ const RDojoKombatRules = {
         if (!round.ended) {
             // do nothing
 
-        } else if (round.submission) {
-            winner       = red.id == round.submission_by ? red : blue;
-            method.type  = 'submission'
-            method.value = round.submission;
+        } else if (round.declared_winner_id && !round.stoppage) {
+            winner       = red.id == round.declared_winner_id ? red : blue;
+            method.type  = 'submission';
+            method.value = null;
 
-        } else if (round.stoppage_by) {
-            winner      = red.id == round.stoppage_by ? red : blue;
+        } else if (round.declared_winner_id && round.stoppage) {
+            winner      = red.id == round.declared_winner_id ? red : blue;
             method.type = 'stoppage';
 
         } else if (redScore != blueScore) {

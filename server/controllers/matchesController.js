@@ -1,4 +1,3 @@
-const { endRoundValidations } = require('../lib/controllers/roundsControllerHelpers');
 const { logger }              = require('../lib/logger');
 const { Mat }                 = require('../models/mat');
 const { Match }               = require('../models/match');
@@ -54,9 +53,6 @@ class MatchesController extends ServerController {
     async postEndMatch() {
         await this.authorize('manage', this.currentMatch);
 
-        const validations = endRoundValidations.call(this);
-        await this.validateParameters(validations);
-
         if (!this.currentMatch.started) {
             return await this.renderErrors({matchId: ['this match has not started']});
         }
@@ -64,9 +60,8 @@ class MatchesController extends ServerController {
             return await this.renderErrors({matchId: ['this match has already ended']});
         }
 
-        await this.currentMatch.end(this.params);
-        const submission = this.params.submission ? ` submission=${this.params.submission} by=${this.params.submitter}` : '';
-        logger.info(`Match ended: match=${this.currentMatch.id} by user=${this.currentUser.id}${submission}`);
+        await this.currentMatch.end();
+        logger.info(`Match ended: match=${this.currentMatch.id} by user=${this.currentUser.id}`);
         const renderOptions = {includeMat: true, includeMatchJudges: true, includeRounds: true};
         await this.render({match: this.currentMatch}, renderOptions);
     }
@@ -130,10 +125,6 @@ class MatchesController extends ServerController {
                 request: {
                     params: {
                         matchId: { type: 'string', required: true }
-                    },
-                    body: {
-                        submission: { type: 'string' },
-                        submitter:  { type: 'string', enum: ['red', 'blue'] }
                     }
                 },
                 response: {
