@@ -212,8 +212,9 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                     IconTextButton(
                         modifier = buttonModifier,
                         icon = Icons.Default.HeartBroken,
-                        text = "Stop Round",
-                        onClick = endRound
+                        text = "Submission",
+                        onClick = endRound,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                     )
                 }
                 state.actions.resume?.let { resume ->
@@ -224,7 +225,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                         onClick = resume
                     )
                 }
-                if (state.isMatchStarted && state.matchResult == null) {
+                if (state.isMatchStarted && state.matchResult == null && isActiveBreak) {
                     IconTextButton(
                         modifier = buttonModifier,
                         icon = Icons.Default.StopCircle,
