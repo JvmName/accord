@@ -125,7 +125,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(vertical = 72.dp, horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -178,9 +178,9 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             val roundInfo = state.matchState.roundInfo
             val isActiveBreak =
                 roundInfo?.round is RoundInfo.Break && roundInfo.state == RoundEvent.RoundState.STARTED
-            val buttonModifier = Modifier.width(200.dp).height(80.dp)
+            val buttonModifier = Modifier.width(275.dp).height(105.dp)
             FlowRow(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(top = 64.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
