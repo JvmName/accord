@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.jvmname.accord.ui.theme.AccordTheme
 import kotlinx.coroutines.launch
 
@@ -66,7 +67,7 @@ fun IconTextButton(
         }
         Text(
             text,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 22.sp),
             modifier = Modifier.padding(start = 6.dp)
         )
     }
