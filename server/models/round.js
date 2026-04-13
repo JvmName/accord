@@ -136,7 +136,7 @@ class Round extends BaseRecord {
     }
 
 
-    async end({submission, submitter, stoppage, stopper}={}) {
+    async end({winner, stoppage = false}={}) {
         const where = {ended_at: null};
         const ridingTimeVotes = await this.getRidingTimeVotes({ where });
         for (const vote of ridingTimeVotes) {
@@ -146,13 +146,11 @@ class Round extends BaseRecord {
         if (await this.isPaused()) await this.resume();
 
         const match = await this.getMatch();
-        if (submission) {
-            const competitor   = await match.competitorForColor(submitter);
-            this.submission    = submission;
-            this.submission_by = competitor?.id;
-        } else if (stoppage) {
-            const competitor   = await match.competitorForColor(stopper);
-            this.stoppage_by   = competitor?.id;
+
+        if (winner) {
+            const competitor        = await match.competitorForColor(winner);
+            this.declared_winner_id = competitor?.id;
+            this.stoppage           = stoppage;
         }
 
         this.ended_at = new Date();
@@ -160,9 +158,8 @@ class Round extends BaseRecord {
 
         const redScore  = await this.getRedScore();
         const blueScore = await this.getBlueScore();
-        const sub       = submission ? ` submission=${submission} by=${submitter}` : '';
-        const stop      = stoppage   ? ` stoppage by=${stopper}` : '';
-        logger.info(`Round ended: match=${this.match_id} round=${this.id} red=${redScore} blue=${blueScore}${sub}${stop}`);
+        const winLog    = winner ? ` winner=${winner} stoppage=${stoppage}` : '';
+        logger.info(`Round ended: match=${this.match_id} round=${this.id} red=${redScore} blue=${blueScore}${winLog}`);
 
         const allRounds = await match.getRounds();
         logger.info(`Round transition: match=${this.match_id} completedRounds=${allRounds.length} maxRounds=${match.maxRounds}`);
@@ -336,10 +333,6 @@ class Round extends BaseRecord {
 
 Round.initialize();
 
-Round.belongsTo(User, {
-    foreignKey: 'submission_by',
-    as:         'submitter'
-});
 Round.hasMany(RidingTimeVote);
 
 

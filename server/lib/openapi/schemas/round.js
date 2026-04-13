@@ -67,7 +67,7 @@ const Round = {
                         },
                         value: {
                             type: ["string", "null"],
-                            description: "The submission name or point score as a string; null if round is ongoing"
+                            description: "The point score as a string for points/tech-fall wins; null otherwise"
                         }
                     },
                     required: ["type", "value"],
