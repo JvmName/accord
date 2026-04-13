@@ -21,6 +21,7 @@ fun CompetitorEditText(
     state: TextFieldState,
     imeAction: ImeAction = ImeAction.Next,
     isError: Boolean = false,
+    onKeyboardAction: (() -> Unit)? = null,
 ) {
     val (focusedBorder, unfocusedBorder, labelColor) = when (competitor) {
         Competitor.RED -> Triple(Color(0xFFD32F2F), Color(0xFFEF9A9A), Color.Red)
@@ -38,6 +39,7 @@ fun CompetitorEditText(
             capitalization = KeyboardCapitalization.Words,
             imeAction = imeAction,
         ),
+        onKeyboardAction = { onKeyboardAction?.invoke() },
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = focusedBorder,
             unfocusedBorderColor = unfocusedBorder,

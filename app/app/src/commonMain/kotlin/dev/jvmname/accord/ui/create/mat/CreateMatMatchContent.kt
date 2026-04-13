@@ -87,6 +87,19 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
             val redNameError = hasAttemptedSubmit && redNameState.text.isBlank()
             val blueNameError = hasAttemptedSubmit && blueNameState.text.isBlank()
 
+            fun submitForm() {
+                hasAttemptedSubmit = true
+                if (matNameState.text.isBlank() || redNameState.text.isBlank() || blueNameState.text.isBlank()) return
+                state.eventSink(
+                    CreateMatMatchEvent.CreateMat(
+                        matName = matNameState.text.toString(),
+                        judgeCount = judgeCount,
+                        redName = redNameState.text.toString(),
+                        blueName = blueNameState.text.toString(),
+                    )
+                )
+            }
+
             Column(
                 modifier = Modifier
                     .widthIn(max = 480.dp)
@@ -146,6 +159,7 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
                     imeAction = ImeAction.Done,
                     modifier = Modifier.fillMaxWidth(),
                     isError = blueNameError,
+                    onKeyboardAction = { submitForm() },
                 )
 
                 Spacer(Modifier.height(if (isTablet) 80.dp else 64.dp))
@@ -163,18 +177,7 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
                             Text("Create", style = AccordTypography.labelLarge)
                         }
                     },
-                    onClick = {
-                        hasAttemptedSubmit = true
-                        if (matNameState.text.isBlank() || redNameState.text.isBlank() || blueNameState.text.isBlank()) return@Button
-                        state.eventSink(
-                            CreateMatMatchEvent.CreateMat(
-                                matName = matNameState.text.toString(),
-                                judgeCount = judgeCount,
-                                redName = redNameState.text.toString(),
-                                blueName = blueNameState.text.toString(),
-                            )
-                        )
-                    },
+                    onClick = { submitForm() },
                 )
             }
         }
@@ -215,7 +218,7 @@ private fun JudgeCountEditText(judgeCount: Int, onJudgeCountChange: (count: Int)
             },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.Done
+                imeAction = ImeAction.Next
             ),
         )
 
