@@ -171,21 +171,14 @@ class Round extends BaseRecord {
             logger.info(`Match ending: match=${this.match_id} reason=max-rounds-reached`);
             await match.end();
         } else {
-            const winner = await match.getWinner();
-            logger.info(`Match winner check: match=${this.match_id} winner=${winner?.id ?? 'none'}`);
-            if (winner) {
-                logger.info(`Match ending: match=${this.match_id} reason=winner-determined winner=${winner.id}`);
-                await match.end();
-            } else {
-                const breakDuration = match.rules.getBreakDuration(allRounds.length);
-                logger.info(`Break check: match=${this.match_id} breakDuration=${breakDuration}`);
-                if (breakDuration > 0) {
-                    match.break_started_at = new Date();
-                    match.break_duration   = breakDuration;
-                    await match.save();
-                    match.clearCachedAssociation('rounds');
-                    logger.info(`Break started: match=${this.match_id} duration=${breakDuration}s`);
-                }
+            const breakDuration = match.rules.getBreakDuration(allRounds.length);
+            logger.info(`Break check: match=${this.match_id} breakDuration=${breakDuration}`);
+            if (breakDuration > 0) {
+                match.break_started_at = new Date();
+                match.break_duration   = breakDuration;
+                await match.save();
+                match.clearCachedAssociation('rounds');
+                logger.info(`Break started: match=${this.match_id} duration=${breakDuration}s`);
             }
         }
     }
