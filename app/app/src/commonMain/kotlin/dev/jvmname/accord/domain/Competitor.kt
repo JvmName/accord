@@ -24,8 +24,9 @@ val Competitor.asColor: CompetitorColor
         Competitor.BLUE -> CompetitorColor.BLUE
     }
 
-val Competitor.asEmoji: String
+val Competitor?.asEmoji: String
     get() = when (this) {
         Competitor.RED -> "🟥"
         Competitor.BLUE -> "🟦"
+        null -> "🔲"
     }

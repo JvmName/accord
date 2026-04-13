@@ -33,7 +33,7 @@ data class MatchResult(
 //    val winnerScore: Int,
 //    val loserScore: Int,
     val winConditions: String,
-    val roundWinners: List<Competitor>,
+    val roundWinners: List<Competitor?>,
 ) {
     fun toText(): String {
         return buildString {

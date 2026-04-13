@@ -111,11 +111,15 @@ class MasterSession(
         scope.launch { matchManager.startRound() }
     }
 
-    override fun endRound(winner: Competitor?, stoppage: Boolean?) {
+    override fun endRound() {
         scope.launch {
-            currentMatchId?.let {
-                matchManager.endRound(it, stoppage = stoppage, winner = winner)
-            }
+            currentMatchId?.let { matchManager.endRound(it) }
+        }
+    }
+
+    fun recordRoundResult(winner: Competitor?, stoppage: Boolean) {
+        scope.launch {
+            currentMatchId?.let { matchManager.patchRoundResult(it, winner, stoppage) }
         }
     }
 

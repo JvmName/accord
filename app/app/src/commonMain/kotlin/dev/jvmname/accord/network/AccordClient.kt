@@ -13,6 +13,7 @@ import io.ktor.client.call.body
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import kotlinx.coroutines.Dispatchers
@@ -218,22 +219,36 @@ class AccordClient(private val httpClient: HttpClient) {
         }
     }
 
-    suspend fun endRound(
-        matchId: MatchId,
-        winner: CompetitorColor?,
-        stoppage: Boolean,
-    ): NetworkResult<Match> {
-        log.d { "endRound matchId=$matchId winner=$winner stoppage=$stoppage" }
+    suspend fun endRound(matchId: MatchId): NetworkResult<Match> {
+        log.d { "endRound matchId=$matchId" }
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
-                httpClient.post("match/${matchId.id}/rounds/end") {
-                    setBody(EndRoundRequest(winner = winner, stoppage = stoppage))
-                }.body<ApiResult<MatchResponseData>>()
+                httpClient.post("match/${matchId.id}/rounds/end")
+                    .body<ApiResult<MatchResponseData>>()
             }
                 .unwrapApiResult()
                 .map { it.match }
                 .onOk { log.i { "endRound OK matchId=${it.id}" } }
                 .onErr { log.w { "endRound FAILED: $it" } }
+        }
+    }
+
+    suspend fun patchRoundResult(
+        matchId: MatchId,
+        winner: CompetitorColor?,
+        stoppage: Boolean,
+    ): NetworkResult<Match> {
+        log.d { "patchRoundResult matchId=$matchId winner=$winner stoppage=$stoppage" }
+        return withContext(Dispatchers.IO) {
+            runSuspendCatching {
+                httpClient.patch("match/${matchId.id}/rounds/result") {
+                    setBody(EndRoundRequest(winner = winner, stoppage = stoppage))
+                }.body<ApiResult<MatchResponseData>>()
+            }
+                .unwrapApiResult()
+                .map { it.match }
+                .onOk { log.i { "patchRoundResult OK matchId=${it.id}" } }
+                .onErr { log.w { "patchRoundResult FAILED: $it" } }
         }
     }
 

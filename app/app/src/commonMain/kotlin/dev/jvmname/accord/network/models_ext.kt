@@ -88,8 +88,8 @@ fun Match.toMatchResult(): MatchResult? {
 //        winnerScore = scores[winnerC] ?: 0,
 //        loserScore = scores[loser] ?: 0,
         winConditions = rounds
-            .filter { it.endedAt != null && it.result.winner == winner && it.result.method.type != null }
+            .filter { it.endedAt != null && it.result.method.type != null }
             .joinToString { it.result.method.type!!.toHumanString },
-        roundWinners = rounds.indices.mapNotNull { winner(it) }
+        roundWinners = rounds.indices.map { winner(it) }
     )
 }
