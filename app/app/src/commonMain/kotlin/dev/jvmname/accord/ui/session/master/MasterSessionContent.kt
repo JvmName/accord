@@ -44,6 +44,7 @@ import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.ui.LockLandscape
+import dev.jvmname.accord.ui.common.AudioPlayback
 import dev.jvmname.accord.ui.common.IconTextButton
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.MasterSessionEvent
@@ -94,6 +95,8 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             state.eventSink(MasterSessionEvent.DismissScores)
         }
     }
+
+    AudioPlayback(state.matchState.audio)
 
     StandardScaffold(
         title = "Tablet: ${state.matName}",
@@ -293,6 +296,7 @@ private fun MasterSessionContent_ActiveRound_Preview() {
                     roundLabel = "Round 2",
                     controlDurations = emptyMap(),
                     roundScores = emptyMap(),
+                    audio = null,
                 ),
                 isMatchStarted = true,
                 matchResult = null,
@@ -332,6 +336,7 @@ private fun MasterSessionContent_BetweenRounds_Preview() {
                     roundLabel = null,
                     controlDurations = emptyMap(),
                     roundScores = emptyMap(),
+                    audio = null,
                 ),
                 isMatchStarted = true,
                 matchResult = null,
@@ -362,6 +367,7 @@ private fun MasterSessionContent_Start_Preview() {
                     roundLabel = "Round 1",
                     controlDurations = emptyMap(),
                     roundScores = emptyMap(),
+                    audio = null,
                 ),
                 isMatchStarted = false,
                 matchResult = null,
@@ -392,6 +398,7 @@ private fun MasterSessionContent_Ended_Preview() {
                     roundLabel = "Round 3",
                     controlDurations = emptyMap(),
                     roundScores = emptyMap(),
+                    audio = null,
                 ),
                 isMatchStarted = true,
                 matchResult = MatchResult(
@@ -429,6 +436,7 @@ private fun MasterSessionContent_Dialog_Preview() {
                     roundLabel = "Round 2",
                     controlDurations = emptyMap(),
                     roundScores = emptyMap(),
+                    audio = null,
                 ),
                 isMatchStarted = true,
                 matchResult = null,
@@ -459,6 +467,7 @@ private fun MasterSessionContent_Paused_Preview() {
                     roundLabel = "Round 1",
                     controlDurations = emptyMap(),
                     roundScores = emptyMap(),
+                    audio = null,
                 ),
                 isMatchStarted = true,
                 matchResult = null,
@@ -489,6 +498,7 @@ private fun MasterSessionContent_Error_Preview() {
                     roundLabel = "Round 1",
                     controlDurations = emptyMap(),
                     roundScores = emptyMap(),
+                    audio = null,
                 ),
                 isMatchStarted = true,
                 matchResult = null,

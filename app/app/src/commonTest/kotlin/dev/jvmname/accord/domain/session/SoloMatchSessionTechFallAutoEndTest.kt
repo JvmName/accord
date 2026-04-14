@@ -2,6 +2,7 @@ package dev.jvmname.accord.domain.session
 
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.ButtonEvent
+import dev.jvmname.accord.domain.control.RoundAudioFeedbackHelper
 import dev.jvmname.accord.domain.control.ScoreHapticFeedbackHelper
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
@@ -24,7 +25,10 @@ class SoloMatchSessionTechFallAutoEndTest {
         val fakeFactory = ScoreHapticFeedbackHelper.Factory { buttonEvents, score ->
             ScoreHapticFeedbackHelper(buttonEvents, score, testScope)
         }
-        return SoloMatchSession(tracker, timer, testScope, MatchConfig.RdojoKombat, fakeFactory)
+        val fakeAudioFactory = RoundAudioFeedbackHelper.Factory { roundEvent ->
+            RoundAudioFeedbackHelper(roundEvent, testScope)
+        }
+        return SoloMatchSession(tracker, timer, testScope, MatchConfig.RdojoKombat, fakeFactory, fakeAudioFactory)
     }
 
     @Test

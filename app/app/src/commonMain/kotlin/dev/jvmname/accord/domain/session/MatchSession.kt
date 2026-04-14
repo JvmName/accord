@@ -1,6 +1,7 @@
 package dev.jvmname.accord.domain.session
 
 import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.domain.control.AudioEvent
 import dev.jvmname.accord.domain.control.HapticEvent
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.score.Score
@@ -14,6 +15,7 @@ interface MatchObserver {
     val score: StateFlow<Score>
     val roundEvent: StateFlow<RoundEvent?>
     val hapticEvents: SharedFlow<HapticEvent>
+    val audioEvents: SharedFlow<AudioEvent>
 }
 
 interface PausableSession : MatchObserver {

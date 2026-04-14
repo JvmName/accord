@@ -4,9 +4,11 @@ import co.touchlab.kermit.Logger
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.MatchManager
+import dev.jvmname.accord.domain.control.AudioEvent
 import dev.jvmname.accord.domain.control.ButtonEvent
 import dev.jvmname.accord.domain.control.ButtonPressTracker
 import dev.jvmname.accord.domain.control.HapticEvent
+import dev.jvmname.accord.domain.control.RoundAudioFeedbackHelper
 import dev.jvmname.accord.domain.control.ScoreHapticFeedbackHelper
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
@@ -35,6 +37,7 @@ class NetworkJudgeSession(
     private val matchManager: MatchManager,
     private val buttonPressTracker: ButtonPressTracker,
     private val hapticFactory: ScoreHapticFeedbackHelper.Factory,
+    audioFactory: RoundAudioFeedbackHelper.Factory,
     private val scope: CoroutineScope,
     private val config: MatchConfig,
 ) : JudgingSession {
@@ -53,6 +56,9 @@ class NetworkJudgeSession(
         score = _score,
     )
     override val hapticEvents: SharedFlow<HapticEvent> = hapticHelper.hapticEvents
+
+    private val audioHelper = audioFactory.create(_roundEvent)
+    override val audioEvents: SharedFlow<AudioEvent> = audioHelper.audioEvents
 
     private var activeVote: Competitor? = null
 

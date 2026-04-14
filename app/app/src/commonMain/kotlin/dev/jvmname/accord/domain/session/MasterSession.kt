@@ -4,7 +4,9 @@ import co.touchlab.kermit.Logger
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.MatchManager
+import dev.jvmname.accord.domain.control.AudioEvent
 import dev.jvmname.accord.domain.control.HapticEvent
+import dev.jvmname.accord.domain.control.RoundAudioFeedbackHelper
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.score.Score
@@ -32,6 +34,7 @@ import kotlin.time.Duration.Companion.milliseconds
 @SingleIn(MatchScope::class)
 class MasterSession(
     private val matchManager: MatchManager,
+    audioFactory: RoundAudioFeedbackHelper.Factory,
     private val scope: CoroutineScope,
     private val config: MatchConfig,
 ) : RoundController {
@@ -45,6 +48,9 @@ class MasterSession(
     override val roundEvent: StateFlow<RoundEvent?> = _roundEvent.asStateFlow()
     private var countdownJob: Job? = null
     override val hapticEvents: SharedFlow<HapticEvent> = MutableSharedFlow()
+
+    private val audioHelper = audioFactory.create(_roundEvent)
+    override val audioEvents: SharedFlow<AudioEvent> = audioHelper.audioEvents
 
     init {
         scope.launch {

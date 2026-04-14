@@ -19,6 +19,7 @@ materialIconsExtended = "1.7.3"
 serialization = "1.10.0"
 multihaptic = "0.3.1"
 socketio = "2.1.2"
+sound = "0.2.6-beta02"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
@@ -56,6 +57,8 @@ serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-jso
 
 multihaptic = { module = "top.ltfan.multihaptic:multihaptic-compose", version.ref = "multihaptic" }
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
+sound = { module = "app.lexilabs.basic:basic-sound", version.ref = "sound" }
+composeResources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 kotlin-result = { module = "com.michael-bull.kotlin-result:kotlin-result", version.ref = "kotlinResult" }
 kotlin-result-coroutines = { module = "com.michael-bull.kotlin-result:kotlin-result-coroutines", version.ref = "kotlinResult" }
 kotlin-result-retry = "com.michael-bull.kotlin-retry:kotlin-retry-result:2.0.2"

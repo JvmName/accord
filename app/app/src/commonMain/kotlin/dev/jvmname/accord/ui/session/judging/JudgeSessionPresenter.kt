@@ -52,6 +52,7 @@ class JudgeSessionPresenter(
 
         val score by remember { session.score }.collectAsState()
         val hapticEvent by remember { session.hapticEvents }.collectAsState(null)
+        val audioEvent by remember { session.audioEvents }.collectAsState(null)
         val roundEvent by remember { session.roundEvent }.collectAsState()
 
         val currentMatch by remember { matchManager.observeCurrentMatch() }.collectAsState(null)
@@ -74,6 +75,7 @@ class JudgeSessionPresenter(
             roundLabel = roundLabel,
             controlDurations = controlDurations,
             roundScores = emptyMap(),
+            audio = audioEvent,
         )
 
         val roundState = roundEvent?.state

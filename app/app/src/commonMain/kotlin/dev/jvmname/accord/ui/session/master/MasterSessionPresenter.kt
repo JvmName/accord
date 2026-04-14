@@ -62,6 +62,7 @@ class MasterSessionPresenter(
         val currentMatch by remember { matchManager.observeCurrentMatch() }.collectAsState(null)
         val score by remember { session.score }.collectAsState()
         val roundEvent by remember { session.roundEvent }.collectAsState()
+        val audioEvent by remember { session.audioEvents }.collectAsState(null)
 
         var error by remember { mutableStateOf<String?>(null) }
         var showEndRoundDialog by remember { mutableStateOf(false) }
@@ -97,6 +98,7 @@ class MasterSessionPresenter(
             roundLabel = roundLabel,
             controlDurations = emptyMap(),
             roundScores = roundScores,
+            audio = audioEvent,
         )
 
         val roundState = roundEvent?.state

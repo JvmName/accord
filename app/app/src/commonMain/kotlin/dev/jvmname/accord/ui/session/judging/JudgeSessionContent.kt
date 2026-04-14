@@ -58,6 +58,7 @@ import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.StubVibrator
+import dev.jvmname.accord.ui.common.AudioPlayback
 import dev.jvmname.accord.ui.common.HoldingButton
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.JudgeSessionEvent
@@ -84,6 +85,7 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
     LaunchedEffect(state.hapticEvent) {
         state.hapticEvent?.effect?.consume()?.let { vibrator.vibrate(it) }
     }
+    AudioPlayback(state.matchState.audio)
 
     Box(modifier = modifier.fillMaxSize()) {
         StandardScaffold(
@@ -343,6 +345,7 @@ private fun JudgeSessionContentPreview() {
                     roundLabel = "Round 1 of 3",
                     controlDurations = emptyMap(),
                     roundScores = emptyMap(),
+                    audio = null,
                 ),
                 actions = MatchActions(),
                 eventSink = { },
@@ -379,6 +382,7 @@ private fun JudgeSessionContentPreview_Paused() {
                     roundLabel = "Round 1 of 3",
                     controlDurations = emptyMap(),
                     roundScores = emptyMap(),
+                    audio = null,
                 ),
                 actions = MatchActions(),
                 eventSink = { },
@@ -415,6 +419,7 @@ private fun JudgeSessionContentPreview_Holding() {
                     roundLabel = "Round 1 of 3",
                     controlDurations = mapOf(Competitor.BLUE to "(3)"),
                     roundScores = emptyMap(),
+                    audio = null,
                 ),
                 actions = MatchActions(),
                 eventSink = { },

@@ -2,6 +2,7 @@ package dev.jvmname.accord.domain.session
 
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.MatchManager
+import dev.jvmname.accord.domain.control.AudioEvent
 import dev.jvmname.accord.domain.control.HapticEvent
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
@@ -35,6 +36,7 @@ class NetworkViewerSession(
     private val _roundEvent = MutableStateFlow<RoundEvent?>(null)
     override val roundEvent: StateFlow<RoundEvent?> = _roundEvent.asStateFlow()
     override val hapticEvents: SharedFlow<HapticEvent> = MutableSharedFlow()
+    override val audioEvents: SharedFlow<AudioEvent> = MutableSharedFlow()
     private var countdownJob: Job? = null
 
     init {
