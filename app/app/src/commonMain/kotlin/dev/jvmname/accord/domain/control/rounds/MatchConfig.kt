@@ -20,9 +20,9 @@ data class MatchConfig(val rounds: List<RoundInfo>) : CommonParcelable {
             listOf(
                 Round(index = 1, duration = 3.minutes, maxPoints = 24),
                 Break(1.minutes),
-                Round(index = 2, maxPoints = 16, duration = 2.minutes),
+                Round(index = 2, duration = 2.minutes, maxPoints = 16),
                 Break(1.minutes),
-                Round(index = 3, maxPoints = 8, duration = 1.minutes, optional = true),
+                Round(index = 3, duration = 1.minutes, maxPoints = 8),
             )
         )
     }
@@ -36,7 +36,6 @@ sealed interface RoundInfo : CommonParcelable {
         val index: Int,
         val maxPoints: Int,
         override val duration: Duration,
-        val optional: Boolean = false,
     ) : RoundInfo
 
     @[Poko CommonParcelize]
