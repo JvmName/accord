@@ -6,7 +6,6 @@ import com.slack.circuit.runtime.CircuitUiState
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.asEmoji
 import dev.jvmname.accord.domain.control.HapticEvent
-import dev.jvmname.accord.network.User
 import dev.jvmname.accord.parcel.CommonParcelize
 import dev.jvmname.accord.parcel.ParcelableScreen
 import dev.jvmname.accord.ui.session.JudgeSessionEvent
@@ -30,15 +29,21 @@ data class JudgeSessionState(
 
 @Immutable
 data class MatchResult(
-    val winner: Pair<User, Competitor>,
-    val winnerScore: Int,
-    val loserScore: Int,
-    val winConditions: String
+//    val winner: Pair<User, Competitor>,
+//    val winnerScore: Int,
+//    val loserScore: Int,
+    val winConditions: String,
+    val roundWinners: List<Competitor?>,
 ) {
     fun toText(): String {
+        if (roundWinners.isEmpty()) return "⬜ ⬜ ⬜"
         return buildString {
-            append("Winner: ", winner.first.name, ' ', winner.second.asEmoji).appendLine()
-            append("Score: ", winnerScore, " to ", loserScore, "(", winConditions, ")").appendLine()
+//            append("Winner: ", winner.first.name, ' ', winner.second.asEmoji).appendLine()
+//            append("Score: ", winnerScore, " to ", loserScore, "(", winConditions, ")").appendLine()
+            append("Results: ")
+            roundWinners.forEach {
+                append(it.asEmoji).append(' ')
+            }
         }
     }
 }

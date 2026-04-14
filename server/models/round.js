@@ -136,7 +136,7 @@ class Round extends BaseRecord {
     }
 
 
-    async end({submission, submitter, stoppage, stopper}={}) {
+    async end() {
         const where = {ended_at: null};
         const ridingTimeVotes = await this.getRidingTimeVotes({ where });
         for (const vote of ridingTimeVotes) {
@@ -146,23 +146,13 @@ class Round extends BaseRecord {
         if (await this.isPaused()) await this.resume();
 
         const match = await this.getMatch();
-        if (submission) {
-            const competitor   = await match.competitorForColor(submitter);
-            this.submission    = submission;
-            this.submission_by = competitor?.id;
-        } else if (stoppage) {
-            const competitor   = await match.competitorForColor(stopper);
-            this.stoppage_by   = competitor?.id;
-        }
 
         this.ended_at = new Date();
         await this.save();
 
         const redScore  = await this.getRedScore();
         const blueScore = await this.getBlueScore();
-        const sub       = submission ? ` submission=${submission} by=${submitter}` : '';
-        const stop      = stoppage   ? ` stoppage by=${stopper}` : '';
-        logger.info(`Round ended: match=${this.match_id} round=${this.id} red=${redScore} blue=${blueScore}${sub}${stop}`);
+        logger.info(`Round ended: match=${this.match_id} round=${this.id} red=${redScore} blue=${blueScore}`);
 
         const allRounds = await match.getRounds();
         logger.info(`Round transition: match=${this.match_id} completedRounds=${allRounds.length} maxRounds=${match.maxRounds}`);
@@ -181,6 +171,23 @@ class Round extends BaseRecord {
                 logger.info(`Break started: match=${this.match_id} duration=${breakDuration}s`);
             }
         }
+    }
+
+
+    async setResult({ winner, stoppage = false } = {}) {
+        if (!this.ended) throw new Error('Cannot set result on a round that has not ended');
+
+        if (winner) {
+            const match             = await this.getMatch();
+            const competitor        = await match.competitorForColor(winner);
+            this.declared_winner_id = competitor?.id;
+            this.stoppage           = stoppage;
+        } else {
+            this.declared_winner_id = null;
+            this.stoppage           = null;
+        }
+
+        await this.save();
     }
 
 
@@ -329,10 +336,6 @@ class Round extends BaseRecord {
 
 Round.initialize();
 
-Round.belongsTo(User, {
-    foreignKey: 'submission_by',
-    as:         'submitter'
-});
 Round.hasMany(RidingTimeVote);
 
 

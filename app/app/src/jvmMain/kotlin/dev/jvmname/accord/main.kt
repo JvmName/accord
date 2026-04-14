@@ -20,8 +20,8 @@ import kotlin.time.Clock
 fun main() = application {
     val windowState =
         rememberWindowState(
-            width = 1200.dp,
-            height = 800.dp,
+            width = 1429.dp,
+            height = 857.dp,
             position = WindowPosition(Alignment.Center),
         )
 

@@ -19,10 +19,20 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.runningFold
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
 
 @Inject
 @SingleIn(MatchScope::class)
@@ -54,14 +64,15 @@ class MasterSession(
                             log.d { "scores derived red=${it.redPoints} blue=${it.bluePoints}" }
                         }
                     }
-                    val event = deriveRoundEventFromMatch(match).also {
-                        _roundEvent.value = it
+                    val event = _roundEvent.updateAndGet {
+                        deriveRoundEventFromMatch(match, config)
                     }
-                    if (event?.state == RoundEvent.RoundState.STARTED) {
-                        startCountdown(event.remaining)
-                    } else {
-                        countdownJob?.cancel()
-                        countdownJob = null
+                    when (event?.state) {
+                        RoundEvent.RoundState.STARTED -> startCountdown(event)
+                        else -> {
+                            countdownJob?.cancel()
+                            countdownJob = null
+                        }
                     }
                 }
         }
@@ -102,14 +113,15 @@ class MasterSession(
         scope.launch { matchManager.startRound() }
     }
 
-    override fun endRound(winner: Competitor?, submission: String?, stoppage: Boolean) {
+    override fun endRound() {
         scope.launch {
-            currentMatchId?.let {
-                when {
-                    stoppage -> matchManager.endRound(it, stoppage = true, stopper = winner)
-                    else -> matchManager.endRound(it, submission.orEmpty(), winner)
-                }
-            }
+            currentMatchId?.let { matchManager.endRound(it) }
+        }
+    }
+
+    fun recordRoundResult(winner: Competitor?, stoppage: Boolean) {
+        scope.launch {
+            currentMatchId?.let { matchManager.patchRoundResult(it, winner, stoppage) }
         }
     }
 
@@ -128,28 +140,23 @@ class MasterSession(
         Logger.d { "manualEdit: API not yet defined — TODO" }
     }
 
-    suspend fun createMatch(matCode: String, red: String, blue: String): NetworkResult<Match> =
-        matchManager.createMatch(matCode, red, blue)
-
     override suspend fun startMatch(): NetworkResult<Match> =
         matchManager.startMatch()
 
     override suspend fun endMatch(): NetworkResult<Match> =
         matchManager.endMatch()
 
-    private fun startCountdown(initialRemaining: Duration) {
+    private fun startCountdown(event: RoundEvent) {
         countdownJob?.cancel()
         countdownJob = scope.launch {
-            var remaining = initialRemaining
+            var remaining = event.remaining
             while (remaining > Duration.ZERO) {
-                delay(1.seconds)
-                remaining -= 1.seconds
+                delay(300.milliseconds)
                 val current = _roundEvent.value ?: return@launch
-                if (current.state == RoundEvent.RoundState.STARTED) {
-                    _roundEvent.value = current.copy(remaining = remaining)
-                } else {
-                    return@launch
-                }
+                if (current.round != event.round || current.roundNumber != event.roundNumber) return@launch
+                if (current.state != RoundEvent.RoundState.STARTED) return@launch
+                remaining -= 300.milliseconds
+                _roundEvent.value = current.copy(remaining = remaining)
             }
         }
     }

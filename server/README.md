@@ -107,7 +107,7 @@ in the `x-api-token` header. This API token is returned via the user creation en
 ### End a Round
 `POST /match/:matchId/rounds/end`
 ##### request parameters
-`submission` (string with submission name), `submitter` ("red" or "blue") // optional
+`winner` ("red" or "blue", optional), `stoppage` (boolean, optional)
 ##### response
 ```
 {
@@ -126,8 +126,6 @@ in the `x-api-token` header. This API token is returned via the user creation en
 
 ### End a Match
 `POST /match/:matchId/end`
-##### request parameters
-`submission` (string with submission name), `submitter` ("red" or "blue") // optional
 ##### response
 ```
 {

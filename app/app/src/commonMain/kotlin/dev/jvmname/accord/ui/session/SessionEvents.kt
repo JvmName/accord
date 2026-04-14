@@ -35,13 +35,11 @@ sealed interface MasterSessionEvent : SessionEvent {
     data object Pause : MasterSessionEvent, PausableEvent
     data object Resume : MasterSessionEvent, PausableEvent
     data object StartRound : MasterSessionEvent, RoundControlEvent
-    data class EndRound(
-        val submission: String? = null,
-        val submitter: Competitor? = null,
-        val stoppage: Boolean = false,
-        val stopper: Competitor? = null,
+    data object EndRound : MasterSessionEvent, RoundControlEvent
+    data class RecordRoundResult(
+        val winner: Competitor?,
+        val stoppage: Boolean,
     ) : MasterSessionEvent, RoundControlEvent
-    data object ShowEndRoundDialog : MasterSessionEvent
     data object DismissEndRoundDialog : MasterSessionEvent
     data object StartMatch : MasterSessionEvent
     data object EndMatch : MasterSessionEvent

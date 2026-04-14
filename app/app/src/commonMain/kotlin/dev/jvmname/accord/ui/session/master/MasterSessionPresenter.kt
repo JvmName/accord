@@ -1,6 +1,12 @@
 package dev.jvmname.accord.ui.session.master
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
@@ -10,10 +16,16 @@ import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.MatManager
 import dev.jvmname.accord.domain.MatchManager
+import dev.jvmname.accord.domain.color
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.session.MasterSession
-import dev.jvmname.accord.network.*
+import dev.jvmname.accord.network.Mat
+import dev.jvmname.accord.network.adminCode
+import dev.jvmname.accord.network.message
+import dev.jvmname.accord.network.roundScore
+import dev.jvmname.accord.network.toMatchResult
+import dev.jvmname.accord.network.winner
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.onEither
 import dev.jvmname.accord.ui.session.MasterSessionEvent
@@ -96,7 +108,6 @@ class MasterSessionPresenter(
             { event ->
                 log.i { "event: $event" }
                 when (event) {
-                    MasterSessionEvent.ShowEndRoundDialog -> showEndRoundDialog = true
                     MasterSessionEvent.DismissEndRoundDialog -> showEndRoundDialog = false
                     MasterSessionEvent.StartMatch -> scope.launch {
                         log.i { "starting match" }
@@ -120,10 +131,16 @@ class MasterSessionPresenter(
                         session.resume()
                     }
 
-                    is MasterSessionEvent.EndRound -> {
-                        log.i { "ending round submission=${event.submission} stoppage=${event.stoppage}" }
+                    MasterSessionEvent.EndRound -> {
+                        log.i { "ending round" }
+                        session.endRound()
+                        showEndRoundDialog = true
+                    }
+
+                    is MasterSessionEvent.RecordRoundResult -> {
+                        log.i { "recording round result: winner=${event.winner?.name} (${event.winner?.color}), stoppage=${event.stoppage}" }
                         showEndRoundDialog = false
-                        session.endRound(event.submitter ?: event.stopper, event.submission, event.stoppage)
+                        session.recordRoundResult(event.winner, event.stoppage)
                     }
 
                     MasterSessionEvent.StartRound -> {
@@ -172,7 +189,7 @@ class MasterSessionPresenter(
             onPause = { eventSink(MasterSessionEvent.Pause) },
             onResume = { eventSink(MasterSessionEvent.Resume) },
             onStartRound = { eventSink(MasterSessionEvent.StartRound) },
-            onEndRound = { eventSink(MasterSessionEvent.ShowEndRoundDialog) },
+            onEndRound = { eventSink(MasterSessionEvent.EndRound) },
         )
 
         return MasterSessionState(

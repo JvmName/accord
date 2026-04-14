@@ -2,6 +2,7 @@ package dev.jvmname.accord.ui.create.mat
 
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -65,131 +67,119 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
             }
         }
 
-        Column(
+        BoxWithConstraints(
             modifier = modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(vertical = 32.dp, horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            val masterNameState = rememberTextFieldState()
+            val isTablet = maxWidth >= 600.dp
+            val verticalPadding = if (isTablet) 64.dp else 32.dp
+            val sectionSpacing = if (isTablet) 24.dp else 16.dp
+
             val matNameState = rememberTextFieldState()
             val redNameState = rememberTextFieldState()
             val blueNameState = rememberTextFieldState()
-            var judgeCount by remember { mutableIntStateOf(1) }
-            var isJudging by remember { mutableStateOf(false) }
+            var judgeCount by remember { mutableIntStateOf(3) }
             var hasAttemptedSubmit by remember { mutableStateOf(false) }
 
-            val masterNameError = hasAttemptedSubmit && masterNameState.text.isBlank()
             val matNameError = hasAttemptedSubmit && matNameState.text.isBlank()
             val redNameError = hasAttemptedSubmit && redNameState.text.isBlank()
             val blueNameError = hasAttemptedSubmit && blueNameState.text.isBlank()
 
-            Text("Mat Info", style = AccordTypography.titleLarge)
-
-            Spacer(Modifier.height(16.dp))
-
-            OutlinedTextField(
-                masterNameState,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Jane Smith") },
-                label = { Text("Your Name *") },
-                isError = masterNameError,
-                supportingText = if (masterNameError) {
-                    { Text("Required") }
-                } else null,
-                lineLimits = TextFieldLineLimits.SingleLine,
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    capitalization = KeyboardCapitalization.Words,
-                    imeAction = ImeAction.Next,
-                ),
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            OutlinedTextField(
-                matNameState,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Mat #1") },
-                label = { Text("Mat Name *") },
-                isError = matNameError,
-                supportingText = if (matNameError) {
-                    { Text("Required") }
-                } else null,
-                lineLimits = TextFieldLineLimits.SingleLine,
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    capitalization = KeyboardCapitalization.Words,
-                    imeAction = ImeAction.Next,
-                ),
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-
-            JudgeCountEditText(judgeCount) { judgeCount = it }
-
-            Spacer(Modifier.height(16.dp))
-
-            Text(
-                "Match Info", style = AccordTypography.titleLarge,
-                modifier = Modifier.combinedClickable(
-                    onLongClick = { state.eventSink(CreateMatMatchEvent.LongClick) },
-                    onClick = {}
-                )
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            CompetitorEditText(
-                competitor = Competitor.RED,
-                state = redNameState,
-                imeAction = ImeAction.Next,
-                modifier = Modifier.fillMaxWidth(),
-                isError = redNameError,
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            CompetitorEditText(
-                competitor = Competitor.BLUE,
-                state = blueNameState,
-                imeAction = ImeAction.Done,
-                modifier = Modifier.fillMaxWidth(),
-                isError = blueNameError,
-            )
-
-            Spacer(Modifier.height(64.dp))
-
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                content = {
-                    if (state.loading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.height(ButtonDefaults.MinHeight),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            trackColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    } else {
-                        Text("Create", style = AccordTypography.labelLarge)
-                    }
-                },
-                onClick = {
-                    hasAttemptedSubmit = true
-                    if (masterNameState.text.isBlank() || matNameState.text.isBlank() ||
-                        redNameState.text.isBlank() || blueNameState.text.isBlank()
-                    ) return@Button
-                    state.eventSink(
-                        CreateMatMatchEvent.CreateMat(
-                            masterName = masterNameState.text.toString(),
-                            matName = matNameState.text.toString(),
-                            judgeCount = judgeCount,
-                            redName = redNameState.text.toString(),
-                            blueName = blueNameState.text.toString(),
-//                            isJudging = isJudging,
-                        )
+            fun submitForm() {
+                hasAttemptedSubmit = true
+                if (matNameState.text.isBlank() || redNameState.text.isBlank() || blueNameState.text.isBlank()) return
+                state.eventSink(
+                    CreateMatMatchEvent.CreateMat(
+                        matName = matNameState.text.toString(),
+                        judgeCount = judgeCount,
+                        redName = redNameState.text.toString(),
+                        blueName = blueNameState.text.toString(),
                     )
-                },
-            )
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 480.dp)
+                    .fillMaxWidth()
+                    .padding(vertical = verticalPadding, horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text("Mat Info", style = AccordTypography.titleLarge)
+
+                Spacer(Modifier.height(sectionSpacing))
+
+                OutlinedTextField(
+                    matNameState,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Mat #1") },
+                    label = { Text("Mat Name *") },
+                    isError = matNameError,
+                    supportingText = if (matNameError) {
+                        { Text("Required") }
+                    } else null,
+                    lineLimits = TextFieldLineLimits.SingleLine,
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Next,
+                    ),
+                )
+
+                Spacer(Modifier.height(sectionSpacing))
+
+                JudgeCountEditText(judgeCount) { judgeCount = it }
+
+                Spacer(Modifier.height(sectionSpacing))
+
+                Text(
+                    "Match Info", style = AccordTypography.titleLarge,
+                    modifier = Modifier.combinedClickable(
+                        onLongClick = { state.eventSink(CreateMatMatchEvent.LongClick) },
+                        onClick = {}
+                    )
+                )
+
+                Spacer(Modifier.height(sectionSpacing))
+
+                CompetitorEditText(
+                    competitor = Competitor.RED,
+                    state = redNameState,
+                    imeAction = ImeAction.Next,
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = redNameError,
+                )
+
+                Spacer(Modifier.height(sectionSpacing))
+
+                CompetitorEditText(
+                    competitor = Competitor.BLUE,
+                    state = blueNameState,
+                    imeAction = ImeAction.Done,
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = blueNameError,
+                    onKeyboardAction = { submitForm() },
+                )
+
+                Spacer(Modifier.height(if (isTablet) 80.dp else 64.dp))
+
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    content = {
+                        if (state.loading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.height(ButtonDefaults.MinHeight),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                trackColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        } else {
+                            Text("Create", style = AccordTypography.labelLarge)
+                        }
+                    },
+                    onClick = { submitForm() },
+                )
+            }
         }
     }
 
@@ -228,7 +218,7 @@ private fun JudgeCountEditText(judgeCount: Int, onJudgeCountChange: (count: Int)
             },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.Done
+                imeAction = ImeAction.Next
             ),
         )
 
@@ -243,6 +233,8 @@ private fun JudgeCountEditText(judgeCount: Int, onJudgeCountChange: (count: Int)
 }
 
 @Preview
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
+
 @Composable
 private fun CreateMatMatchContentPreview() {
     AccordTheme {
@@ -251,6 +243,7 @@ private fun CreateMatMatchContentPreview() {
 }
 
 @Preview
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun CreateMatMatchContentLoadingPreview() {
     AccordTheme {

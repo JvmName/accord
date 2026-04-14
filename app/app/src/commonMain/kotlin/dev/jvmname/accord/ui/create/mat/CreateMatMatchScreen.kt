@@ -18,12 +18,10 @@ data class CreateMatMatchState(
 
 sealed interface CreateMatMatchEvent : CircuitUiEvent {
     data class CreateMat(
-        val masterName: String,
         val matName: String,
         val judgeCount: Int,
         val redName: String,
         val blueName: String,
-//        val isJudging: Boolean,
     ) : CreateMatMatchEvent
     data object Back : CreateMatMatchEvent
     data object LongClick : CreateMatMatchEvent

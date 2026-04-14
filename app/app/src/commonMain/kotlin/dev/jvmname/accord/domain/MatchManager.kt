@@ -8,7 +8,15 @@ import com.github.michaelbull.result.onOk
 import com.github.michaelbull.retry.policy.stopAtAttempts
 import com.github.michaelbull.retry.retry
 import dev.jvmname.accord.di.MatchScope
-import dev.jvmname.accord.network.*
+import dev.jvmname.accord.network.AccordClient
+import dev.jvmname.accord.network.CompetitorColor
+import dev.jvmname.accord.network.CompetitorRequest
+import dev.jvmname.accord.network.Match
+import dev.jvmname.accord.network.MatchId
+import dev.jvmname.accord.network.NetworkResult
+import dev.jvmname.accord.network.SocketClient
+import dev.jvmname.accord.network.flatMapping
+import dev.jvmname.accord.network.merge
 import dev.jvmname.accord.prefs.Prefs
 import dev.jvmname.accord.ui.catchRunning
 import dev.zacsweers.metro.Inject
@@ -129,15 +137,19 @@ class MatchManager(
             }
     }
 
-    suspend fun endRound(
+    suspend fun endRound(matchId: MatchId): NetworkResult<Match> {
+        log.i { "ending round matchId=$matchId" }
+        return client.endRound(matchId)
+            .onOk { match -> updateCache(match) }
+    }
+
+    suspend fun patchRoundResult(
         matchId: MatchId,
-        submission: String? = null,
-        submitter: Competitor? = null,
-        stoppage: Boolean = false,
-        stopper: Competitor? = null,
+        winner: Competitor?,
+        stoppage: Boolean,
     ): NetworkResult<Match> {
-        log.i { "ending round matchId=$matchId submission=$submission stoppage=$stoppage" }
-        return client.endRound(matchId, submission, submitter?.asColor, stoppage, stopper?.asColor)
+        log.i { "patching round result matchId=$matchId winner=$winner stoppage=$stoppage" }
+        return client.patchRoundResult(matchId, winner = winner?.asColor, stoppage = stoppage)
             .onOk { match ->
                 updateCache(match)
             }
