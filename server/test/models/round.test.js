@@ -308,4 +308,53 @@ describe('round.end()', () => {
         expect(resumeSpy).not.toHaveBeenCalled();
         expect(round.ended_at).toBeInstanceOf(Date);
     });
+
+    it('sets declared_winner_id and stoppage when winner is provided', async () => {
+        const round = makeRound();
+        mockRoundPauseFindAll.mockResolvedValue([closedPause()]);
+
+        const competitorId = 'competitor-red-1';
+        const mockMatch = round.getMatch.mock.results[0]?.value
+            ? await round.getMatch()
+            : null;
+
+        // Re-stub getMatch so competitorForColor returns a competitor with an id
+        round.getMatch = jest.fn().mockResolvedValue({
+            competitorForColor:      jest.fn().mockResolvedValue({ id: competitorId }),
+            getRounds:               jest.fn().mockResolvedValue([round]),
+            getWinner:               jest.fn().mockResolvedValue(null),
+            maxRounds:               999,
+            end:                     jest.fn(),
+            save:                    jest.fn().mockResolvedValue(null),
+            clearCachedAssociation:  jest.fn(),
+            rules:                   { getBreakDuration: jest.fn().mockReturnValue(0) },
+            red_competitor_id:       'red-1',
+            blue_competitor_id:      'blue-1',
+            getJudges:               jest.fn().mockResolvedValue([]),
+            getRedCompetitor:        jest.fn().mockResolvedValue(null),
+            getBlueCompetitor:       jest.fn().mockResolvedValue(null),
+        });
+
+        round.save = jest.fn().mockResolvedValue(round);
+
+        await round.end({ winner: 'red', stoppage: true });
+
+        expect(round.declared_winner_id).toBe(competitorId);
+        expect(round.stoppage).toBe(true);
+        expect(round.ended_at).toBeInstanceOf(Date);
+    });
+
+
+    it('leaves declared_winner_id and stoppage null when winner is not provided', async () => {
+        const round = makeRound();
+        mockRoundPauseFindAll.mockResolvedValue([closedPause()]);
+
+        round.save = jest.fn().mockResolvedValue(round);
+
+        await round.end();
+
+        expect(round.declared_winner_id).toBeUndefined();
+        expect(round.stoppage).toBeUndefined();
+        expect(round.ended_at).toBeInstanceOf(Date);
+    });
 });

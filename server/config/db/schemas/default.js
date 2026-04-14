@@ -274,50 +274,6 @@ module.exports = {
             "unique": false
         }
     },
-    "rounds": {
-        "id": {
-            "type": "UUID",
-            "allowNull": false,
-            "primaryKey": true,
-            "unique": true
-        },
-        "match_id": {
-            "type": "UUID",
-            "allowNull": false,
-            "primaryKey": false,
-            "unique": false
-        },
-        "submission_by": {
-            "type": "UUID",
-            "allowNull": true,
-            "primaryKey": false,
-            "unique": false
-        },
-        "submission": {
-            "type": "VARCHAR(255)",
-            "allowNull": true,
-            "primaryKey": false,
-            "unique": false
-        },
-        "ended_at": {
-            "type": "DATETIME",
-            "allowNull": true,
-            "primaryKey": false,
-            "unique": false
-        },
-        "created_at": {
-            "type": "DATETIME",
-            "allowNull": false,
-            "primaryKey": false,
-            "unique": false
-        },
-        "updated_at": {
-            "type": "DATETIME",
-            "allowNull": false,
-            "primaryKey": false,
-            "unique": false
-        }
-    },
     "judges_matches": {
         "match_id": {
             "type": "UUID",
@@ -410,6 +366,50 @@ module.exports = {
         "updated_at": {
             "type": "DATETIME",
             "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        }
+    },
+    "rounds": {
+        "id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": true,
+            "unique": true
+        },
+        "match_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "ended_at": {
+            "type": "DATETIME",
+            "allowNull": true,
+            "primaryKey": false,
+            "unique": false
+        },
+        "created_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "updated_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "declared_winner_id": {
+            "type": "UUID",
+            "allowNull": true,
+            "primaryKey": false,
+            "unique": false
+        },
+        "stoppage": {
+            "type": "TINYINT(1)",
+            "allowNull": true,
             "primaryKey": false,
             "unique": false
         }

@@ -3,7 +3,7 @@ package dev.jvmname.accord.domain
 import androidx.compose.ui.graphics.Color
 import dev.jvmname.accord.network.CompetitorColor
 import dev.jvmname.accord.ui.capitalize
-import java.util.*
+import java.util.Locale
 
 enum class Competitor {
     RED, BLUE

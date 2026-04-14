@@ -70,10 +70,8 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             when (result) {
                 is SubmissionResult.Confirmed -> state.eventSink(
                     MasterSessionEvent.EndRound(
-                        submission = result.submission,
-                        submitter = result.submitter,
-                        stoppage = result.stoppage,
-                        stopper = result.stopper,
+                        winner = result.winner,
+                        stoppage = result.stoppage
                     )
                 )
 

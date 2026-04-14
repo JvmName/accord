@@ -1,12 +1,24 @@
 package dev.jvmname.accord.ui.session.master
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,18 +35,17 @@ import dev.jvmname.accord.ui.theme.AccordTheme
 internal sealed class SubmissionResult {
     data object Dismissed : SubmissionResult()
     data class Confirmed(
-        val submission: String?,
-        val submitter: Competitor?,
+        val winner: Competitor?,
         val stoppage: Boolean,
-        val stopper: Competitor?,
     ) : SubmissionResult()
+
+    companion object
 }
 
 private enum class EndRoundMethod { SUBMISSION, STOPPAGE }
 
 @Composable
 internal fun SubmissionDialog(overlayNavigator: OverlayNavigator<SubmissionResult>) {
-    val submissionText = rememberTextFieldState()
     var method by remember { mutableStateOf(EndRoundMethod.SUBMISSION) }
     var selected by remember { mutableStateOf<Competitor?>(null) }
 
@@ -61,17 +72,8 @@ internal fun SubmissionDialog(overlayNavigator: OverlayNavigator<SubmissionResul
                 )
             }
         }
-        if (method == EndRoundMethod.SUBMISSION) {
-            OutlinedTextField(
-                state = submissionText,
-                label = { Text("Submission (optional)") },
-                placeholder = { Text("e.g. rear naked choke") },
-                lineLimits = TextFieldLineLimits.SingleLine,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
         Text(
-            text = if (method == EndRoundMethod.SUBMISSION) "Who submitted?" else "Who wins?",
+            text = "Who won this round?",
             style = MaterialTheme.typography.bodyMedium,
         )
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -96,20 +98,10 @@ internal fun SubmissionDialog(overlayNavigator: OverlayNavigator<SubmissionResul
             TextButton(onClick = { overlayNavigator.finish(SubmissionResult.Dismissed) }) { Text("Cancel") }
             TextButton(onClick = {
                 overlayNavigator.finish(
-                    when (method) {
-                        EndRoundMethod.SUBMISSION -> SubmissionResult.Confirmed(
-                            submission = submissionText.text.ifBlank { null }?.toString(),
-                            submitter = selected,
-                            stoppage = false,
-                            stopper = null,
-                        )
-                        EndRoundMethod.STOPPAGE -> SubmissionResult.Confirmed(
-                            submission = null,
-                            submitter = null,
-                            stoppage = true,
-                            stopper = selected,
-                        )
-                    }
+                    SubmissionResult.Confirmed(
+                        winner = selected,
+                        stoppage = method == EndRoundMethod.STOPPAGE
+                    )
                 )
             }) { Text("Confirm") }
         }
