@@ -17,7 +17,7 @@ enum class AudioTrigger(val filename: String) {
     BreakCountdown("countdown.wav"),
 
     /** Fired when the break ends and the next round begins. */
-    BreakCountdownGo("round-start.wav"),
+    RoundStart("round-start.wav"),
 }
 
 @[Poko Stable]

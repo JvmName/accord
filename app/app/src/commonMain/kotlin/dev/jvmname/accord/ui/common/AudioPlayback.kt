@@ -20,7 +20,7 @@ private fun AudioTrigger.localPath(): String = when (this) {
     AudioTrigger.RoundEnded -> Res.getUri("files/${filename}")
     AudioTrigger.TenSecondsWarning -> Res.getUri("files/${filename}")
     AudioTrigger.BreakCountdown -> Res.getUri("files/${filename}")
-    AudioTrigger.BreakCountdownGo -> Res.getUri("files/${filename}")
+    AudioTrigger.RoundStart -> Res.getUri("files/${filename}")
 }
 
 @Composable

@@ -51,7 +51,7 @@ class RoundAudioFeedbackHelper(
         if (prev?.round is RoundInfo.Break
             && current.round is RoundInfo.Round
             && current.state == RoundState.STARTED
-        ) return AudioTrigger.BreakCountdownGo
+        ) return AudioTrigger.RoundStart
 
         return when (current.round) {
             is RoundInfo.Round -> detectRoundTrigger(prev, current)
