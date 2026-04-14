@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastForEachIndexed
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.accord.network.User
 import dev.jvmname.accord.network.UserId
@@ -90,7 +91,7 @@ private fun WordCodeRow(code: String?) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
-        words.forEachIndexed { index, word ->
+        words.fastForEachIndexed { index, word ->
             Card(
                 elevation = CardDefaults.cardElevation(2.dp),
                 colors = CardDefaults.cardColors(containerColor = chipColors[index % chipColors.size]),

@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.util.fastMapIndexed
 import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
@@ -80,7 +81,7 @@ class MasterSessionPresenter(
         val roundScores = currentMatch?.roundScore() ?: mapOf(Competitor.RED to 0, Competitor.BLUE to 0)
 
         val roundDisplays = currentMatch?.let { match ->
-            match.rounds.mapIndexed { index, round ->
+            match.rounds.fastMapIndexed { index, round ->
                 RoundDisplayInfo(
                     roundNumber = index + 1,
                     isInProgress = round.endedAt == null,

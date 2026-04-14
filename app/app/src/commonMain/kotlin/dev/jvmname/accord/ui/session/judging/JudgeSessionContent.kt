@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.fastForEach
 import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.accord.di.MatchScope
@@ -140,7 +141,7 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
                     modifier = Modifier.fillMaxWidth().weight(3f),
                     horizontalArrangement = spacedBy(8.dp)
                 ) {
-                    Competitor.entries.forEach { competitor ->
+                    Competitor.entries.fastForEach { competitor ->
                         PlayerControl(
                             modifier = Modifier.weight(1f),
                             points = state.matchState.score.getPoints(competitor),
