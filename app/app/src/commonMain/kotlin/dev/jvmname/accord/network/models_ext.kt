@@ -67,6 +67,12 @@ fun Match.merge(other: Match): Match = Match(
     mat = mat ?: other.mat,
     judges = judges.ifEmpty { other.judges },
     rounds = rounds.ifEmpty { other.rounds },
+    breakStartedAt = breakStartedAt,
+    breakDuration = breakDuration,
+    // breakRemaining is computed by the worker and only present in WebSocket updates.
+    // HTTP responses always return null. Preserve the cached value while the break is
+    // still active; clear it once break_started_at is gone (new round started).
+    breakRemaining = if (breakStartedAt != null) breakRemaining ?: other.breakRemaining else null,
 )
 
 val RoundResultType.toHumanString: String

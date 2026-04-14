@@ -18,10 +18,16 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
 
 @Inject
 @SingleIn(MatchScope::class)
@@ -57,13 +63,15 @@ class NetworkJudgeSession(
                 .collect { match ->
                     currentMatchId = match.id
                     _score.update { deriveScoreFromMatch(match) }
-                    val event = deriveRoundEventFromMatch(match, config)
-                    _roundEvent.value = event
-                    if (event?.state == RoundEvent.RoundState.STARTED) {
-                        startCountdown(event.remaining)
-                    } else {
-                        countdownJob?.cancel()
-                        countdownJob = null
+                    val event = _roundEvent.updateAndGet {
+                        deriveRoundEventFromMatch(match, config)
+                    }
+                    when (event?.state) {
+                        RoundEvent.RoundState.STARTED -> startCountdown(event)
+                        else -> {
+                            countdownJob?.cancel()
+                            countdownJob = null
+                        }
                     }
                 }
         }
@@ -72,7 +80,7 @@ class NetworkJudgeSession(
             buttonPressTracker.buttonEvents.collect { event ->
                 when (event) {
                     is ButtonEvent.Holding -> {
-                        if(activeVote != null) {
+                        if (activeVote != null) {
                             log.d { "button continue held → (no network call) competitor=${event.competitor}" }
                             return@collect
                         }
@@ -80,7 +88,10 @@ class NetworkJudgeSession(
                         scope.launch {
                             log.d { "button started held → startVote competitor=${event.competitor}" }
                             currentMatchId?.let {
-                                matchManager.startRidingTimeVote(it, event.competitor.toCompetitorColor())
+                                matchManager.startRidingTimeVote(
+                                    it,
+                                    event.competitor.toCompetitorColor()
+                                )
                             }
                         }
                     }
@@ -121,19 +132,17 @@ class NetworkJudgeSession(
         scope.launch { currentMatchId?.let { matchManager.resumeRound(it) } }
     }
 
-    private fun startCountdown(initialRemaining: Duration) {
+    private fun startCountdown(event: RoundEvent) {
         countdownJob?.cancel()
         countdownJob = scope.launch {
-            var remaining = initialRemaining
+            var remaining = event.remaining
             while (remaining > Duration.ZERO) {
-                delay(1.seconds)
-                remaining -= 1.seconds
+                delay(300.milliseconds)
                 val current = _roundEvent.value ?: return@launch
-                if (current.state == RoundEvent.RoundState.STARTED) {
-                    _roundEvent.value = current.copy(remaining = remaining)
-                } else {
-                    return@launch
-                }
+                if (current.round != event.round || current.roundNumber != event.roundNumber) return@launch
+                if (current.state != RoundEvent.RoundState.STARTED) return@launch
+                remaining -= 300.milliseconds
+                _roundEvent.value = current.copy(remaining = remaining)
             }
         }
     }

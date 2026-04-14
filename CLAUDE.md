@@ -156,7 +156,7 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 - `User`: `id`, `name`, `api_token`
 - `Mat`: `id`, `name`, `judge_count`, `creator_id`
 - `Match`: `id`, `mat_id`, `creator_id`, `red_competitor_id`, `blue_competitor_id`, `red_score`, `blue_score`, `started_at`, `ended_at`, `break_started_at`, `break_duration`
-- `Round`: `id`, `match_id`, `ended_at`, `submission`, `submission_by`
+- `Round`: `id`, `match_id`, `ended_at`, `declared_winner_id`, `stoppage`
 - `RidingTimeVote`: `id`, `round_id`, `judge_id`, `competitor_id`, `ended_at`
 - `RoundPause`: `id`, `round_id`, `paused_at`, `resumed_at`
 
@@ -177,15 +177,17 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 
 5. **Room-Based Broadcasting**: WebSocket rooms keep server scalable; all interested clients receive updates atomically
 
-6. **Match Extensions in `models_ext.kt`**: All winner/score derivation from `Match` belongs in `/app/app/src/commonMain/kotlin/dev/jvmname/accord/network/models_ext.kt`, not inlined in presenters. Key extensions: `Match.winner(roundIndex)`, `Match.winnerCompetitor`, `Match.roundScore()`, `Match.toMatchResult()`. `toMatchResult()` always returns a non-null `MatchResult` for any ended match — do NOT add a `winner ?: return null` guard; a null winner on an ended match is a valid draw.
+6. **Match Extensions in `models_ext.kt`**: All winner/score derivation from `Match` belongs in `/app/app/src/commonMain/kotlin/dev/jvmname/accord/network/models_ext.kt`, not inlined in presenters. Key extensions: `Match.winner(roundIndex)`, `Match.winnerCompetitor`, `Match.roundScore()`, `Match.toMatchResult()`. `toMatchResult()` always returns a non-null `MatchResult` for any ended match — do NOT add a `winner ?: return null` guard; a null winner on an ended match is a valid draw. `Match.merge(other)` handles cache updates — some HTTP endpoints return partial payloads (omitting `judges`, `mat`, etc.) and merge preserves cached values for those. `break_remaining` is a worker-computed field that is only present in WebSocket `match.update` payloads — HTTP responses always return it as `null`. `merge` uses `if (breakStartedAt != null) breakRemaining ?: other.breakRemaining else null` to preserve the last WebSocket value during an active break and clear it once the break ends.
 
 7. **`MatchResult` is shared across screens**: Defined in `JudgeSessionScreen.kt` but imported by `MasterSessionScreen.kt` as well. Has `winConditions: String` and `roundWinners: List<Competitor>`. Empty `roundWinners` means all rounds were tied (draw); `toText()` handles this case.
 
 8. **Judge vs Master role separation**: Judges only vote on control time — they do NOT handle meta-round actions (submission, stoppage, manual score edits are master-only). `JudgeSessionEvent.EndRound` is a simple `data object` that ends the round with no params. All structured end-round actions (submission name, who submitted/stopped, stoppage vs submission choice) belong exclusively in the master session.
 
-9. **Master session overlay pattern**: The master uses Circuit's `OverlayEffect` + `BottomSheetOverlay` for dialogs (not `AlertDialog`). The end-round dialog is `SubmissionDialog` in `/app/.../ui/session/master/overlay.kt`, which returns a `SubmissionResult` sealed class. `SubmissionResult.Confirmed` carries both submission and stoppage paths. The content maps the result to `MasterSessionEvent.EndRound` which carries `submission`, `submitter`, `stoppage`, and `stopper` fields.
+9. **Master session overlay pattern**: The master uses Circuit's `OverlayEffect` + `BottomSheetOverlay` for dialogs (not `AlertDialog`). The end-round dialog is `SubmissionDialog` in `/app/.../ui/session/master/overlay.kt`, which returns a `SubmissionResult` sealed class. `SubmissionResult.Confirmed` carries `winner` and `stoppage`. The content maps the result to `MasterSessionEvent.RecordRoundResult(winner, stoppage)` — NOT `EndRound`. `EndRound` is a `data object` that fires `POST /rounds/end` immediately on button tap and opens the dialog; `RecordRoundResult` fires `PATCH /rounds/result` when the dialog is confirmed.
 
-10. **End-round method routing**: `RoundController.endRound(winner, submission, stoppage)` — `winner` doubles as submitter (submission path) or stopper (stoppage path). `MasterSession` routes to the correct `MatchManager.endRound` overload based on the `stoppage` flag. The server API uses `{ submission, submitter }` for submissions and `{ stoppage: true, stopper }` for stoppages.
+10. **All rounds always play out**: A match always runs all `maxRounds` (3) rounds — there is no early exit when a competitor reaches 2 wins. The match winner is determined by best-2-of-3 only after all 3 rounds have completed. `Match.getWinner()` returns `null` while rounds are still in progress. Do not reintroduce early-exit logic in `Round.end()` or `Match.getWinner()`.
+
+11. **Two-step end-round flow**: Ending a round is split into two API calls. `POST /match/:matchId/rounds/end` (no body) stops the clock and starts the break immediately. `PATCH /match/:matchId/rounds/result` `{ winner: "red"|"blue"|null, stoppage: boolean }` records who won — this is only valid during the break or after the match has ended. On the client: `MasterSessionEvent.EndRound` (data object) calls `session.endRound()` and opens the dialog; `MasterSessionEvent.RecordRoundResult(winner, stoppage)` calls `session.recordRoundResult()`. Dismissing the dialog without confirming leaves the result null on the server.
 
 ## Testing
 
