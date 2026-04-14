@@ -115,13 +115,13 @@ class Match extends BaseRecord {
     }
 
 
-    async endRound({ winner, stoppage, safe }={}) {
+    async endRound({ safe }={}) {
         const lastRound = await this.getLastRound();
         if (!lastRound || lastRound.ended) {
             if (safe) return;
             throw new Error("No available round to end");
         }
-        await lastRound.end({ winner, stoppage });
+        await lastRound.end();
     }
 
 

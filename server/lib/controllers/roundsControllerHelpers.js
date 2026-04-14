@@ -1,8 +1,8 @@
-function endRoundValidations() {
-    return {
-        winner: { isEnum: { enums: [undefined, 'red', 'blue'] } }
-    };
+function isResultWindowOpen(match) {
+    const breakActive = match.break_started_at != null;
+    const matchEnded  = match.ended_at != null;
+    return breakActive || matchEnded;
 }
 
 
-module.exports = { endRoundValidations };
+module.exports = { isResultWindowOpen };

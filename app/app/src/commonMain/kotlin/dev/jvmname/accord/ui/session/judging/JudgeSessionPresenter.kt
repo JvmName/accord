@@ -1,6 +1,10 @@
 package dev.jvmname.accord.ui.session.judging
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
@@ -102,7 +106,7 @@ class JudgeSessionPresenter(
 
                     JudgeSessionEvent.StartRound -> {
                         (session as? RoundController)?.let { rc ->
-                            rc.endRound(null, null)
+                            rc.endRound()
                             rc.startRound()
                         }
                     }
@@ -111,7 +115,7 @@ class JudgeSessionPresenter(
                     JudgeSessionEvent.Resume -> session.resume()
                     JudgeSessionEvent.Reset -> TODO()
                     JudgeSessionEvent.EndRound -> {
-                        (session as? RoundController)?.endRound(null, null)
+                        (session as? RoundController)?.endRound()
                     }
                 }
             }

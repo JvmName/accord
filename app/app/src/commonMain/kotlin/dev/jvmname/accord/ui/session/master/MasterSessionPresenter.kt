@@ -108,7 +108,6 @@ class MasterSessionPresenter(
             { event ->
                 log.i { "event: $event" }
                 when (event) {
-                    MasterSessionEvent.ShowEndRoundDialog -> showEndRoundDialog = true
                     MasterSessionEvent.DismissEndRoundDialog -> showEndRoundDialog = false
                     MasterSessionEvent.StartMatch -> scope.launch {
                         log.i { "starting match" }
@@ -132,10 +131,16 @@ class MasterSessionPresenter(
                         session.resume()
                     }
 
-                    is MasterSessionEvent.EndRound -> {
-                        log.i { "ending round: submitter=${event.winner?.name} (${event.winner?.color}), stoppage=${event.stoppage}" }
+                    MasterSessionEvent.EndRound -> {
+                        log.i { "ending round" }
+                        session.endRound()
+                        showEndRoundDialog = true
+                    }
+
+                    is MasterSessionEvent.RecordRoundResult -> {
+                        log.i { "recording round result: winner=${event.winner?.name} (${event.winner?.color}), stoppage=${event.stoppage}" }
                         showEndRoundDialog = false
-                        session.endRound(event.winner, event.stoppage)
+                        session.recordRoundResult(event.winner, event.stoppage)
                     }
 
                     MasterSessionEvent.StartRound -> {
@@ -184,7 +189,7 @@ class MasterSessionPresenter(
             onPause = { eventSink(MasterSessionEvent.Pause) },
             onResume = { eventSink(MasterSessionEvent.Resume) },
             onStartRound = { eventSink(MasterSessionEvent.StartRound) },
-            onEndRound = { eventSink(MasterSessionEvent.ShowEndRoundDialog) },
+            onEndRound = { eventSink(MasterSessionEvent.EndRound) },
         )
 
         return MasterSessionState(

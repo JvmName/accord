@@ -137,13 +137,19 @@ class MatchManager(
             }
     }
 
-    suspend fun endRound(
+    suspend fun endRound(matchId: MatchId): NetworkResult<Match> {
+        log.i { "ending round matchId=$matchId" }
+        return client.endRound(matchId)
+            .onOk { match -> updateCache(match) }
+    }
+
+    suspend fun patchRoundResult(
         matchId: MatchId,
         winner: Competitor?,
-        stoppage: Boolean?,
+        stoppage: Boolean,
     ): NetworkResult<Match> {
-        log.i { "ending round matchId=$matchId winner=$winner stoppage=$stoppage" }
-        return client.endRound(matchId, winner = winner?.asColor, stoppage = stoppage ?: false)
+        log.i { "patching round result matchId=$matchId winner=$winner stoppage=$stoppage" }
+        return client.patchRoundResult(matchId, winner = winner?.asColor, stoppage = stoppage)
             .onOk { match ->
                 updateCache(match)
             }

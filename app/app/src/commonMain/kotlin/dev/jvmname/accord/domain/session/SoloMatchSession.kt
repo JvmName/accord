@@ -152,7 +152,7 @@ class SoloMatchSession(
                 .drop(1)
                 .collect { (prev, current) ->
                     if (prev == null && current != null) {
-                        endRound(current, null)
+                        endRound()
                     }
                 }
         }
@@ -200,7 +200,7 @@ class SoloMatchSession(
         timer.resume()
     }
 
-    override fun endRound(winner: Competitor?, stoppage: Boolean?) {
+    override fun endRound() {
         timer.cancel()
 
         _roundEvent.update {
@@ -216,7 +216,7 @@ class SoloMatchSession(
     }
 
     override suspend fun endMatch(): NetworkResult<Match> {
-        endRound(null, null)
+        endRound()
         //TODO unclear if this is helpful, maybe Ok(Match)?
         return Err(mapOf("solo" to listOf("no server match in solo mode")))
     }
@@ -252,7 +252,7 @@ class SoloMatchSession(
                 .collect { remaining ->
                     when (remaining) {
                         Duration.ZERO -> {
-                            endRound(null, null)
+                            endRound()
                             startRound()
                         }
 
