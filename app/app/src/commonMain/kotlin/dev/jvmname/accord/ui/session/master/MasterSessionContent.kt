@@ -1,13 +1,33 @@
 package dev.jvmname.accord.ui.session.master
 
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.NextPlan
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.HeartBroken
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Password
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material3.*
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,8 +43,7 @@ import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
-import dev.jvmname.accord.network.User
-import dev.jvmname.accord.network.UserId
+import dev.jvmname.accord.ui.LockLandscape
 import dev.jvmname.accord.ui.common.IconTextButton
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.MasterSessionEvent
@@ -32,9 +51,14 @@ import dev.jvmname.accord.ui.session.MatchActions
 import dev.jvmname.accord.ui.session.MatchState
 import dev.jvmname.accord.ui.session.judging.MatchResult
 import dev.jvmname.accord.ui.theme.AccordTheme
+import dev.jvmname.accord.ui.theme.TabletCompetitor
+import dev.jvmname.accord.ui.theme.TabletScore
+import dev.jvmname.accord.ui.theme.TabletTimeDisplay
 
+@OptIn(ExperimentalLayoutApi::class)
 @[Composable CircuitInject(MasterSessionScreen::class, MatchScope::class)]
 fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifier) {
+    LockLandscape()
     if (state.showEndRoundDialog) {
         OverlayEffect(state.showEndRoundDialog) {
             val result = show(
@@ -101,113 +125,134 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(vertical = 72.dp, horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            Text(
-                state.matchState.timerDisplay,
-                style = MaterialTheme.typography.displayLargeEmphasized,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            state.matchState.roundLabel?.let { Text(it) }
-
-            // Score row
+            // Combined scores + timer/label row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(state.redName, style = MaterialTheme.typography.bodyMedium)
+                Column(
+                    modifier = Modifier.weight(0.31f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(state.redName, style = MaterialTheme.typography.TabletCompetitor)
                     Text(
-                        "${state.matchState.score.redPoints}",
-                        style = MaterialTheme.typography.displayLarge,
-                        color = Color.Red
+                        state.matchState.score.redPoints.toString(),
+                        style = MaterialTheme.typography.TabletScore,
+                        color = Color.Red,
+                        softWrap = false,
                     )
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(state.blueName, style = MaterialTheme.typography.bodyMedium)
+                Column(
+                    modifier = Modifier.weight(0.38f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        state.matchState.timerDisplay,
+                        style = MaterialTheme.typography.TabletTimeDisplay,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    state.matchState.roundLabel?.let {
+                        Text(it, style = MaterialTheme.typography.displayLarge)
+                    }
+                }
+                Column(
+                    modifier = Modifier.weight(0.31f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(state.blueName, style = MaterialTheme.typography.TabletCompetitor)
                     Text(
                         "${state.matchState.score.bluePoints}",
-                        style = MaterialTheme.typography.displayLarge,
+                        style = MaterialTheme.typography.TabletScore,
                         color = Color.Blue,
+                        softWrap = false,
                     )
                 }
             }
 
             // Control buttons
             val roundInfo = state.matchState.roundInfo
-            val isActiveBreak = roundInfo?.round is RoundInfo.Break && roundInfo.state == RoundEvent.RoundState.STARTED
-            if (!isActiveBreak && roundInfo?.state == RoundEvent.RoundState.ENDED) {
-                IconTextButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.AutoMirrored.Outlined.NextPlan,
-                    text = "Start Next Round",
-                    onClick = { state.eventSink(MasterSessionEvent.StartRound) }
-                )
-            }
+            val isActiveBreak =
+                roundInfo?.round is RoundInfo.Break && roundInfo.state == RoundEvent.RoundState.STARTED
+            val buttonModifier = Modifier.width(275.dp).height(105.dp)
+            FlowRow(
+                modifier = Modifier.fillMaxWidth().padding(top = 64.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (!isActiveBreak && roundInfo?.state == RoundEvent.RoundState.ENDED) {
+                    IconTextButton(
+                        modifier = buttonModifier,
+                        icon = Icons.AutoMirrored.Outlined.NextPlan,
+                        text = "Start Next Round",
+                        onClick = { state.eventSink(MasterSessionEvent.StartRound) }
+                    )
+                }
 
-            if (!state.isMatchStarted && state.matchResult == null) {
-                IconTextButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.Outlined.PlayArrow,
-                    text = "Start Match",
-                    onClick = { state.eventSink(MasterSessionEvent.StartMatch) }
-                )
-            }
+                if (!state.isMatchStarted && state.matchResult == null) {
+                    IconTextButton(
+                        modifier = buttonModifier,
+                        icon = Icons.Outlined.PlayArrow,
+                        text = "Start Match",
+                        onClick = { state.eventSink(MasterSessionEvent.StartMatch) }
+                    )
+                }
 
-            state.actions.pause?.let { pause ->
-                IconTextButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.Default.Pause,
-                    text = "Pause",
-                    onClick = pause,
-                )
-            }
-            state.actions.endRound?.let { endRound ->
-                IconTextButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.Default.HeartBroken,
-                    text = "Stop Round",
-                    onClick = endRound
-                )
-            }
-            state.actions.resume?.let { resume ->
-                IconTextButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.Outlined.PlayArrow,
-                    text = "Resume",
-                    onClick = resume
-                )
-            }
-            if (state.isMatchStarted && state.matchResult == null) {
-                IconTextButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.Default.StopCircle,
-                    text = "End Match",
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    onClick = { state.eventSink(MasterSessionEvent.EndMatch) }
-                )
+                state.actions.pause?.let { pause ->
+                    IconTextButton(
+                        modifier = buttonModifier,
+                        icon = Icons.Default.Pause,
+                        text = "Pause",
+                        onClick = pause,
+                    )
+                }
+                state.actions.endRound?.let { endRound ->
+                    IconTextButton(
+                        modifier = buttonModifier,
+                        icon = Icons.Default.HeartBroken,
+                        text = "Submission",
+                        onClick = endRound,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    )
+                }
+                state.actions.resume?.let { resume ->
+                    IconTextButton(
+                        modifier = buttonModifier,
+                        icon = Icons.Outlined.PlayArrow,
+                        text = "Resume",
+                        onClick = resume
+                    )
+                }
+                if (state.isMatchStarted && state.matchResult == null && isActiveBreak) {
+                    IconTextButton(
+                        modifier = buttonModifier,
+                        icon = Icons.Default.StopCircle,
+                        text = "End Match",
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        onClick = { state.eventSink(MasterSessionEvent.EndMatch) }
+                    )
+                }
             }
 
             state.matchResult?.let { matchResult ->
                 Text(
                     "Match Complete",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.displayLargeEmphasized,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
                 Text(
                     matchResult.toText(),
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.displayLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 IconTextButton(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = buttonModifier,
                     icon = Icons.Default.Home,
                     text = "Return to Main",
                     onClick = { state.eventSink(MasterSessionEvent.ReturnToMain) }
@@ -228,7 +273,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
 
 
 // Match started, active round in progress — pause + end round + end match visible
-@Preview
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_ActiveRound_Preview() {
     AccordTheme {
@@ -239,14 +284,14 @@ private fun MasterSessionContent_ActiveRound_Preview() {
                 blueName = "Bob",
                 matchState = MatchState(
                     score = Score(
-                        redPoints = 3,
+                        redPoints = 13,
                         bluePoints = 1,
                         activeControlTime = null,
                         activeCompetitor = null,
                         techFallWin = null,
                     ),
                     roundInfo = null,
-                    timerDisplay = "02:07",
+                    timerDisplay = "2:07",
                     roundLabel = "Round 2",
                     controlDurations = emptyMap(),
                     roundScores = emptyMap(),
@@ -267,7 +312,7 @@ private fun MasterSessionContent_ActiveRound_Preview() {
 }
 
 // Match started, between rounds — only end match visible
-@Preview
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_BetweenRounds_Preview() {
     AccordTheme {
@@ -279,7 +324,7 @@ private fun MasterSessionContent_BetweenRounds_Preview() {
                 matchState = MatchState(
                     score = Score(
                         redPoints = 3,
-                        bluePoints = 1,
+                        bluePoints = 14,
                         activeControlTime = null,
                         activeCompetitor = null,
                         techFallWin = null,
@@ -303,7 +348,7 @@ private fun MasterSessionContent_BetweenRounds_Preview() {
     }
 }
 
-@Preview
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_Start_Preview() {
     AccordTheme {
@@ -333,7 +378,7 @@ private fun MasterSessionContent_Start_Preview() {
     }
 }
 
-@Preview
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_Ended_Preview() {
     AccordTheme {
@@ -352,10 +397,8 @@ private fun MasterSessionContent_Ended_Preview() {
                 ),
                 isMatchStarted = true,
                 matchResult = MatchResult(
-                    winner = User(UserId("1"), "Alice") to Competitor.RED,
-                    winnerScore = 2,
-                    loserScore = 1,
                     winConditions = "Points (12s), Points (9s)",
+                    roundWinners = listOf(Competitor.RED, Competitor.BLUE, Competitor.RED)
                 ),
                 actions = MatchActions(),
                 showEndRoundDialog = false,
@@ -372,7 +415,7 @@ private fun MasterSessionContent_Ended_Preview() {
     }
 }
 
-@Preview
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_Dialog_Preview() {
     AccordTheme {
@@ -402,7 +445,7 @@ private fun MasterSessionContent_Dialog_Preview() {
     }
 }
 
-@Preview
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_Paused_Preview() {
     AccordTheme {
@@ -432,7 +475,7 @@ private fun MasterSessionContent_Paused_Preview() {
     }
 }
 
-@Preview
+@Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_Error_Preview() {
     AccordTheme {

@@ -177,9 +177,9 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 
 5. **Room-Based Broadcasting**: WebSocket rooms keep server scalable; all interested clients receive updates atomically
 
-6. **Match Extensions in `models_ext.kt`**: All winner/score derivation from `Match` belongs in `/app/app/src/commonMain/kotlin/dev/jvmname/accord/network/models_ext.kt`, not inlined in presenters. Key extensions: `Match.winner(roundIndex)`, `Match.winnerCompetitor`, `Match.roundScore()`, `Match.toMatchResult()`.
+6. **Match Extensions in `models_ext.kt`**: All winner/score derivation from `Match` belongs in `/app/app/src/commonMain/kotlin/dev/jvmname/accord/network/models_ext.kt`, not inlined in presenters. Key extensions: `Match.winner(roundIndex)`, `Match.winnerCompetitor`, `Match.roundScore()`, `Match.toMatchResult()`. `toMatchResult()` always returns a non-null `MatchResult` for any ended match — do NOT add a `winner ?: return null` guard; a null winner on an ended match is a valid draw.
 
-7. **`MatchResult` is shared across screens**: Defined in `JudgeSessionScreen.kt` but imported by `MasterSessionScreen.kt` as well. `winner` field is `Pair<User, Competitor>` (not just `Competitor`).
+7. **`MatchResult` is shared across screens**: Defined in `JudgeSessionScreen.kt` but imported by `MasterSessionScreen.kt` as well. Has `winConditions: String` and `roundWinners: List<Competitor>`. Empty `roundWinners` means all rounds were tied (draw); `toText()` handles this case.
 
 8. **Judge vs Master role separation**: Judges only vote on control time — they do NOT handle meta-round actions (submission, stoppage, manual score edits are master-only). `JudgeSessionEvent.EndRound` is a simple `data object` that ends the round with no params. All structured end-round actions (submission name, who submitted/stopped, stoppage vs submission choice) belong exclusively in the master session.
 

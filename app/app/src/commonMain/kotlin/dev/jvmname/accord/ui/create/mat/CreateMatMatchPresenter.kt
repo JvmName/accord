@@ -44,7 +44,6 @@ class CreateMatMatchPresenter(
 
                         val event = when (event) {
                             is CreateMatMatchEvent.LongClick -> CreateMatMatchEvent.CreateMat(
-                                masterName = "Test 0",
                                 matName = "Mat 1",
                                 judgeCount = 1,
                                 redName = "RRR",
@@ -58,7 +57,7 @@ class CreateMatMatchPresenter(
                         log.i { "creating mat name='${event.matName}' judges=${event.judgeCount}" }
 
                         matManager.createMatAndMatch(
-                            masterName = event.masterName,
+                            masterName = event.matName,
                             matName = event.matName,
                             judgeCount = event.judgeCount,
                             redName = event.redName,
