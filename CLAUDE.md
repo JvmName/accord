@@ -80,8 +80,8 @@ RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
   - Each match has its own room: `match:${matchId}`
   - Authentication via `socket.handshake.auth.apiToken`
 
-- **Worker process** (`/server/bin/worker <workerToken>`): Separate process that connects via WebSocket using `workerToken`. Runs four background jobs every 1 second:
-  - `MatchUpdateWorker`: Broadcasts `match.update` for every open (not-yet-ended) round **and** for every match currently in a break
+- **Worker process** (`/server/bin/worker <workerToken>`): Separate process that connects via WebSocket using `workerToken`. Runs four background jobs:
+  - `MatchUpdateWorker`: Ticks every **250ms**. Broadcasts `match.update` for every open (not-yet-ended) round **and** for every match currently in a break, throttled to ~1s. Also tracks active match IDs across ticks — when a match exits the active set (just ended), immediately broadcasts one final `match.update` so judges receive the ended state without waiting for their local countdown to expire. The other three workers tick every 1 second:
   - `TechFallTrackerWorker`: Checks open rounds for tech fall threshold; if reached, ends the round in the DB and broadcasts `round.tech-fall`
   - `BreakTransitionWorker`: Checks matches in break state; when break expires, starts the next round and broadcasts `break.ended`
   - `RoundTimerWorker`: Checks open rounds for timer expiry; if elapsed time (minus pauses) ≥ max duration, ends the round and broadcasts `match.update`
@@ -187,7 +187,9 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 
 10. **All rounds always play out**: A match always runs all `maxRounds` (3) rounds — there is no early exit when a competitor reaches 2 wins. The match winner is determined by best-2-of-3 only after all 3 rounds have completed. `Match.getWinner()` returns `null` while rounds are still in progress. Do not reintroduce early-exit logic in `Round.end()` or `Match.getWinner()`.
 
-11. **Two-step end-round flow**: Ending a round is split into two API calls. `POST /match/:matchId/rounds/end` (no body) stops the clock and starts the break immediately. `PATCH /match/:matchId/rounds/result` `{ winner: "red"|"blue"|null, stoppage: boolean }` records who won — this is only valid during the break or after the match has ended. On the client: `MasterSessionEvent.EndRound` (data object) calls `session.endRound()` and opens the dialog; `MasterSessionEvent.RecordRoundResult(winner, stoppage)` calls `session.recordRoundResult()`. Dismissing the dialog without confirming leaves the result null on the server.
+11. **End-round method routing**: `RoundController.endRound(winner, submission, stoppage)` — `winner` doubles as submitter (submission path) or stopper (stoppage path). `MasterSession` routes to the correct `MatchManager.endRound` overload based on the `stoppage` flag. The server API uses `{ submission, submitter }` for submissions and `{ stoppage: true, stopper }` for stoppages.
+
+12. **Two-step end-round flow**: Ending a round is split into two API calls. `POST /match/:matchId/rounds/end` (no body) stops the clock and starts the break immediately. `PATCH /match/:matchId/rounds/result` `{ winner: "red"|"blue"|null, stoppage: boolean }` records who won — this is only valid during the break or after the match has ended. On the client: `MasterSessionEvent.EndRound` (data object) calls `session.endRound()` and opens the dialog; `MasterSessionEvent.RecordRoundResult(winner, stoppage)` calls `session.recordRoundResult()`. Dismissing the dialog without confirming leaves the result null on the server.
 
 ## Testing
 

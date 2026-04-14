@@ -43,23 +43,19 @@ class Match extends BaseRecord {
         if (this.#winner != undefined) return this.#winner;
 
         const rounds = (await this.getRounds()).filter(r => r.ended);
+        if (rounds.length < this.maxRounds) return this.#winner = null;
 
         let redWins  = 0;
         let blueWins = 0;
-        let winner;
         for (const round of rounds) {
-            winner = await round.getWinner();
+            const winner = await round.getWinner();
             if (!winner)                              continue;
             if (winner.id == this.red_competitor_id)  redWins += 1;
             if (winner.id == this.blue_competitor_id) blueWins += 1;
         }
 
-        const roundsToWin = Math.ceil(this.maxRounds/2)
-        if (redWins  >= roundsToWin)        return this.#winner = await this.getRedCompetitor();
-        if (blueWins >= roundsToWin)        return this.#winner = await this.getBlueCompetitor();
-        if (rounds.length < this.maxRounds) return this.#winner = null;
-        if (redWins > blueWins)             return this.#winner = await this.getRedCompetitor();
-        if (blueWins > redWins)             return this.#winner = await this.getBlueCompetitor();
+        if (redWins > blueWins)  return this.#winner = await this.getRedCompetitor();
+        if (blueWins > redWins)  return this.#winner = await this.getBlueCompetitor();
         return this.#winner = null;
     }
 
