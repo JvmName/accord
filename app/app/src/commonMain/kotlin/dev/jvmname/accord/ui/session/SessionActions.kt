@@ -37,9 +37,9 @@ fun rememberMatchActions(
     val onResetState = rememberUpdatedState(onReset)
     val onManualEditState = rememberUpdatedState(onManualEdit)
 
-    return remember(isActive, isPaused, hasRound) {
+    return remember(isActive, isPaused, hasRound, onStartRound != null) {
         MatchActions(
-            startRound = { onStartState.value() },
+            startRound = onStartState.value?.let { fn -> { fn() } },
             resume = onResumeState.value.takeIf { isPaused },
             pause = onPauseState.value.takeIf { isActive },
             endRound = onEndState.value.takeIf { isActive },

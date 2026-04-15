@@ -23,7 +23,7 @@ interface PausableSession : MatchObserver {
     fun resume()
 }
 
-interface JudgingSession : PausableSession {
+interface JudgingSession : MatchObserver {
     fun recordPress(competitor: Competitor)
     fun recordRelease(competitor: Competitor)
 }

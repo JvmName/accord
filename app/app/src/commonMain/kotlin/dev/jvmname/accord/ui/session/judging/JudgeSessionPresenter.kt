@@ -17,6 +17,7 @@ import dev.jvmname.accord.domain.MatchManager
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.session.JudgingSession
+import dev.jvmname.accord.domain.session.PausableSession
 import dev.jvmname.accord.domain.session.RoundController
 import dev.jvmname.accord.domain.session.SoloSession
 import dev.jvmname.accord.network.Mat
@@ -113,8 +114,8 @@ class JudgeSessionPresenter(
                         }
                     }
 
-                    JudgeSessionEvent.Pause -> session.pause()
-                    JudgeSessionEvent.Resume -> session.resume()
+                    JudgeSessionEvent.Pause -> (session as? PausableSession)?.pause()
+                    JudgeSessionEvent.Resume -> (session as? PausableSession)?.resume()
                     JudgeSessionEvent.Reset -> TODO()
                     JudgeSessionEvent.EndRound -> {
                         (session as? RoundController)?.endRound()
@@ -123,15 +124,16 @@ class JudgeSessionPresenter(
             }
         }
 
+        val isSolo = session is SoloSession
         val actions = rememberMatchActions(
             isActive = isActive,
             isPaused = isPaused,
             hasRound = roundEvent != null,
-            onPause = { eventSink(JudgeSessionEvent.Pause) },
-            onResume = { eventSink(JudgeSessionEvent.Resume) },
-            onStartRound = { eventSink(JudgeSessionEvent.StartRound) },
-            onEndRound = { eventSink(JudgeSessionEvent.EndRound) },
-            onReset = { eventSink(JudgeSessionEvent.Reset) },
+            onPause = if (isSolo) { { eventSink(JudgeSessionEvent.Pause) } } else null,
+            onResume = if (isSolo) { { eventSink(JudgeSessionEvent.Resume) } } else null,
+            onStartRound = if (isSolo) { { eventSink(JudgeSessionEvent.StartRound) } } else null,
+            onEndRound = if (isSolo) { { eventSink(JudgeSessionEvent.EndRound) } } else null,
+            onReset = if (isSolo) { { eventSink(JudgeSessionEvent.Reset) } } else null,
             onManualEdit = if (session is SoloSession && isPaused && score.techFallWin == null) {
                 { competitor, action -> eventSink(JudgeSessionEvent.ManualEdit(competitor, action)) }
             } else null,

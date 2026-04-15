@@ -130,14 +130,6 @@ class NetworkJudgeSession(
         buttonPressTracker.recordRelease(competitor)
     }
 
-    override fun pause() {
-        scope.launch { currentMatchId?.let { matchManager.pauseRound(it) } }
-    }
-
-    override fun resume() {
-        scope.launch { currentMatchId?.let { matchManager.resumeRound(it) } }
-    }
-
     private fun startCountdown(event: RoundEvent) {
         countdownJob?.cancel()
         countdownJob = scope.launch {
