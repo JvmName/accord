@@ -1,11 +1,14 @@
+@file:OptIn(DelicateMetroGradleApi::class, ExperimentalKotlinGradlePluginApi::class)
+
 import com.google.devtools.ksp.gradle.KspAATask
+import dev.zacsweers.metro.gradle.DelicateMetroGradleApi
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidApplication)
+    alias(libs.plugins.androidLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
@@ -19,11 +22,16 @@ plugins {
 
 kotlin {
     jvmToolchain(21)
-    androidTarget {
+
+    android {
+        namespace = "dev.jvmname.accord.lib"
+        compileSdk = libs.versions.android.compileSdk.get().toInt()
+        minSdk = libs.versions.android.minSdk.get().toInt()
     }
 
-    jvm {
-    }
+    jvm {}
+
+    applyDefaultHierarchyTemplate()
 
     sourceSets {
         commonMain {
@@ -39,7 +47,7 @@ kotlin {
                 implementation(libs.material.icons)
                 implementation(libs.kotlinx.coroutines.core)
 
-                implementation(libs.circuit.foundation)
+                api(libs.circuit.foundation)
                 implementation(libs.circuit.overlay)
                 implementation(libs.circuitx.overlays)
                 implementation(libs.circuitx.gestureNav)
@@ -65,12 +73,19 @@ kotlin {
 
         val commonJvm by creating {
             dependsOn(commonMain.get())
-
             dependencies {
                 implementation(libs.socketio.client)
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.ui.tooling.preview)
                 implementation(libs.compose.ui.tooling)
+            }
+        }
+
+        jvmMain {
+            dependsOn(commonJvm)
+            dependencies {
+                implementation(compose.desktop.currentOs)
+                implementation(libs.kotlinx.coroutines.swing)
             }
         }
 
@@ -80,14 +95,6 @@ kotlin {
                 implementation(libs.androidx.activity.compose)
                 implementation(libs.kotlinx.coroutines.android)
                 implementation(libs.circuitx.android)
-            }
-        }
-
-        jvmMain {
-            dependsOn(commonJvm)
-            dependencies {
-                implementation(compose.desktop.currentOs)
-                implementation(libs.kotlinx.coroutines.swing)
             }
         }
 
@@ -139,48 +146,6 @@ kotlin {
     }
 }
 
-android {
-    namespace = "dev.jvmname.accord"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
-
-    defaultConfig {
-        applicationId = "com.rdojo.kombat"
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 6
-        versionName = "0.0.6"
-    }
-    signingConfigs {
-        create("release") {
-            storeFile = file(System.getenv("SIGNING_STORE_FILE") ?: "AccordProdKey.jks")
-            storePassword = System.getenv("SIGNING_STORE_PASSWORD")
-            keyAlias = System.getenv("SIGNING_KEY_ALIAS")
-            keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
-        }
-    }
-    buildTypes {
-        getByName("debug") {
-            isMinifyEnabled = false
-            isShrinkResources = false
-
-        }
-        release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-}
-
-
 tasks.withType<JavaCompile>().configureEach {
     // Only configure kotlin/jvm tasks with this
     if (name.startsWith("compileJvm")) {
@@ -188,7 +153,7 @@ tasks.withType<JavaCompile>().configureEach {
     }
 }
 
-compose{
+compose {
     desktop {
         application {
             mainClass = "dev.jvmname.accord.MainKt"
@@ -230,9 +195,7 @@ buildConfig {
             "BASE_URL",
             if (isRelease) "https://rdk.api.jvmname.dev" else "http://[fec0::2]:3000"
         )
-
     }
-
 }
 
 dependencies {

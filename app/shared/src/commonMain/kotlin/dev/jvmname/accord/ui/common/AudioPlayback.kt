@@ -1,6 +1,6 @@
 package dev.jvmname.accord.ui.common
 
-import accord.app.generated.resources.Res
+import accord.shared.generated.resources.Res
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
