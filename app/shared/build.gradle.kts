@@ -19,10 +19,11 @@ plugins {
 
 kotlin {
     jvmToolchain(21)
-    androidLibrary {
-        namespace = "dev.jvmname.accord"
+    android {
+        namespace = "dev.jvmname.accord.lib"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
+        androidResources.enable = true
     }
 
     jvm {
@@ -42,7 +43,7 @@ kotlin {
                 implementation(libs.material.icons)
                 implementation(libs.kotlinx.coroutines.core)
 
-                implementation(libs.circuit.foundation)
+                api(libs.circuit.foundation)
                 implementation(libs.circuit.overlay)
                 implementation(libs.circuitx.overlays)
                 implementation(libs.circuitx.gestureNav)
@@ -82,6 +83,15 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
+            }
+        }
+
+        androidMain{
+            dependsOn(commonJvm)
+            dependencies {
+                implementation(libs.androidx.activity.compose)
+                implementation(libs.kotlinx.coroutines.android)
+                implementation(libs.circuitx.android)
             }
         }
 
