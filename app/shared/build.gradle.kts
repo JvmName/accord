@@ -19,7 +19,10 @@ plugins {
 
 kotlin {
     jvmToolchain(21)
-    androidTarget {
+    android {
+        namespace = "dev.jvmname.accord"
+        compileSdk = libs.versions.android.compileSdk.get().toInt()
+        minSdk = libs.versions.android.minSdk.get().toInt()
     }
 
     jvm {
@@ -71,14 +74,6 @@ kotlin {
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.ui.tooling.preview)
                 implementation(libs.compose.ui.tooling)
-            }
-        }
-
-        androidMain {
-            dependsOn(commonJvm)
-            dependencies {
-                implementation(libs.kotlinx.coroutines.android)
-                implementation(libs.circuitx.android)
             }
         }
 
@@ -138,13 +133,6 @@ kotlin {
     }
 }
 
-android {
-    namespace = "dev.jvmname.accord"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
-    minSdk = libs.versions.android.minSdk.get().toInt()
-}
-
-
 tasks.withType<JavaCompile>().configureEach {
     // Only configure kotlin/jvm tasks with this
     if (name.startsWith("compileJvm")) {
@@ -167,6 +155,7 @@ compose{
 }
 
 ksp { arg("circuit.codegen.mode", "metro") }
+@Suppress("OPT_IN_USAGE")
 metro {
     contributesAsInject = true
     enableFullBindingGraphValidation = true
