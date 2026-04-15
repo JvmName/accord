@@ -1,4 +1,7 @@
+@file:OptIn(DelicateMetroGradleApi::class)
+
 import com.google.devtools.ksp.gradle.KspAATask
+import dev.zacsweers.metro.gradle.DelicateMetroGradleApi
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
@@ -19,11 +22,21 @@ plugins {
 
 kotlin {
     jvmToolchain(21)
+
+    @OptIn(ExperimentalKotlinGradlePluginApi::class)
+    applyDefaultHierarchyTemplate {
+        common {
+            group("commonJvm") {
+                withAndroidTarget()
+                withJvm()
+            }
+        }
+    }
+
     android {
         namespace = "dev.jvmname.accord.lib"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
-        androidResources.enable = true
     }
 
     jvm {
@@ -67,9 +80,7 @@ kotlin {
             }
         }
 
-        val commonJvm by creating {
-            dependsOn(commonMain.get())
-
+        val commonJvmMain by getting {
             dependencies {
                 implementation(libs.socketio.client)
                 implementation(libs.ktor.client.okhttp)
@@ -79,15 +90,13 @@ kotlin {
         }
 
         jvmMain {
-            dependsOn(commonJvm)
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
             }
         }
 
-        androidMain{
-            dependsOn(commonJvm)
+        androidMain {
             dependencies {
                 implementation(libs.androidx.activity.compose)
                 implementation(libs.kotlinx.coroutines.android)
@@ -165,7 +174,6 @@ compose{
 }
 
 ksp { arg("circuit.codegen.mode", "metro") }
-@Suppress("OPT_IN_USAGE")
 metro {
     contributesAsInject = true
     enableFullBindingGraphValidation = true
@@ -193,9 +201,7 @@ buildConfig {
             "BASE_URL",
             if (isRelease) "https://rdk.api.jvmname.dev" else "http://[fec0::2]:3000"
         )
-
     }
-
 }
 
 dependencies {
