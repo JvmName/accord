@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.fastForEach
 import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.accord.di.MatchScope
@@ -58,6 +59,7 @@ import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.StubVibrator
+import dev.jvmname.accord.ui.common.AudioPlayback
 import dev.jvmname.accord.ui.common.HoldingButton
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.JudgeSessionEvent
@@ -84,6 +86,7 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
     LaunchedEffect(state.hapticEvent) {
         state.hapticEvent?.effect?.consume()?.let { vibrator.vibrate(it) }
     }
+    AudioPlayback(state.matchState.audio)
 
     Box(modifier = modifier.fillMaxSize()) {
         StandardScaffold(
@@ -138,7 +141,7 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
                     modifier = Modifier.fillMaxWidth().weight(3f),
                     horizontalArrangement = spacedBy(8.dp)
                 ) {
-                    Competitor.entries.forEach { competitor ->
+                    Competitor.entries.fastForEach { competitor ->
                         PlayerControl(
                             modifier = Modifier.weight(1f),
                             points = state.matchState.score.getPoints(competitor),
@@ -343,6 +346,7 @@ private fun JudgeSessionContentPreview() {
                     roundLabel = "Round 1 of 3",
                     controlDurations = emptyMap(),
                     roundScores = emptyMap(),
+                    audio = null,
                 ),
                 actions = MatchActions(),
                 eventSink = { },
@@ -379,6 +383,7 @@ private fun JudgeSessionContentPreview_Paused() {
                     roundLabel = "Round 1 of 3",
                     controlDurations = emptyMap(),
                     roundScores = emptyMap(),
+                    audio = null,
                 ),
                 actions = MatchActions(),
                 eventSink = { },
@@ -415,6 +420,7 @@ private fun JudgeSessionContentPreview_Holding() {
                     roundLabel = "Round 1 of 3",
                     controlDurations = mapOf(Competitor.BLUE to "(3)"),
                     roundScores = emptyMap(),
+                    audio = null,
                 ),
                 actions = MatchActions(),
                 eventSink = { },

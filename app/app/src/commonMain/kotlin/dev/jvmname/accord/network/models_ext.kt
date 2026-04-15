@@ -1,6 +1,8 @@
 package dev.jvmname.accord.network
 
+import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastFirst
+import androidx.compose.ui.util.fastJoinToString
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.ui.session.judging.MatchResult
 
@@ -87,8 +89,8 @@ val RoundResultType.toHumanString: String
 fun Match.toMatchResult(): MatchResult {
     return MatchResult(
         winConditions = rounds
-            .filter { it.endedAt != null && it.result.method.type != null }
-            .joinToString { it.result.method.type!!.toHumanString },
+            .fastFilter { it.endedAt != null && it.result.method.type != null }
+            .fastJoinToString { it.result.method.type!!.toHumanString },
         roundWinners = rounds.indices.map { winner(it) }
     )
 }

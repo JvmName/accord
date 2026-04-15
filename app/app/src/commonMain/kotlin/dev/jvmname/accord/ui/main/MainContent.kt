@@ -2,6 +2,7 @@ package dev.jvmname.accord.ui.main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallMerge
 import androidx.compose.material.icons.automirrored.outlined.NoteAdd
@@ -41,16 +43,23 @@ fun MainContent(state: MainState, modifier: Modifier) {
     StandardScaffold(
         title = "Accord", modifier = modifier.fillMaxSize()
     ) { padding ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background)
-                .padding(padding)
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(padding),
+            contentAlignment = Alignment.Center,
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            val isTablet = maxWidth >= 600.dp
+            val cardSpacing = if (isTablet) 32.dp else 12.dp
+
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 600.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(cardSpacing),
+            ) {
                 if (state.canRejoin && state.mat != null) {
                     ActionCard(
                         icon = Icons.Default.Replay,

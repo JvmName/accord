@@ -5,6 +5,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.util.fastAny
+import androidx.compose.ui.util.fastFirstOrNull
 import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
@@ -60,8 +62,9 @@ class JoinMatPresenter(
                                             return@onEither
                                         }
                                     val currentUserId = matManager.currentUserId()
-                                    val isJudge = mat.judges.any { j -> j.id == currentUserId }
-                                        || mat.codes.find { c -> c.code == it.code }?.role == Role.ADMIN
+                                    val isJudge = mat.judges.fastAny { j -> j.id == currentUserId }
+                                            || mat.codes.fastFirstOrNull { c -> c.code == it.code }
+                                                ?.role == Role.ADMIN
                                     val role = if (isJudge) MatchRole.JUDGE else MatchRole.VIEWER
                                     val next = when {
                                         isJudge -> TrampolineMatchGraphScreen(
@@ -70,6 +73,7 @@ class JoinMatPresenter(
                                             matchConfig = MatchConfig.RdojoKombat,
                                             matchRole = MatchRole.JUDGE,
                                         )
+
                                         else -> TrampolineMatchGraphScreen(
                                             innerRoot = ViewerScreen(mat.id),
                                             match = match,

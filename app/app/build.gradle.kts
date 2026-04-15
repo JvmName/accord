@@ -58,6 +58,8 @@ kotlin {
 
                 implementation(libs.multihaptic)
                 implementation(libs.kermit)
+                implementation(libs.sound)
+                implementation(libs.composeResources)
             }
         }
 
@@ -110,6 +112,8 @@ kotlin {
                     "kotlinx.serialization.InternalSerializationApi",
                     "androidx.compose.material.ExperimentalMaterial3ExpressiveApi",
                     "androidx.compose.material3.ExperimentalMaterial3ExpressiveApi",
+                    "app.lexilabs.basic.sound.ExperimentalBasicSound",
+                    "org.jetbrains.compose.resources.ExperimentalResourceApi",
                 )
                 freeCompilerArgs.addAll(
                     "-Xexpect-actual-classes",
@@ -184,14 +188,16 @@ tasks.withType<JavaCompile>().configureEach {
     }
 }
 
-compose.desktop {
-    application {
-        mainClass = "dev.jvmname.accord.MainKt"
+compose{
+    desktop {
+        application {
+            mainClass = "dev.jvmname.accord.MainKt"
 
-        nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Deb)
-            packageName = "dev.jvmname.accord"
-            packageVersion = "1.0.0"
+            nativeDistributions {
+                targetFormats(TargetFormat.Dmg, TargetFormat.Deb)
+                packageName = "dev.jvmname.accord"
+                packageVersion = "1.0.0"
+            }
         }
     }
 }

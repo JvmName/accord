@@ -2,6 +2,7 @@ package dev.jvmname.accord.ui.session.judging
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.compose.ui.util.fastForEach
 import com.slack.circuit.runtime.CircuitUiState
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.asEmoji
@@ -41,7 +42,7 @@ data class MatchResult(
 //            append("Winner: ", winner.first.name, ' ', winner.second.asEmoji).appendLine()
 //            append("Score: ", winnerScore, " to ", loserScore, "(", winConditions, ")").appendLine()
             append("Results: ")
-            roundWinners.forEach {
+            roundWinners.fastForEach {
                 append(it.asEmoji).append(' ')
             }
         }

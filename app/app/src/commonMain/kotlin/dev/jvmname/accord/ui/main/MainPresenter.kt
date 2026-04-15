@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.util.fastMap
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
@@ -111,7 +112,7 @@ class MainPresenter(
                                 judges = emptyList(),
                                 rounds = RdojoKombat.rounds
                                     .filterIsInstance<RoundInfo.Round>()
-                                    .map { roundInfo ->
+                                    .fastMap { roundInfo ->
                                         Round(
                                             id = RoundId("round_${roundInfo.index}"),
                                             maxDuration = roundInfo.duration.inWholeSeconds.toInt(),

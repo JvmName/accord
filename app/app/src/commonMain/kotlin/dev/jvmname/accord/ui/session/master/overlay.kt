@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastForEachIndexed
 import com.slack.circuit.overlay.OverlayNavigator
 import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.asEmoji
@@ -60,7 +61,7 @@ internal fun SubmissionDialog(overlayNavigator: OverlayNavigator<SubmissionResul
             modifier = Modifier.padding(bottom = 4.dp),
         )
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            EndRoundMethod.entries.forEachIndexed { index, m ->
+            EndRoundMethod.entries.fastForEachIndexed { index, m ->
                 SegmentedButton(
                     shape = SegmentedButtonDefaults.itemShape(index, 2),
                     onClick = {
@@ -77,7 +78,7 @@ internal fun SubmissionDialog(overlayNavigator: OverlayNavigator<SubmissionResul
             style = MaterialTheme.typography.bodyMedium,
         )
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            Competitor.entries.forEachIndexed { index, competitor ->
+            Competitor.entries.fastForEachIndexed { index, competitor ->
                 SegmentedButton(
                     shape = SegmentedButtonDefaults.itemShape(index, 2),
                     border = SegmentedButtonDefaults.borderStroke(competitor.color),

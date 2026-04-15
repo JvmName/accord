@@ -1,5 +1,6 @@
 package dev.jvmname.accord.network
 
+import androidx.compose.ui.util.fastJoinToString
 import co.touchlab.kermit.Logger
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
@@ -16,7 +17,7 @@ typealias ApiError = Map<String, List<String>>
 
 val ApiError.message: String
     get() = entries.joinToString(separator = "\n") {
-        it.key + ":" + it.value.joinToString()
+        it.key + ":" + it.value.fastJoinToString()
     }
 
 fun <T> ApiResult<T>.toResult(): Result<T, ApiError> = when (this) {
