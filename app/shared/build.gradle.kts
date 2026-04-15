@@ -19,7 +19,7 @@ plugins {
 
 kotlin {
     jvmToolchain(21)
-    android {
+    androidLibrary {
         namespace = "dev.jvmname.accord"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
