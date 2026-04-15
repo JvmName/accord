@@ -1,4 +1,4 @@
-@file:OptIn(DelicateMetroGradleApi::class)
+@file:OptIn(DelicateMetroGradleApi::class, ExperimentalKotlinGradlePluginApi::class)
 
 import com.google.devtools.ksp.gradle.KspAATask
 import dev.zacsweers.metro.gradle.DelicateMetroGradleApi
@@ -23,24 +23,15 @@ plugins {
 kotlin {
     jvmToolchain(21)
 
-    @OptIn(ExperimentalKotlinGradlePluginApi::class)
-    applyDefaultHierarchyTemplate {
-        common {
-            group("commonJvm") {
-                withAndroidTarget()
-                withJvm()
-            }
-        }
-    }
-
     android {
         namespace = "dev.jvmname.accord.lib"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
     }
 
-    jvm {
-    }
+    jvm {}
+
+    applyDefaultHierarchyTemplate()
 
     sourceSets {
         commonMain {
@@ -80,7 +71,8 @@ kotlin {
             }
         }
 
-        val commonJvmMain by getting {
+        val commonJvm by creating {
+            dependsOn(commonMain.get())
             dependencies {
                 implementation(libs.socketio.client)
                 implementation(libs.ktor.client.okhttp)
@@ -90,6 +82,7 @@ kotlin {
         }
 
         jvmMain {
+            dependsOn(commonJvm)
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
@@ -97,6 +90,7 @@ kotlin {
         }
 
         androidMain {
+            dependsOn(commonJvm)
             dependencies {
                 implementation(libs.androidx.activity.compose)
                 implementation(libs.kotlinx.coroutines.android)
@@ -159,7 +153,7 @@ tasks.withType<JavaCompile>().configureEach {
     }
 }
 
-compose{
+compose {
     desktop {
         application {
             mainClass = "dev.jvmname.accord.MainKt"
