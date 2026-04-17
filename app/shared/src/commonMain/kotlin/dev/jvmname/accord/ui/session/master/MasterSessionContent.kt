@@ -1,5 +1,7 @@
 package dev.jvmname.accord.ui.session.master
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,13 +27,18 @@ import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -78,6 +85,21 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
 
                 SubmissionResult.Dismissed -> state.eventSink(MasterSessionEvent.DismissEndRoundDialog)
             }
+        }
+    }
+
+    if (state.showEndMatchDialog) {
+        OverlayEffect(state.showEndMatchDialog) {
+            val confirmed = show(
+                BottomSheetOverlay(
+                    model = Unit,
+                    onDismiss = { false },
+                ) { _, navigator -> EndMatchConfirmDialog(navigator) }
+            )
+            state.eventSink(
+                if (confirmed) MasterSessionEvent.EndMatch
+                else MasterSessionEvent.DismissEndMatchDialog
+            )
         }
     }
 
@@ -131,6 +153,17 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
+            val redHealth by animateFloatAsState(
+                state.redHealthFraction,
+                label = "redHealth",
+                animationSpec = tween(durationMillis = 250)
+            )
+            val blueHealth by animateFloatAsState(
+                state.blueHealthFraction,
+                label = "blueHealth",
+                animationSpec = tween(durationMillis = 250)
+            )
+
             // Combined scores + timer/label row
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -146,7 +179,22 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                         style = MaterialTheme.typography.TabletScore,
                         color = Color.Red,
                         softWrap = false,
+                        modifier = Modifier.layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            val trimmed = (placeable.height - 32.dp.roundToPx()).coerceAtLeast(0)
+                            layout(placeable.width, trimmed) { placeable.place(0, 0) }
+                        },
                     )
+                    if (state.redHealthFraction > 0f) {
+                        LinearProgressIndicator(
+                            progress = { redHealth },
+                            modifier = Modifier.fillMaxWidth().height(25.dp),
+                            color = Color.Red,
+                            strokeCap = StrokeCap.Butt,
+                            trackColor = Color.Red.copy(alpha = 0.2f),
+                            drawStopIndicator = {}
+                        )
+                    }
                 }
                 Column(
                     modifier = Modifier.weight(0.38f),
@@ -171,7 +219,24 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                         style = MaterialTheme.typography.TabletScore,
                         color = Color.Blue,
                         softWrap = false,
+                        modifier = Modifier.layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            val trimmed = (placeable.height - 32.dp.roundToPx()).coerceAtLeast(0)
+                            layout(placeable.width, trimmed) { placeable.place(0, 0) }
+                        },
                     )
+                    if (state.blueHealthFraction > 0f) {
+                        LinearProgressIndicator(
+                            progress = { blueHealth },
+                            modifier = Modifier.fillMaxWidth()
+                                .height(25.dp)
+                                .scale(scaleX = -1f, scaleY = 1f),
+                            color = Color.Blue,
+                            trackColor = Color.Blue.copy(alpha = 0.2f),
+                            strokeCap = StrokeCap.Butt,
+                            drawStopIndicator = {}
+                        )
+                    }
                 }
             }
 
@@ -234,7 +299,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                         icon = Icons.Default.StopCircle,
                         text = "End Match",
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                        onClick = { state.eventSink(MasterSessionEvent.EndMatch) }
+                        onClick = { state.eventSink(MasterSessionEvent.ShowEndMatchDialog) }
                     )
                 }
             }
@@ -274,6 +339,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
 
 
 // Match started, active round in progress — pause + end round + end match visible
+// Health bars: red ~half (11/24), blue ~full (23/24)
 @Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_ActiveRound_Preview() {
@@ -302,10 +368,13 @@ private fun MasterSessionContent_ActiveRound_Preview() {
                 matchResult = null,
                 actions = MatchActions(pause = {}, endRound = {}),
                 showEndRoundDialog = false,
+                showEndMatchDialog = false,
                 showScoresOverlay = false,
                 roundDisplays = listOf(
                     RoundDisplayInfo(1, false, Competitor.RED, 12, 4),
                 ),
+                redHealthFraction = 0.46f,
+                blueHealthFraction = 0.96f,
                 error = null,
                 eventSink = {},
             )
@@ -313,7 +382,7 @@ private fun MasterSessionContent_ActiveRound_Preview() {
     }
 }
 
-// Match started, between rounds — only end match visible
+// Match started, between rounds — only end match visible. No health bars.
 @Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_BetweenRounds_Preview() {
@@ -342,8 +411,11 @@ private fun MasterSessionContent_BetweenRounds_Preview() {
                 matchResult = null,
                 actions = MatchActions(),
                 showEndRoundDialog = false,
+                showEndMatchDialog = false,
                 showScoresOverlay = false,
                 roundDisplays = emptyList(),
+                redHealthFraction = 0f,
+                blueHealthFraction = 0f,
                 error = null,
                 eventSink = {},
             )
@@ -351,6 +423,7 @@ private fun MasterSessionContent_BetweenRounds_Preview() {
     }
 }
 
+// Pre-match start. Health bars: both full (1.0f).
 @Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_Start_Preview() {
@@ -373,8 +446,11 @@ private fun MasterSessionContent_Start_Preview() {
                 matchResult = null,
                 actions = MatchActions(),
                 showEndRoundDialog = false,
+                showEndMatchDialog = false,
                 showScoresOverlay = false,
                 roundDisplays = emptyList(),
+                redHealthFraction = 1.0f,
+                blueHealthFraction = 1.0f,
                 error = null,
                 eventSink = {},
             )
@@ -382,6 +458,7 @@ private fun MasterSessionContent_Start_Preview() {
     }
 }
 
+// Match ended. No health bars.
 @Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_Ended_Preview() {
@@ -407,12 +484,15 @@ private fun MasterSessionContent_Ended_Preview() {
                 ),
                 actions = MatchActions(),
                 showEndRoundDialog = false,
+                showEndMatchDialog = false,
                 showScoresOverlay = false,
                 roundDisplays = listOf(
                     RoundDisplayInfo(1, false, Competitor.RED, 12, 4),
                     RoundDisplayInfo(2, false, Competitor.BLUE, 3, 18),
                     RoundDisplayInfo(3, false, Competitor.RED, 9, 7),
                 ),
+                redHealthFraction = 0f,
+                blueHealthFraction = 0f,
                 error = null,
                 eventSink = {},
             )
@@ -442,8 +522,11 @@ private fun MasterSessionContent_Dialog_Preview() {
                 matchResult = null,
                 actions = MatchActions(),
                 showEndRoundDialog = true,
+                showEndMatchDialog = false,
                 showScoresOverlay = false,
                 roundDisplays = emptyList(),
+                redHealthFraction = 0.875f,
+                blueHealthFraction = 0.875f,
                 error = null,
                 eventSink = {},
             )
@@ -451,6 +534,7 @@ private fun MasterSessionContent_Dialog_Preview() {
     }
 }
 
+// Paused mid-round. Health bars: red nearly empty (0.08f), blue full — shows critical state.
 @Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_Paused_Preview() {
@@ -461,7 +545,7 @@ private fun MasterSessionContent_Paused_Preview() {
                 redName = "Alice",
                 blueName = "Bob",
                 matchState = MatchState(
-                    score = Score(2, 0, null, null, null),
+                    score = Score(22, 0, null, null, null),
                     roundInfo = null,
                     timerDisplay = "03:15",
                     roundLabel = "Round 1",
@@ -473,8 +557,11 @@ private fun MasterSessionContent_Paused_Preview() {
                 matchResult = null,
                 actions = MatchActions(resume = {}),
                 showEndRoundDialog = false,
+                showEndMatchDialog = false,
                 showScoresOverlay = false,
                 roundDisplays = emptyList(),
+                redHealthFraction = 0.08f,
+                blueHealthFraction = 1.0f,
                 error = null,
                 eventSink = {},
             )
@@ -504,8 +591,11 @@ private fun MasterSessionContent_Error_Preview() {
                 matchResult = null,
                 actions = MatchActions(pause = {}, endRound = {}),
                 showEndRoundDialog = false,
+                showEndMatchDialog = false,
                 showScoresOverlay = false,
                 roundDisplays = emptyList(),
+                redHealthFraction = 0.96f,
+                blueHealthFraction = 1.0f,
                 error = "Failed to connect to server",
                 eventSink = {},
             )

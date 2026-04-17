@@ -32,8 +32,11 @@ data class MasterSessionState(
     val matchResult: MatchResult?,
     val actions: MatchActions,
     val showEndRoundDialog: Boolean,
+    val showEndMatchDialog: Boolean,
     val showScoresOverlay: Boolean,
     val roundDisplays: List<RoundDisplayInfo>,
+    val redHealthFraction: Float,
+    val blueHealthFraction: Float,
     val error: String?,
     val eventSink: (MasterSessionEvent) -> Unit,
 ) : CircuitUiState

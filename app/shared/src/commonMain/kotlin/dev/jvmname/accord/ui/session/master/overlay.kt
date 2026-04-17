@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -110,6 +111,36 @@ internal fun SubmissionDialog(overlayNavigator: OverlayNavigator<SubmissionResul
 }
 
 @Composable
+internal fun EndMatchConfirmDialog(overlayNavigator: OverlayNavigator<Boolean>) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            "End match?",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 4.dp),
+        )
+        Text(
+            "This will immediately end the entire match.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = { overlayNavigator.finish(false) }) { Text("Cancel") }
+            TextButton(
+                onClick = { overlayNavigator.finish(true) },
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) { Text("OK") }
+        }
+    }
+}
+
+@Composable
 internal fun RoundScoresSheet(
     rounds: List<RoundDisplayInfo>,
     redName: String,
@@ -192,5 +223,13 @@ private fun RoundScoresSheet_Preview() {
 private fun SubmissionDialogPreview() {
     AccordTheme {
         SubmissionDialog(overlayNavigator = { })
+    }
+}
+
+@Preview
+@Composable
+private fun EndMatchConfirmDialogPreview() {
+    AccordTheme {
+        EndMatchConfirmDialog(overlayNavigator = { })
     }
 }

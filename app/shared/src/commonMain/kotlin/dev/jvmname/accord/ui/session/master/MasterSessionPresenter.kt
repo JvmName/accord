@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastMapIndexed
 import co.touchlab.kermit.Logger
 import com.slack.circuit.codegen.annotations.CircuitInject
@@ -67,6 +68,7 @@ class MasterSessionPresenter(
 
         var error by remember { mutableStateOf<String?>(null) }
         var showEndRoundDialog by remember { mutableStateOf(false) }
+        var showEndMatchDialog by remember { mutableStateOf(false) }
         var showScoresOverlay by remember { mutableStateOf(false) }
 
         val isMatchStarted = currentMatch?.startedAt != null
@@ -151,7 +153,11 @@ class MasterSessionPresenter(
                         session.startRound()
                     }
 
+                    MasterSessionEvent.ShowEndMatchDialog -> showEndMatchDialog = true
+                    MasterSessionEvent.DismissEndMatchDialog -> showEndMatchDialog = false
+
                     MasterSessionEvent.EndMatch -> scope.launch {
+                        showEndMatchDialog = false
                         log.i { "ending match" }
                         session.endMatch()
                             .onEither(
@@ -185,6 +191,15 @@ class MasterSessionPresenter(
             }
         }
 
+        val currentRound = roundEvent?.round as? RoundInfo.Round
+        val maxPoints = currentRound?.maxPoints ?: 0
+        val redHealthFraction = if (maxPoints > 0)
+            (maxPoints - score.redPoints).fastCoerceIn(0, maxPoints) / maxPoints.toFloat()
+        else 0f
+        val blueHealthFraction = if (maxPoints > 0)
+            (maxPoints - score.bluePoints).fastCoerceIn(0, maxPoints) / maxPoints.toFloat()
+        else 0f
+
         val actions = rememberMatchActions(
             isActive = isActive,
             isPaused = isPaused,
@@ -204,8 +219,11 @@ class MasterSessionPresenter(
             matchResult = matchResult,
             actions = actions,
             showEndRoundDialog = showEndRoundDialog,
+            showEndMatchDialog = showEndMatchDialog,
             showScoresOverlay = showScoresOverlay,
             roundDisplays = roundDisplays,
+            redHealthFraction = redHealthFraction,
+            blueHealthFraction = blueHealthFraction,
             error = error,
             eventSink = eventSink,
         )

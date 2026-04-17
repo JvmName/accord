@@ -42,6 +42,8 @@ sealed interface MasterSessionEvent : SessionEvent {
     ) : MasterSessionEvent, RoundControlEvent
     data object DismissEndRoundDialog : MasterSessionEvent
     data object StartMatch : MasterSessionEvent
+    data object ShowEndMatchDialog : MasterSessionEvent
+    data object DismissEndMatchDialog : MasterSessionEvent
     data object EndMatch : MasterSessionEvent
 }
 

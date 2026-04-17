@@ -4,7 +4,6 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 
 private val baseline = Typography()
@@ -30,9 +29,8 @@ val AccordTypography = Typography(
 val Typography.TabletScore: TextStyle
     get() = AccordTypography.displayLarge.copy(
         fontSize = 330.sp,
-        lineHeight = 0.75.em,
         lineHeightStyle = LineHeightStyle.Default.copy(
-            mode = LineHeightStyle.Mode.Tight
+            mode = LineHeightStyle.Mode.Minimum
         ),
         fontWeight = FontWeight.Bold
     )
