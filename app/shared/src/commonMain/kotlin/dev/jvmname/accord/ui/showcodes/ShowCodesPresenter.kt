@@ -19,6 +19,7 @@ import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlin.time.Duration.Companion.seconds
 
 @AssistedInject
@@ -32,7 +33,7 @@ class ShowCodesPresenter(
     override fun present(): ShowCodesState {
         val joinedJudges by produceState(emptyList(), key1 = screen) {
             val adminCode = screen.mat.adminCode.code
-            while (true) {
+            while (coroutineContext.isActive) {
                 matManager.listJudges(adminCode).onOk { value = it }
                 delay(1.5.seconds)
             }
