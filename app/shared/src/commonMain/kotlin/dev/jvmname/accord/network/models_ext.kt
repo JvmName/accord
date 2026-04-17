@@ -32,15 +32,15 @@ fun Mat.merge(other: Mat): Mat = Mat(
  * Returns the [Competitor] who won the round at [roundIndex], or null if the round has no winner.
  */
 fun Match.winner(roundIndex: Int): Competitor? = when (rounds[roundIndex].result.winner?.id) {
-    red.id -> Competitor.RED
-    blue.id -> Competitor.BLUE
+    red.id -> Competitor.Orange
+    blue.id -> Competitor.Green
     else -> null
 }
 
 val Match.winnerCompetitor: Competitor?
     get() = when (winner?.id) {
-        red.id -> Competitor.RED
-        blue.id -> Competitor.BLUE
+        red.id -> Competitor.Orange
+        blue.id -> Competitor.Green
         else -> null
     }
 
@@ -48,8 +48,8 @@ val Match.winnerCompetitor: Competitor?
  * Returns the total rounds-won score for each competitor across all completed rounds.
  */
 fun Match.roundScore(): Map<Competitor, Int> = mapOf(
-    Competitor.RED to rounds.count { it.result.winner?.id == red.id },
-    Competitor.BLUE to rounds.count { it.result.winner?.id == blue.id },
+    Competitor.Orange to rounds.count { it.result.winner?.id == red.id },
+    Competitor.Green to rounds.count { it.result.winner?.id == blue.id },
 )
 
 /**

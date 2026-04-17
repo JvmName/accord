@@ -44,7 +44,7 @@ class SoloMatchSessionTechFallAutoEndTest {
         advanceUntilIdle()
 
         // 72 ticks = 24 points = Round 1 maxPoints → tech fall
-        repeat(72) { tracker.emit(ButtonEvent.Holding(Competitor.RED)) }
+        repeat(72) { tracker.emit(ButtonEvent.Holding(Competitor.Orange)) }
         advanceUntilIdle()
 
         val endedCount = roundStates.count { it == RoundEvent.RoundState.ENDED }
@@ -78,7 +78,7 @@ class SoloMatchSessionTechFallAutoEndTest {
         val collectJob = launch { session.roundEvent.collect { roundStates.add(it?.state) } }
 
         // 48 ticks = 48 seconds = 16 points = Round 2 maxPoints → tech fall
-        repeat(48) { tracker.emit(ButtonEvent.Holding(Competitor.RED)) }
+        repeat(48) { tracker.emit(ButtonEvent.Holding(Competitor.Orange)) }
         advanceUntilIdle()
 
         val endedCount = roundStates.count { it == RoundEvent.RoundState.ENDED }
@@ -100,7 +100,7 @@ class SoloMatchSessionTechFallAutoEndTest {
         advanceUntilIdle()
 
         // Emit well past the tech fall threshold to trigger multiple score updates above threshold
-        repeat(90) { tracker.emit(ButtonEvent.Holding(Competitor.RED)) }
+        repeat(90) { tracker.emit(ButtonEvent.Holding(Competitor.Orange)) }
         advanceUntilIdle()
 
         // The auto-end mechanism uses runningFold tracking prev==null && current!=null,
@@ -121,7 +121,7 @@ class SoloMatchSessionTechFallAutoEndTest {
         advanceUntilIdle()
 
         // Accumulate some points (not enough for tech fall)
-        repeat(6) { tracker.emit(ButtonEvent.Holding(Competitor.RED)) }
+        repeat(6) { tracker.emit(ButtonEvent.Holding(Competitor.Orange)) }
         advanceUntilIdle()
         assertEquals(2, session.score.value.redPoints)
 

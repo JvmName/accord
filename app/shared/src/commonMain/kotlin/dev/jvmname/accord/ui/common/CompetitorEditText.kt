@@ -8,10 +8,12 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.domain.color
+import dev.jvmname.accord.domain.colorDark
+import dev.jvmname.accord.domain.colorLight
 import dev.jvmname.accord.domain.nameStr
 
 @Composable
@@ -23,10 +25,6 @@ fun CompetitorEditText(
     isError: Boolean = false,
     onKeyboardAction: (() -> Unit)? = null,
 ) {
-    val (focusedBorder, unfocusedBorder, labelColor) = when (competitor) {
-        Competitor.RED -> Triple(Color(0xFFD32F2F), Color(0xFFEF9A9A), Color.Red)
-        Competitor.BLUE -> Triple(Color(0xFF1565C0), Color(0xFF90CAF9), Color.Blue)
-    }
     OutlinedTextField(
         state = state,
         modifier = modifier,
@@ -41,10 +39,10 @@ fun CompetitorEditText(
         ),
         onKeyboardAction = { default -> onKeyboardAction?.invoke() ?: default() },
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = focusedBorder,
-            unfocusedBorderColor = unfocusedBorder,
-            focusedLabelColor = labelColor,
-            unfocusedLabelColor = labelColor,
+            focusedBorderColor = competitor.colorDark,
+            unfocusedBorderColor = competitor.colorLight,
+            focusedLabelColor = competitor.color,
+            unfocusedLabelColor = competitor.color,
         ),
     )
 }

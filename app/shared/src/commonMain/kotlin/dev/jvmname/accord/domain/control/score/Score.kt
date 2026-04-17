@@ -13,8 +13,8 @@ data class Score(
     val techFallWin: Competitor?, // null until threshold reached
 ) {
     fun getPoints(competitor: Competitor) = when (competitor) {
-        Competitor.RED -> redPoints
-        Competitor.BLUE -> bluePoints
+        Competitor.Orange -> redPoints
+        Competitor.Green -> bluePoints
     }
 
     fun controlTimeHumanReadable(competitor: Competitor) = when (activeCompetitor) {

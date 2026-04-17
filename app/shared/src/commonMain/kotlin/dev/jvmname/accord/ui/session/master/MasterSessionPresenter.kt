@@ -21,6 +21,7 @@ import dev.jvmname.accord.domain.MatchManager
 import dev.jvmname.accord.domain.color
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
+import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.domain.session.MasterSession
 import dev.jvmname.accord.network.Mat
 import dev.jvmname.accord.network.adminCode
@@ -80,7 +81,7 @@ class MasterSessionPresenter(
             is RoundInfo.Break -> "Break ${roundEvent!!.roundNumber} of ${roundEvent!!.totalRounds - 1}"
             is RoundInfo.Round -> "Round ${round.index} of ${roundEvent!!.totalRounds}"
         }
-        val roundScores = currentMatch?.roundScore() ?: mapOf(Competitor.RED to 0, Competitor.BLUE to 0)
+        val roundScores = currentMatch?.roundScore() ?: mapOf(Competitor.Orange to 0, Competitor.Green to 0)
 
         val roundDisplays = currentMatch?.let { match ->
             match.rounds.fastMapIndexed { index, round ->
@@ -212,8 +213,8 @@ class MasterSessionPresenter(
 
         return MasterSessionState(
             matName = mat?.name.orEmpty(),
-            redName = currentMatch?.red?.name ?: "Red",
-            blueName = currentMatch?.blue?.name ?: "Blue",
+            redName = currentMatch?.red?.name ?: Competitor.Orange.nameStr,
+            blueName = currentMatch?.blue?.name ?: Competitor.Green.nameStr,
             matchState = matchState,
             isMatchStarted = isMatchStarted,
             matchResult = matchResult,

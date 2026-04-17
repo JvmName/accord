@@ -42,6 +42,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.domain.color
+import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.theme.AccordTheme
 import kotlinx.coroutines.launch
 
@@ -172,8 +175,8 @@ private fun HoldingButtonPreview() {
             HoldingButton(
                 modifier = Modifier.fillMaxWidth(),
                 icon = Icons.Default.MoveUp,
-                text = "RED controlling",
-                containerColor = Color.Red,
+                text = "${Competitor.Orange.nameStr} controlling",
+                containerColor = Competitor.Orange.color,
                 onPress = {},
                 onRelease = {}
             )

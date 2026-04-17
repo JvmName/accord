@@ -144,7 +144,7 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
                 Spacer(Modifier.height(sectionSpacing))
 
                 CompetitorEditText(
-                    competitor = Competitor.RED,
+                    competitor = Competitor.Orange,
                     state = redNameState,
                     imeAction = ImeAction.Next,
                     modifier = Modifier.fillMaxWidth(),
@@ -154,7 +154,7 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
                 Spacer(Modifier.height(sectionSpacing))
 
                 CompetitorEditText(
-                    competitor = Competitor.BLUE,
+                    competitor = Competitor.Green,
                     state = blueNameState,
                     imeAction = ImeAction.Done,
                     modifier = Modifier.fillMaxWidth(),

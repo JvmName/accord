@@ -11,10 +11,12 @@ import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.accord.di.MatchRole
+import dev.jvmname.accord.domain.Competitor
 import dev.jvmname.accord.domain.MatManager
 import dev.jvmname.accord.domain.control.rounds.MatchConfig
 import dev.jvmname.accord.domain.control.rounds.MatchConfig.Companion.RdojoKombat
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
+import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.network.MatId
 import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.network.MatchId
@@ -107,8 +109,8 @@ class MainPresenter(
                                 matId = MatId("localMatId"),
                                 startedAt = Clock.System.now(),
                                 endedAt = null,
-                                red = User(UserId("red"), "Red"),
-                                blue = User(UserId("blue"), "Blue"),
+                                red = User(UserId("red"), Competitor.Orange.nameStr),
+                                blue = User(UserId("blue"), Competitor.Green.nameStr),
                                 judges = emptyList(),
                                 rounds = RdojoKombat.rounds
                                     .filterIsInstance<RoundInfo.Round>()

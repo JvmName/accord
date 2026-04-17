@@ -227,7 +227,3 @@ fun wordChipColors(): List<Color> = listOf(
     MaterialTheme.colorScheme.secondaryContainer,
     MaterialTheme.colorScheme.tertiaryContainer,
 )
-
-
-
-
