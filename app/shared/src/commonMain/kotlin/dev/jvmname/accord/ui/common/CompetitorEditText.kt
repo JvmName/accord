@@ -33,13 +33,13 @@ fun CompetitorEditText(
         label = { Text("${competitor.nameStr} Competitor") },
         placeholder = { Text("Competitor name") },
         isError = isError,
-        supportingText = if (isError) { { Text("Required") } } else null,
+        supportingText = if (isError) { @Composable { Text("Required") } } else null,
         lineLimits = TextFieldLineLimits.SingleLine,
         keyboardOptions = KeyboardOptions.Default.copy(
             capitalization = KeyboardCapitalization.Words,
             imeAction = imeAction,
         ),
-        onKeyboardAction = { onKeyboardAction?.invoke() },
+        onKeyboardAction = { default -> onKeyboardAction?.invoke() ?: default() },
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = focusedBorder,
             unfocusedBorderColor = unfocusedBorder,
