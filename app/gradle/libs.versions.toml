@@ -5,7 +5,7 @@ android-minSdk = "24"
 android-targetSdk = "36"
 androidx-activity = "1.13.0"
 circuit = "0.33.1"
-composeHotReload = "1.1.0-beta01"
+composeHotReload = "1.1.0-rc01"
 composeMultiplatform = "1.10.3"
 coroutines = "1.10.2"
 datastore = "1.2.1"
@@ -16,7 +16,7 @@ kotlinResult = "2.3.1"
 ktor = "3.4.2"
 material3 = "1.10.0-alpha05"
 materialIconsExtended = "1.7.3"
-serialization = "1.10.0"
+serialization = "1.11.0"
 multihaptic = "0.3.1"
 socketio = "2.1.2"
 sound = "0.2.6-beta02"
@@ -74,7 +74,7 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 kotlinParcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
 serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
-metro = "dev.zacsweers.metro:0.12.1"
+metro = "dev.zacsweers.metro:0.13.2"
 poko = "dev.drewhamilton.poko:0.22.0"
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 buildconfig = "com.github.gmazzo.buildconfig:6.0.9"
