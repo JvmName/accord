@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'app/app/build.gradle.kts'
+      - 'app/androidApp/build.gradle.kts'
 
 jobs:
   release:
@@ -28,7 +28,7 @@ jobs:
       - name: Extract versionName
         id: version
         run: |
-          VERSION=$(grep 'versionName = ' app/app/build.gradle.kts | grep -oP '"\K[^"]+')
+          VERSION=$(grep 'versionName = ' app/androidApp/build.gradle.kts | grep -oP '"\K[^"]+')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Detected version: $VERSION"
 
@@ -47,7 +47,7 @@ jobs:
       - name: Decode keystore
         if: steps.check_release.outputs.exists == 'false'
         run: |
-          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > app/app/AccordProdKey.jks
+          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > app/AccordProdKey.jks
 
       - name: Make gradlew executable
         if: steps.check_release.outputs.exists == 'false'
@@ -67,8 +67,8 @@ jobs:
         if: steps.check_release.outputs.exists == 'false'
         id: apk
         run: |
-          APK=$(find app/app/build/outputs/apk/release -name "*.apk" | head -1)
-          VERSIONED="app/app/build/outputs/apk/release/accord-${{ steps.version.outputs.version }}.apk"
+          APK=$(find app/androidApp/build/outputs/apk/release -name "*.apk" | head -1)
+          VERSIONED="app/androidApp/build/outputs/apk/release/accord-${{ steps.version.outputs.version }}.apk"
           mv "$APK" "$VERSIONED"
           echo "path=$VERSIONED" >> $GITHUB_OUTPUT
 
