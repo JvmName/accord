@@ -5,6 +5,7 @@ import com.slack.circuit.foundation.Circuit
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.ui.Ui
 import dev.jvmname.accord.network.BaseUrl
+import dev.jvmname.accord.ui.common.VolumeBooster
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
@@ -17,6 +18,7 @@ import kotlin.time.Clock
 @DependencyGraph(scope = AppScope::class)
 interface AccordGraph {
     val circuit: Circuit
+    val volumeBooster: VolumeBooster
 
     val matchGraphFactory: MatchGraph.Factory
 

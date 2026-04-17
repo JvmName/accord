@@ -64,7 +64,7 @@ class RoundAudioFeedbackHelper(
         }
 
         // "Go" signal: break just transitioned into a new round starting.
-        if (prev?.round is RoundInfo.Break
+        if ((prev == null || prev.round is RoundInfo.Break)
             && current.round is RoundInfo.Round
             && current.state == RoundState.STARTED
         ) {

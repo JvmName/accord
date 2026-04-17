@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import dev.jvmname.accord.network.AuthToken
 import dev.jvmname.accord.network.Mat
@@ -101,6 +102,18 @@ class Prefs(
         return datastore.data.first()[JOIN_CODE]
     }
 
+    suspend fun savePreBoostVolume(volume: Int) {
+        datastore.edit { it[PRE_BOOST_VOLUME] = volume }
+    }
+
+    suspend fun getPreBoostVolume(): Int? {
+        return datastore.data.first()[PRE_BOOST_VOLUME]
+    }
+
+    suspend fun clearPreBoostVolume() {
+        datastore.edit { it.remove(PRE_BOOST_VOLUME) }
+    }
+
     companion object {
         const val FILENAME = "prefs.preferences_pb"
         val MAT_INFO = stringPreferencesKey("mat_info")
@@ -108,5 +121,6 @@ class Prefs(
         val MAIN_USER = stringPreferencesKey("user.main")
         val CURRENT_MATCH = stringPreferencesKey("current_match")
         val JOIN_CODE = stringPreferencesKey("join_code")
+        val PRE_BOOST_VOLUME = intPreferencesKey("pre_boost_volume")
     }
 }
