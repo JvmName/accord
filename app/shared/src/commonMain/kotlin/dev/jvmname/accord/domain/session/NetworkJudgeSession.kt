@@ -146,7 +146,7 @@ class NetworkJudgeSession(
     }
 
     private fun Competitor.toCompetitorColor(): CompetitorColor = when (this) {
-        Competitor.RED -> CompetitorColor.RED
-        Competitor.BLUE -> CompetitorColor.BLUE
+        Competitor.Orange -> CompetitorColor.RED
+        Competitor.Green -> CompetitorColor.BLUE
     }
 }

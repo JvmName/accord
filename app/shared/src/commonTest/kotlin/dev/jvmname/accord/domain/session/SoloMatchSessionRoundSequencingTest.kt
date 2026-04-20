@@ -171,7 +171,7 @@ class SoloMatchSessionRoundSequencingTest {
         // Round 1: accumulate some RED points
         session.startRound()
         advanceUntilIdle()
-        repeat(6) { tracker.emit(ButtonEvent.Holding(Competitor.RED)) }
+        repeat(6) { tracker.emit(ButtonEvent.Holding(Competitor.Orange)) }
         advanceUntilIdle()
         assertEquals(2, session.score.value.redPoints)
 

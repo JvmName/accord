@@ -41,13 +41,13 @@ fun NewMatchContent(state: NewMatchState, modifier: Modifier = Modifier) {
             val blueState = rememberTextFieldState()
 
             CompetitorEditText(
-                competitor = Competitor.RED,
+                competitor = Competitor.Orange,
                 state = redState,
                 modifier = Modifier.fillMaxWidth(),
             )
 
             CompetitorEditText(
-                competitor = Competitor.BLUE,
+                competitor = Competitor.Green,
                 state = blueState,
                 imeAction = ImeAction.Done,
                 modifier = Modifier.fillMaxWidth(),

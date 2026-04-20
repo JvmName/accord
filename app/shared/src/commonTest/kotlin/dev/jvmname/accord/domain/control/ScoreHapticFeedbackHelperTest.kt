@@ -33,7 +33,7 @@ class ScoreHapticFeedbackHelperTest {
         val collected = mutableListOf<HapticEvent>()
         val job = launch { helper.hapticEvents.collect { collected.add(it) } }
 
-        buttonFlow.emit(ButtonEvent.Press(Competitor.RED))
+        buttonFlow.emit(ButtonEvent.Press(Competitor.Orange))
         advanceUntilIdle()
 
         assertEquals(1, collected.size)
@@ -49,7 +49,7 @@ class ScoreHapticFeedbackHelperTest {
         val collected = mutableListOf<HapticEvent>()
         val job = launch { helper.hapticEvents.collect { collected.add(it) } }
 
-        buttonFlow.emit(ButtonEvent.Release(Competitor.RED))
+        buttonFlow.emit(ButtonEvent.Release(Competitor.Orange))
         advanceUntilIdle()
 
         assertEquals(1, collected.size)
@@ -65,7 +65,7 @@ class ScoreHapticFeedbackHelperTest {
         val collected = mutableListOf<HapticEvent>()
         val job = launch { helper.hapticEvents.collect { collected.add(it) } }
 
-        buttonFlow.emit(ButtonEvent.Holding(Competitor.RED))
+        buttonFlow.emit(ButtonEvent.Holding(Competitor.Orange))
         advanceUntilIdle()
 
         assertEquals(1, collected.size)
@@ -101,7 +101,7 @@ class ScoreHapticFeedbackHelperTest {
         val collected = mutableListOf<HapticEvent>()
         val job = launch { helper.hapticEvents.collect { collected.add(it) } }
 
-        scoreFlow.value = emptyScore().copy(techFallWin = Competitor.RED)
+        scoreFlow.value = emptyScore().copy(techFallWin = Competitor.Orange)
         advanceUntilIdle()
 
         assertEquals(1, collected.size)
@@ -118,12 +118,12 @@ class ScoreHapticFeedbackHelperTest {
         val job = launch { helper.hapticEvents.collect { collected.add(it) } }
 
         // First transition: null → RED
-        scoreFlow.value = emptyScore().copy(techFallWin = Competitor.RED)
+        scoreFlow.value = emptyScore().copy(techFallWin = Competitor.Orange)
         advanceUntilIdle()
         val countAfterFirst = collected.size
 
         // Emit same value again — StateFlow deduplicates, so no new emission
-        scoreFlow.value = emptyScore().copy(techFallWin = Competitor.RED)
+        scoreFlow.value = emptyScore().copy(techFallWin = Competitor.Orange)
         advanceUntilIdle()
 
         assertEquals(countAfterFirst, collected.size)
@@ -159,8 +159,8 @@ class ScoreHapticFeedbackHelperTest {
         val collected = mutableListOf<HapticEvent>()
         val job = launch { helper.hapticEvents.collect { collected.add(it) } }
 
-        buttonFlow.emit(ButtonEvent.Press(Competitor.RED))
-        scoreFlow.value = emptyScore().copy(techFallWin = Competitor.RED)
+        buttonFlow.emit(ButtonEvent.Press(Competitor.Orange))
+        scoreFlow.value = emptyScore().copy(techFallWin = Competitor.Orange)
         advanceUntilIdle()
 
         assertEquals(2, collected.size)

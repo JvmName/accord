@@ -36,7 +36,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +46,7 @@ import com.slack.circuit.overlay.OverlayEffect
 import com.slack.circuitx.overlays.BottomSheetOverlay
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.domain.color
 import dev.jvmname.accord.domain.control.rounds.RoundEvent
 import dev.jvmname.accord.domain.control.rounds.RoundInfo
 import dev.jvmname.accord.domain.control.score.Score
@@ -136,7 +136,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                         .border(1.5.dp, LocalContentColor.current, RoundedCornerShape(4.dp))
                 ) {
                     Text(
-                        "${state.matchState.roundScores[Competitor.RED] ?: 0}:${state.matchState.roundScores[Competitor.BLUE] ?: 0}",
+                        "${state.matchState.roundScores[Competitor.Orange] ?: 0}:${state.matchState.roundScores[Competitor.Green] ?: 0}",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                     )
@@ -177,7 +177,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                     Text(
                         state.matchState.score.redPoints.toString(),
                         style = MaterialTheme.typography.TabletScore,
-                        color = Color.Red,
+                        color = Competitor.Orange.color,
                         softWrap = false,
                         modifier = Modifier.layout { measurable, constraints ->
                             val placeable = measurable.measure(constraints)
@@ -189,9 +189,9 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                         LinearProgressIndicator(
                             progress = { redHealth },
                             modifier = Modifier.fillMaxWidth().height(25.dp),
-                            color = Color.Red,
+                            color = Competitor.Orange.color,
                             strokeCap = StrokeCap.Butt,
-                            trackColor = Color.Red.copy(alpha = 0.2f),
+                            trackColor = Competitor.Orange.color.copy(alpha = 0.2f),
                             drawStopIndicator = {}
                         )
                     }
@@ -217,7 +217,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                     Text(
                         "${state.matchState.score.bluePoints}",
                         style = MaterialTheme.typography.TabletScore,
-                        color = Color.Blue,
+                        color = Competitor.Green.color,
                         softWrap = false,
                         modifier = Modifier.layout { measurable, constraints ->
                             val placeable = measurable.measure(constraints)
@@ -231,8 +231,8 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                             modifier = Modifier.fillMaxWidth()
                                 .height(25.dp)
                                 .scale(scaleX = -1f, scaleY = 1f),
-                            color = Color.Blue,
-                            trackColor = Color.Blue.copy(alpha = 0.2f),
+                            color = Competitor.Green.color,
+                            trackColor = Competitor.Green.color.copy(alpha = 0.2f),
                             strokeCap = StrokeCap.Butt,
                             drawStopIndicator = {}
                         )
@@ -371,7 +371,7 @@ private fun MasterSessionContent_ActiveRound_Preview() {
                 showEndMatchDialog = false,
                 showScoresOverlay = false,
                 roundDisplays = listOf(
-                    RoundDisplayInfo(1, false, Competitor.RED, 12, 4),
+                    RoundDisplayInfo(1, false, Competitor.Orange, 12, 4),
                 ),
                 redHealthFraction = 0.46f,
                 blueHealthFraction = 0.96f,
@@ -480,16 +480,16 @@ private fun MasterSessionContent_Ended_Preview() {
                 isMatchStarted = true,
                 matchResult = MatchResult(
                     winConditions = "Points (12s), Points (9s)",
-                    roundWinners = listOf(Competitor.RED, Competitor.BLUE, Competitor.RED)
+                    roundWinners = listOf(Competitor.Orange, Competitor.Green, Competitor.Orange)
                 ),
                 actions = MatchActions(),
                 showEndRoundDialog = false,
                 showEndMatchDialog = false,
                 showScoresOverlay = false,
                 roundDisplays = listOf(
-                    RoundDisplayInfo(1, false, Competitor.RED, 12, 4),
-                    RoundDisplayInfo(2, false, Competitor.BLUE, 3, 18),
-                    RoundDisplayInfo(3, false, Competitor.RED, 9, 7),
+                    RoundDisplayInfo(1, false, Competitor.Orange, 12, 4),
+                    RoundDisplayInfo(2, false, Competitor.Green, 3, 18),
+                    RoundDisplayInfo(3, false, Competitor.Orange, 9, 7),
                 ),
                 redHealthFraction = 0f,
                 blueHealthFraction = 0f,

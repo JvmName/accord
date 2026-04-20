@@ -406,7 +406,7 @@ private fun JudgeSessionContentPreview_Holding() {
                         redPoints = 22,
                         bluePoints = 11,
                         activeControlTime = 1.5.seconds,
-                        activeCompetitor = Competitor.BLUE,
+                        activeCompetitor = Competitor.Green,
                         techFallWin = null
                     ),
                     roundInfo = RoundEvent(
@@ -418,7 +418,7 @@ private fun JudgeSessionContentPreview_Holding() {
                     ),
                     timerDisplay = "2:30",
                     roundLabel = "Round 1 of 3",
-                    controlDurations = mapOf(Competitor.BLUE to "(3)"),
+                    controlDurations = mapOf(Competitor.Green to "(3)"),
                     roundScores = emptyMap(),
                     audio = null,
                 ),

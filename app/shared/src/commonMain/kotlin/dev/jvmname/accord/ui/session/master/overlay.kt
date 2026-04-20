@@ -190,8 +190,8 @@ internal fun RoundRow(round: RoundDisplayInfo, redName: String, blueName: String
             )
         } else {
             val (emoji, name) = when (round.winner) {
-                Competitor.RED -> round.winner.asEmoji to redName
-                Competitor.BLUE -> round.winner.asEmoji to blueName
+                Competitor.Orange -> round.winner.asEmoji to redName
+                Competitor.Green -> round.winner.asEmoji to blueName
                 null -> "—" to "Tie"
             }
             Text(
@@ -208,8 +208,8 @@ private fun RoundScoresSheet_Preview() {
     AccordTheme {
         RoundScoresSheet(
             rounds = listOf(
-                RoundDisplayInfo(1, false, Competitor.RED, 12, 4),
-                RoundDisplayInfo(2, false, Competitor.BLUE, 3, 18),
+                RoundDisplayInfo(1, false, Competitor.Orange, 12, 4),
+                RoundDisplayInfo(2, false, Competitor.Green, 3, 18),
                 RoundDisplayInfo(3, true, null, 0, 0),
             ),
             redName = "Alice",

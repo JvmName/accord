@@ -19,8 +19,8 @@ internal fun deriveScoreFromMatch(match: Match): Score {
     val bluePoints = scoreMap.getOrElse(match.blue.id) { 0 }
     val techFallWin = activeRound?.result?.winner?.id?.let { winnerId ->
         when (winnerId) {
-            match.red.id -> Competitor.RED
-            match.blue.id -> Competitor.BLUE
+            match.red.id -> Competitor.Orange
+            match.blue.id -> Competitor.Green
             else -> null
         }
     }

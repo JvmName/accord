@@ -86,7 +86,7 @@ class ScoreDerivationTest {
         val round = makeRound(result = result)
         val match = makeMatch(rounds = listOf(round))
         val score = deriveScoreFromMatch(match)
-        assertEquals(Competitor.RED, score.techFallWin)
+        assertEquals(Competitor.Orange, score.techFallWin)
     }
 
     @Test
@@ -95,7 +95,7 @@ class ScoreDerivationTest {
         val round = makeRound(result = result)
         val match = makeMatch(rounds = listOf(round))
         val score = deriveScoreFromMatch(match)
-        assertEquals(Competitor.BLUE, score.techFallWin)
+        assertEquals(Competitor.Green, score.techFallWin)
     }
 
     @Test

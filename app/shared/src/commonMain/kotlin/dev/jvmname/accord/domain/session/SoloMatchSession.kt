@@ -103,8 +103,8 @@ class SoloMatchSession(
                             val newPointsThisTick = currentSessionPoints - previousSessionPoints
 
                             val (newRedPoints, newBluePoints) = when (event.competitor) {
-                                Competitor.RED -> (prev.redPoints + newPointsThisTick) to prev.bluePoints
-                                Competitor.BLUE -> prev.redPoints to (prev.bluePoints + newPointsThisTick)
+                                Competitor.Orange -> (prev.redPoints + newPointsThisTick) to prev.bluePoints
+                                Competitor.Green -> prev.redPoints to (prev.bluePoints + newPointsThisTick)
                             }
 
                             Score(
@@ -295,8 +295,8 @@ class SoloMatchSession(
 
         _score.update {
             when (competitor) {
-                Competitor.RED -> it.copy(redPoints = actionFun(it.redPoints))
-                Competitor.BLUE -> it.copy(bluePoints = actionFun(it.bluePoints))
+                Competitor.Orange -> it.copy(redPoints = actionFun(it.redPoints))
+                Competitor.Green -> it.copy(bluePoints = actionFun(it.bluePoints))
             }
         }
     }
@@ -309,8 +309,8 @@ class SoloMatchSession(
         val event = latestRoundEvent.load() ?: return null
         val threshold = config.getRound(event.roundNumber)?.maxPoints ?: return null
         return when {
-            redPoints >= threshold -> Competitor.RED
-            bluePoints >= threshold -> Competitor.BLUE
+            redPoints >= threshold -> Competitor.Orange
+            bluePoints >= threshold -> Competitor.Green
             else -> null
         }
     }
