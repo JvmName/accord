@@ -72,11 +72,13 @@ fun ShowCodesContent(state: ShowCodesState, modifier: Modifier = Modifier) {
 
                 Spacer(Modifier.height(64.dp))
 
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { state.eventSink(ShowCodesEvent.Ready) },
-                ) {
-                    Text("Ready – Start Session")
+                if(!state.embedded) {
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { state.eventSink(ShowCodesEvent.Ready) },
+                    ) {
+                        Text("Ready – Start Session")
+                    }
                 }
             }
         }
@@ -133,6 +135,7 @@ private fun ShowCodesContentPreview() {
                 viewerCode = "battery.horse.stapler",
                 joinedJudges = listOf(User(UserId("j1"), "Charlie")),
                 allJudgesJoined = true,
+                embedded = false,
                 eventSink = {},
             ),
         )

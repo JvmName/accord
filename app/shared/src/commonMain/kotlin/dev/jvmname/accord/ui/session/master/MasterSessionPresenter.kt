@@ -81,7 +81,8 @@ class MasterSessionPresenter(
             is RoundInfo.Break -> "Break ${roundEvent!!.roundNumber} of ${roundEvent!!.totalRounds - 1}"
             is RoundInfo.Round -> "Round ${round.index} of ${roundEvent!!.totalRounds}"
         }
-        val roundScores = currentMatch?.roundScore() ?: mapOf(Competitor.Orange to 0, Competitor.Green to 0)
+        val roundScores =
+            currentMatch?.roundScore() ?: mapOf(Competitor.Orange to 0, Competitor.Green to 0)
 
         val roundDisplays = currentMatch?.let { match ->
             match.rounds.fastMapIndexed { index, round ->
@@ -174,7 +175,12 @@ class MasterSessionPresenter(
                         val mat = prefs.observeMatInfo().first() ?: return@launch
                         val match = currentMatch ?: return@launch
                         navigator.goTo(
-                            ShowCodesScreen(mat = mat, match = match, judgeCount = mat.judgeCount)
+                            ShowCodesScreen(
+                                mat = mat,
+                                match = match,
+                                judgeCount = mat.judgeCount,
+                                embedded = true
+                            )
                         )
                     }
 

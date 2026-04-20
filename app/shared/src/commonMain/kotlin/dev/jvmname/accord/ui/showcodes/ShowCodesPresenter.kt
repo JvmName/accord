@@ -44,6 +44,7 @@ class ShowCodesPresenter(
             viewerCode = screen.mat.viewerCode.code,
             joinedJudges = joinedJudges,
             allJudgesJoined = screen.mat.judgeCount == joinedJudges.size,
+            embedded = screen.embedded
         ) { event ->
             when (event) {
                 ShowCodesEvent.Ready -> navigator.goTo(
