@@ -9,6 +9,7 @@ import dev.zacsweers.metro.gradle.DelicateMetroGradleApi
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 plugins {
@@ -127,6 +128,12 @@ kotlin {
             }
         }
 
+        val wasmJsTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
+
         configureEach {
             @OptIn(ExperimentalKotlinGradlePluginApi::class)
             compilerOptions {
@@ -171,6 +178,12 @@ tasks.withType<JavaCompile>().configureEach {
     // Only configure kotlin/jvm tasks with this
     if (name.startsWith("compileJvm")) {
         options.release.set(21)
+    }
+}
+
+tasks.withType<KotlinJsCompile>().configureEach{
+    compilerOptions {
+        target = "2015"
     }
 }
 

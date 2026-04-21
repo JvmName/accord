@@ -8,6 +8,7 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.Json
+import kotlin.jvm.JvmInline
 
 @JvmInline
 value class BaseUrl(val baseUrl: String)
