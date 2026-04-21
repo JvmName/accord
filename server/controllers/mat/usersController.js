@@ -170,13 +170,10 @@ class UsersController extends ServerController {
         await this.authorize("be assigned judge", this.currentMat);
 
         const judges = await this.currentMat.getJudges()
-        if (judges.some(judge => judge.id == this.currentUser.id)) {
-            await this.renderErrors({matCode: ['user is already a judge']});
-            return;
+        if (!judges.some(judge => judge.id == this.currentUser.id)) {
+            await this.currentMat.addJudge(this.currentUser);
+            logger.info(`Judge added: user=${this.currentUser.id} mat=${this.currentMat.id}`);
         }
-
-        await this.currentMat.addJudge(this.currentUser);
-        logger.info(`Judge added: user=${this.currentUser.id} mat=${this.currentMat.id}`);
 
         const incompleteMatches = await this.currentMat.getIncompleteMatches();
         const activeMatch = incompleteMatches.find(m => m.started);
@@ -186,7 +183,9 @@ class UsersController extends ServerController {
                 await this.renderErrors({matCode: ['cannot join a solo match in progress']});
                 return;
             }
-            await activeMatch.addJudge(this.currentUser);
+            if (!matchJudges.some(j => j.id == this.currentUser.id)) {
+                await activeMatch.addJudge(this.currentUser);
+            }
         }
     }
 

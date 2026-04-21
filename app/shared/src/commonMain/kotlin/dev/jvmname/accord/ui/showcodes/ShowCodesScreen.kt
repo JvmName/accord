@@ -13,7 +13,7 @@ import dev.jvmname.accord.parcel.ParcelableScreen
 data class ShowCodesScreen(
     val mat: Mat,
     val match: Match,
-    val judgeCount: Int,
+    val judgeCount: Int?,
     val embedded : Boolean = false,
 ) : ParcelableScreen
 
