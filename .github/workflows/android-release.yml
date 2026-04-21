@@ -49,7 +49,7 @@ jobs:
       - name: Decode keystore
         if: steps.check_release.outputs.exists == 'false'
         run: |
-          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > app/AccordProdKey.jks
+          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > app/androidApp/AccordProdKey.jks
 
       - name: Make gradlew executable
         if: steps.check_release.outputs.exists == 'false'
