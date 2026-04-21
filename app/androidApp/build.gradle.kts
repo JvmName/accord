@@ -19,8 +19,8 @@ android {
         applicationId = "com.rdojo.kombat"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 101
-        versionName = "1.0.0-rc02"
+        versionCode = 103
+        versionName = "1.0.0-rc03"
     }
 
     signingConfigs {
