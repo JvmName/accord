@@ -221,6 +221,13 @@ buildConfig {
             if (isRelease) "https://rdk.api.jvmname.dev" else "http://[fec0::2]:3000"
         )
     }
+
+    sourceSets.named("wasmJsMain") {
+        buildConfigField(
+            "BASE_URL",
+            if (isRelease) "https://rdk.api.jvmname.dev" else "http://localhost:3000"
+        )
+    }
 }
 
 dependencies {
