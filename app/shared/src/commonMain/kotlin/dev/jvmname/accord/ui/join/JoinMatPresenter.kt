@@ -36,8 +36,7 @@ class JoinMatPresenter(
 ) : Presenter<JoinMatState> {
     private companion object{
         @JvmStatic
-        private val space = "\\s".toRegex()
-    }
+        private val trimChars = Regex("""\s|^[^a-z]+|[^a-z]+$""")                                                                                                   }
 
     private val log = Logger.withTag("UI/JoinMat")
 
@@ -54,9 +53,9 @@ class JoinMatPresenter(
                     scope.launch {
                         loading = true
                         error = null
-                        val code = it.code.replace(space, "")
+                        val code = it.code.replace(trimChars, "")
                         log.i { "join attempt code=${code.split('.').first()}..." }
-                        matManager.joinMat(code, it.name)
+                        matManager.joinMat(code, it.name.trim())
                             .onEither(
                                 success = { mat ->
                                     val match = mat.currentMatch
