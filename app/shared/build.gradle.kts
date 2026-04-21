@@ -116,7 +116,6 @@ kotlin {
 //            dependsOn(commonMain.get())
             dependencies {
                 implementation(npm("socket.io-client", "4.8.3"))
-                implementation(libs.ktor.client.cio)
             }
 
         }
