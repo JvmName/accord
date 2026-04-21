@@ -141,6 +141,21 @@ class UsersController extends ServerController {
         if (role == MatCode.ROLES.ADMIN) {
             await this.authorize("assign",            this.currentMat);
             await this.authorize("be assigned judge", this.currentMat);
+
+            const incompleteMatches = await this.currentMat.getIncompleteMatches();
+            const currentMatch = incompleteMatches.find(m => m.started);
+            if (currentMatch) {
+                const rounds = await currentMatch.getRounds();
+                const openRound = rounds.find(r => !r.ended);
+                if (openRound) {
+                    const activeVote = await openRound.currentRidingTimeVoteForJudge(this.currentUser);
+                    if (activeVote) {
+                        await activeVote.end();
+                    }
+                }
+                await currentMatch.removeJudge(this.currentUser);
+            }
+
             await this.currentMat.removeJudge(this.currentUser);
             logger.info(`Judge removed: user=${this.currentUser.id} mat=${this.currentMat.id}`);
         } else {
@@ -160,12 +175,19 @@ class UsersController extends ServerController {
             return;
         }
 
-        if (judges.length >= this.currentMat.judge_count) {
-            await this.renderErrors({matCode: ['maximum judge count reached']});
-            return;
-        }
         await this.currentMat.addJudge(this.currentUser);
         logger.info(`Judge added: user=${this.currentUser.id} mat=${this.currentMat.id}`);
+
+        const incompleteMatches = await this.currentMat.getIncompleteMatches();
+        const activeMatch = incompleteMatches.find(m => m.started);
+        if (activeMatch) {
+            const matchJudges = await activeMatch.getJudges();
+            if (matchJudges.length === 1) {
+                await this.renderErrors({matCode: ['cannot join a solo match in progress']});
+                return;
+            }
+            await activeMatch.addJudge(this.currentUser);
+        }
     }
 
 

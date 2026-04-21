@@ -17,11 +17,7 @@ class RidingTimeCalculator {
         this.#votes.sort((v1,v2) => v1.started_at - v2.started_at);
         this.#pauses = pauses;
 
-        if (judges.length == 1) {
-            this.#voteThreshold = 1;
-        } else {
-            this.#voteThreshold = Math.max(Math.ceil(judges.length/2), 2);
-        }
+        this.#voteThreshold = judges.length === 1 ? 1 : 2;
     }
 
 
