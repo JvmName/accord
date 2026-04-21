@@ -40,7 +40,7 @@ cd app
 ./gradlew assembleRelease   # Build Android release APK (requires signing config)
 
 # Run
-./gradlew :app:run          # Run JVM desktop app
+./gradlew :shared:run       # Run JVM desktop app
 
 # Android deployment
 ./gradlew installDebug      # Install debug APK to connected device
@@ -52,7 +52,7 @@ cd app
 
 The application's defining feature is **threshold-based consensus** for tracking control time (`/server/lib/ridingTime.js`):
 
-- **Vote Threshold**: For multiple judges, threshold = `max(ceil(judgeCount/2), 2)`
+- **Vote Threshold**: Single judge: threshold = 1. Multiple judges: threshold = 2 (always, regardless of judge count)
 - **Control Recognition**: Control is only counted when active votes ≥ threshold
 - **Time Accumulation**: Riding time accumulates only during periods when threshold is met
 - **Winner Determination**: Competitor with more riding time wins (or by submission if called)
@@ -66,7 +66,7 @@ Users (authenticated via API token)
   ↓
 Mats (training locations with word-based invite codes like "morning.coffee.bicycle")
   ↓
-Matches (red vs blue competitor)
+Matches (orange vs green competitor)
   ↓
 Rounds (sequential sub-matches with RidingTimeVotes and RoundPauses)
   ↓
@@ -95,7 +95,7 @@ RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
   - `round.tech-fall` — fired once when tech fall threshold is reached and round is ended
   - `break.ended` — fired once when a break expires and the next round has been auto-started
 
-- **Client**: Flow-based observation (`/app/app/src/commonMain/kotlin/dev/jvmname/accord/network/SocketClient.kt`)
+- **Client**: Flow-based observation (`/app/shared/src/commonMain/kotlin/dev/jvmname/accord/network/SocketClient.kt`)
   - `observeMatch(matchId): Flow<Match>` auto-joins room on collection and listens to `match.update`, `round.tech-fall`, and `break.ended`
   - Auto-leaves room on cancellation
 
@@ -125,7 +125,7 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 ### Android App Architecture
 
 **UI Framework**: Slack Circuit (Presenter pattern)
-- Screens in `/app/app/src/commonMain/kotlin/dev/jvmname/accord/ui/`
+- Screens in `/app/shared/src/commonMain/kotlin/dev/jvmname/accord/ui/`
 - Each screen has: `Screen.kt` (route), `Presenter.kt` (logic), `Content.kt` (UI)
 - Navigation is stack-based with gesture support
 
@@ -134,13 +134,14 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 - `MatchScope`: Per-match scoped dependencies
 - Assisted injection for screen parameters
 
-**Domain Layer** (`/app/app/src/commonMain/kotlin/dev/jvmname/accord/domain/`):
+**Domain Layer** (`/app/shared/src/commonMain/kotlin/dev/jvmname/accord/domain/`):
 - `MatchManager`: Match lifecycle, API calls, caching
 - `MatManager`: Mat operations
 - `UserManager`: Authentication and profile
 - `RoundTracker`: Local round timing for solo mode
+- `RoundAudioFeedbackHelper`: Plays audible alerts (start/stop/end of round, control changes) based on match state transitions
 
-**Network Layer** (`/app/app/src/commonMain/kotlin/dev/jvmname/accord/network/`):
+**Network Layer** (`/app/shared/src/commonMain/kotlin/dev/jvmname/accord/network/`):
 - `AccordClient`: HTTP client (Ktor) for REST API
 - `SocketClient`: WebSocket client (Socket.IO) for real-time updates
 - `ApiResult<T>`: Sealed interface for Success/Error responses
@@ -154,7 +155,7 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 
 **Server** (JavaScript with Sequelize):
 - `User`: `id`, `name`, `api_token`
-- `Mat`: `id`, `name`, `judge_count`, `creator_id`
+- `Mat`: `id`, `name`, `judge_count` (optional, no longer required on creation), `creator_id`
 - `Match`: `id`, `mat_id`, `creator_id`, `red_competitor_id`, `blue_competitor_id`, `red_score`, `blue_score`, `started_at`, `ended_at`, `break_started_at`, `break_duration`
 - `Round`: `id`, `match_id`, `ended_at`, `declared_winner_id`, `stoppage`
 - `RidingTimeVote`: `id`, `round_id`, `judge_id`, `competitor_id`, `ended_at`
@@ -177,13 +178,13 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 
 5. **Room-Based Broadcasting**: WebSocket rooms keep server scalable; all interested clients receive updates atomically
 
-6. **Match Extensions in `models_ext.kt`**: All winner/score derivation from `Match` belongs in `/app/app/src/commonMain/kotlin/dev/jvmname/accord/network/models_ext.kt`, not inlined in presenters. Key extensions: `Match.winner(roundIndex)`, `Match.winnerCompetitor`, `Match.roundScore()`, `Match.toMatchResult()`. `toMatchResult()` always returns a non-null `MatchResult` for any ended match — do NOT add a `winner ?: return null` guard; a null winner on an ended match is a valid draw. `Match.merge(other)` handles cache updates — some HTTP endpoints return partial payloads (omitting `judges`, `mat`, etc.) and merge preserves cached values for those. `break_remaining` is a worker-computed field that is only present in WebSocket `match.update` payloads — HTTP responses always return it as `null`. `merge` uses `if (breakStartedAt != null) breakRemaining ?: other.breakRemaining else null` to preserve the last WebSocket value during an active break and clear it once the break ends.
+6. **Match Extensions in `models_ext.kt`**: All winner/score derivation from `Match` belongs in `/app/shared/src/commonMain/kotlin/dev/jvmname/accord/network/models_ext.kt`, not inlined in presenters. Key extensions: `Match.winner(roundIndex)`, `Match.winnerCompetitor`, `Match.roundScore()`, `Match.toMatchResult()`. `toMatchResult()` always returns a non-null `MatchResult` for any ended match — do NOT add a `winner ?: return null` guard; a null winner on an ended match is a valid draw. `Match.merge(other)` handles cache updates — some HTTP endpoints return partial payloads (omitting `judges`, `mat`, etc.) and merge preserves cached values for those. `break_remaining` is a worker-computed field that is only present in WebSocket `match.update` payloads — HTTP responses always return it as `null`. `merge` uses `if (breakStartedAt != null) breakRemaining ?: other.breakRemaining else null` to preserve the last WebSocket value during an active break and clear it once the break ends.
 
 7. **`MatchResult` is shared across screens**: Defined in `JudgeSessionScreen.kt` but imported by `MasterSessionScreen.kt` as well. Has `winConditions: String` and `roundWinners: List<Competitor>`. Empty `roundWinners` means all rounds were tied (draw); `toText()` handles this case.
 
 8. **Judge vs Master role separation**: Judges only vote on control time — they do NOT handle meta-round actions (submission, stoppage, manual score edits are master-only). `JudgeSessionEvent.EndRound` is a simple `data object` that ends the round with no params. All structured end-round actions (submission name, who submitted/stopped, stoppage vs submission choice) belong exclusively in the master session.
 
-9. **Master session overlay pattern**: The master uses Circuit's `OverlayEffect` + `BottomSheetOverlay` for dialogs (not `AlertDialog`). The end-round dialog is `SubmissionDialog` in `/app/.../ui/session/master/overlay.kt`, which returns a `SubmissionResult` sealed class. `SubmissionResult.Confirmed` carries `winner` and `stoppage`. The content maps the result to `MasterSessionEvent.RecordRoundResult(winner, stoppage)` — NOT `EndRound`. `EndRound` is a `data object` that fires `POST /rounds/end` immediately on button tap and opens the dialog; `RecordRoundResult` fires `PATCH /rounds/result` when the dialog is confirmed.
+9. **Master session overlay pattern**: The master uses Circuit's `OverlayEffect` + `BottomSheetOverlay` for dialogs (not `AlertDialog`). The end-round dialog is `SubmissionDialog` in `/app/.../ui/session/master/overlay.kt`, which returns a `SubmissionResult` sealed class. `SubmissionResult.Confirmed` carries `winner` and `stoppage`. The content maps the result to `MasterSessionEvent.RecordRoundResult(winner, stoppage)` — NOT `EndRound`. `EndRound` is a `data object` that fires `POST /rounds/end` immediately on button tap and opens the dialog; `RecordRoundResult` fires `PATCH /rounds/result` when the dialog is confirmed. There is also a separate `EndMatchConfirmDialog` (triggered by `MasterSessionEvent.ShowEndMatchDialog` / `DismissEndMatchDialog`) that shows a confirmation prompt before ending the entire match — distinct from the per-round end flow. `MasterSessionState` includes `showEndMatchDialog`, `orangeHealthFraction`, and `greenHealthFraction` for the health bar UI.
 
 10. **All rounds always play out**: A match always runs all `maxRounds` (3) rounds — there is no early exit when a competitor reaches 2 wins. The match winner is determined by best-2-of-3 only after all 3 rounds have completed. `Match.getWinner()` returns `null` while rounds are still in progress. Do not reintroduce early-exit logic in `Round.end()` or `Match.getWinner()`.
 
@@ -236,7 +237,7 @@ WebSocket authentication uses `socket.handshake.auth.apiToken`.
 
 ### Adding a New Screen (Android)
 
-1. Create screen directory in `/app/app/src/commonMain/kotlin/dev/jvmname/accord/ui/<screen-name>/`
+1. Create screen directory in `/app/shared/src/commonMain/kotlin/dev/jvmname/accord/ui/<screen-name>/`
 2. Create three files:
    - `<ScreenName>Screen.kt` - Screen data class (route)
    - `<ScreenName>Presenter.kt` - Business logic with `@CircuitInject` annotation
