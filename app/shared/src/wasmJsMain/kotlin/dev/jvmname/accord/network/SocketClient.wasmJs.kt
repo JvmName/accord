@@ -44,10 +44,11 @@ actual class SocketClient actual constructor(
     }
 
     private val log = Logger.withTag("Net/Socket")
-    private val socket: JsSocket = io(baseUrl.baseUrl, makeSocketOptions(token.token))
+    private val socket: JsSocket
     private val matchFlows = mutableMapOf<MatchId, SharedFlow<Match>>()
 
     init {
+        socket = io(baseUrl.baseUrl, makeSocketOptions(token.token))
         socket.on("connect") {
             log.i { "socket connected" }
         }
@@ -62,6 +63,7 @@ actual class SocketClient actual constructor(
     }
 
     actual fun connect() {
+        log.i { "connecting to ${baseUrl.baseUrl}" }
         if (!socket.connected) socket.connect()
     }
 

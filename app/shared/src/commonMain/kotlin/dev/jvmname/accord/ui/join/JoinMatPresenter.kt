@@ -26,6 +26,7 @@ import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlin.jvm.JvmStatic
 
 @AssistedInject
 class JoinMatPresenter(
