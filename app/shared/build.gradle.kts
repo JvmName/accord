@@ -1,9 +1,14 @@
-@file:OptIn(DelicateMetroGradleApi::class, ExperimentalKotlinGradlePluginApi::class)
+@file:OptIn(
+    DelicateMetroGradleApi::class,
+    ExperimentalKotlinGradlePluginApi::class,
+    ExperimentalWasmDsl::class
+)
 
 import com.google.devtools.ksp.gradle.KspAATask
 import dev.zacsweers.metro.gradle.DelicateMetroGradleApi
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 plugins {
@@ -33,6 +38,13 @@ kotlin {
 
     jvm {}
 
+    wasmJs {
+        outputModuleName = "rdk"
+        browser()
+        binaries.executable()
+    }
+
+
     applyDefaultHierarchyTemplate()
 
     sourceSets {
@@ -44,7 +56,7 @@ kotlin {
                 implementation(libs.material3)
                 implementation(libs.ui)
                 implementation(libs.ui.tooling.preview)
-                implementation(libs.compose.ui.tooling)
+//                implementation(libs.compose.ui.tooling)
                 implementation(libs.compose.ui.util)
                 implementation(libs.material.icons)
                 implementation(libs.kotlinx.coroutines.core)
@@ -76,7 +88,7 @@ kotlin {
         val commonJvm by creating {
             dependsOn(commonMain.get())
             dependencies {
-                implementation(libs.socketio.client)
+                implementation(libs.socketio.client.jvm)
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.ui.tooling.preview)
                 implementation(libs.compose.ui.tooling)
@@ -98,6 +110,14 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.android)
                 implementation(libs.circuitx.android)
             }
+        }
+
+        wasmJsMain {
+//            dependsOn(commonMain.get())
+            dependencies {
+                implementation(npm("socket.io-client", "4.8.3"))
+            }
+
         }
 
         commonTest {

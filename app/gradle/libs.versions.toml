@@ -8,7 +8,7 @@ circuit = "0.33.1"
 composeHotReload = "1.1.0-rc01"
 composeMultiplatform = "1.10.3"
 coroutines = "1.10.2"
-datastore = "1.2.1"
+datastore = "1.3.0-alpha07"
 kermit = "2.1.0"
 kotlin = "2.3.20"
 ksp = "2.3.6"
@@ -23,7 +23,7 @@ sound = "0.2.6-beta02"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
-androidx-datastore = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+androidx-datastore = { module = "androidx.datastore:datastore-preferences-core", version.ref = "datastore" }
 
 
 compose-ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "composeMultiplatform" }
@@ -62,7 +62,7 @@ composeResources = { module = "org.jetbrains.compose.components:components-resou
 kotlin-result = { module = "com.michael-bull.kotlin-result:kotlin-result", version.ref = "kotlinResult" }
 kotlin-result-coroutines = { module = "com.michael-bull.kotlin-result:kotlin-result-coroutines", version.ref = "kotlinResult" }
 kotlin-result-retry = "com.michael-bull.kotlin-retry:kotlin-retry-result:2.0.2"
-socketio-client = { module = "io.socket:socket.io-client", version.ref = "socketio" }
+socketio-client-jvm = { module = "io.socket:socket.io-client", version.ref = "socketio" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
