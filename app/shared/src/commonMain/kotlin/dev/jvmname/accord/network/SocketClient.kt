@@ -24,7 +24,7 @@ expect class SocketClient(
     scope: CoroutineScope
 ) {
     @[AssistedFactory SingleIn(AppScope::class)]
-     interface Factory {
+    interface Factory {
         fun create(token: AuthToken): SocketClient
     }
 

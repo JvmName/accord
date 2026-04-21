@@ -13,30 +13,35 @@ class WasmJsInteropTest {
 
         val listener: (JsAny?) -> Unit = { /* no-op */ }
 
-        tracker.addListener(listener)
-        assertEquals(1, tracker.listenerCount(), "listener should be registered")
+        addListener(tracker, listener)
+        assertEquals(1, listenerCount(tracker), "listener should be registered")
 
-        tracker.removeListener(listener)
+        removeListener(tracker, listener)
         assertEquals(
             expected = 0,
-            actual = tracker.listenerCount(),
+            actual = listenerCount(tracker),
             message = "off() with same lambda val should deregister — " +
                 "if this fails, the JS wrapper is not stable and the escape hatch is required"
         )
     }
 }
 
-// JS tracker that mimics the socket.on/off contract using strict reference equality (===)
-private fun makeTracker(): JsTracker = js("""({
-    _listeners: [],
-    addListener(fn)    { this._listeners.push(fn) },
-    removeListener(fn) { this._listeners = this._listeners.filter(f => f !== fn) },
-    listenerCount()    { return this._listeners.length }
-})""")
+// Each operation is its own single-line js() call to avoid multiline string issues.
+// The tracker is a plain JS object with a _listeners array; we never use external interface
+// to avoid function-type-in-external-interface edge cases in Kotlin/Wasm.
 
-// No @JsModule needed — object is created inline via js(), not imported from a module
-external interface JsTracker : JsAny {
-    fun addListener(fn: (JsAny?) -> Unit)
-    fun removeListener(fn: (JsAny?) -> Unit)
-    fun listenerCount(): Int
-}
+@Suppress("UNUSED_PARAMETER")
+private fun makeTracker(): JsAny =
+    js("({ _listeners: [] })")
+
+@Suppress("UNUSED_PARAMETER")
+private fun addListener(tracker: JsAny, fn: (JsAny?) -> Unit): Unit =
+    js("tracker._listeners.push(fn)")
+
+@Suppress("UNUSED_PARAMETER")
+private fun removeListener(tracker: JsAny, fn: (JsAny?) -> Unit): Unit =
+    js("tracker._listeners = tracker._listeners.filter(function(f) { return f !== fn; })")
+
+@Suppress("UNUSED_PARAMETER")
+private fun listenerCount(tracker: JsAny): Int =
+    js("tracker._listeners.length")

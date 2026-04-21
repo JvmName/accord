@@ -5,7 +5,8 @@ package dev.jvmname.accord.network
 
 external fun io(url: String, options: JsAny): JsSocket
 
-external class JsSocket {
+@JsName("Socket")
+external class JsSocket : JsAny {
     val connected: Boolean
 
     fun connect(): JsSocket

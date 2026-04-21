@@ -40,7 +40,6 @@ kotlin {
     jvm {}
 
     wasmJs {
-        outputModuleName = "rdk"
         browser()
         binaries.executable()
     }
@@ -154,6 +153,7 @@ kotlin {
                 freeCompilerArgs.addAll(
                     "-Xexpect-actual-classes",
                     "-Xcontext-sensitive-resolution",
+                    "-Xwasm-use-new-exception-proposal"
                 )
             }
         }

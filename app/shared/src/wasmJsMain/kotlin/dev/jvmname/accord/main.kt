@@ -13,16 +13,19 @@ import dev.jvmname.accord.di.LocalPlatformContext
 import dev.zacsweers.metro.createGraphFactory
 import kotlin.time.Clock
 
-fun main() = ComposeViewport(content = {
-    val graph = createGraphFactory<AccordGraph.Factory>().create(EmptyPlatformContext, Clock.System)
+fun main() {
+    ComposeViewport {
+        val graph =
+            createGraphFactory<AccordGraph.Factory>().create(EmptyPlatformContext, Clock.System)
 
-    CompositionLocalProvider(
-        LocalGraph provides graph,
-        LocalPlatformContext provides EmptyPlatformContext,
-    ) {
-        App(graph.circuit, { /*TODO*/ })
+        CompositionLocalProvider(
+            LocalGraph provides graph,
+            LocalPlatformContext provides EmptyPlatformContext,
+        ) {
+            App(graph.circuit, { /*TODO*/ })
+        }
     }
-})
+}
 
 @Composable
 actual fun platformNavigator(backstack: SaveableBackStack, onRootPop: () -> Unit): Navigator {

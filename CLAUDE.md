@@ -254,6 +254,40 @@ WebSocket authentication uses `socket.handshake.auth.apiToken`.
 5. Update `/server/README.md` with endpoint documentation
 
 
+## Kotlin/Wasm JS Interop (wasmJsMain)
+
+Rules for writing socket.io and other JS interop code in `wasmJsMain`. These are not derivable from the code and were learned the hard way.
+
+**File structure**:
+- External declarations with `@file:JsModule("...")` must be in their own file — `js()` helper functions in the same file are treated as module imports and fail to compile.
+- `js()` helpers live in the `actual` implementation file (e.g., `SocketClient.wasmJs.kt`), never in the `@file:JsModule` file.
+- All files using `JsAny`, `js()`, or any Wasm/JS interop API need `@file:OptIn(ExperimentalWasmJsInterop::class)` at the top.
+
+**External class rules**:
+- All `external class` declarations must extend `: JsAny` — this is required for Wasm GC reference typing.
+- When the Kotlin name differs from the JS export name, use `@JsName("ExactJsName")`. Example: socket.io-client exports `Socket`, not `JsSocket`, so `@JsName("Socket")` is required.
+
+**`js()` intrinsic rules**:
+- Argument must be a string literal (no variables, no concatenation).
+- Single-line preferred — multiline/triple-quoted behavior is unconfirmed.
+- Function parameters are accessible by their Kotlin names inside the string.
+- Add `@Suppress("UNUSED_PARAMETER")` on every `js()` helper — the IDE can't see parameter usage inside the string literal.
+
+**Type rules**:
+- Kotlin `String` maps directly to JS `String` in `external` signatures. It is NOT a subtype of `JsAny` — don't use `JsAny` where `String` is correct and vice versa.
+- For event callbacks, use three separate payload helpers depending on the event:
+  - Match objects → `js("JSON.stringify(obj)")` then `json.decodeFromString<Match>(...)`
+  - Disconnect reason (plain string) → `js("String(obj)")`
+  - connect_error (JS Error) → `js("err.message || String(err)")` — `JSON.stringify` returns `"{}"` for Error objects
+
+**Lambda identity**:
+- Kotlin/Wasm uses `getCachedJsObject` for lambda-to-JS-function conversion. The same Kotlin `val` reference always produces the same JS wrapper.
+- `socket.on(event, listener)` + `socket.off(event, listener)` with the same `val` correctly de-registers. No dispatch-map escape hatch is needed.
+
+**webpack.config.d**:
+- Files placed in `app/shared/webpack.config.d/` are injected into the generated Karma config for `wasmJsBrowserTest`. Confirmed via `build/wasm/packages/accord-shared-test/karma.conf.js`.
+- `socket-io.js` sets `config.node = false` per socket.io bundler docs to prevent webpack from processing Node.js-style dynamic requires.
+
 ## Build Queue
 For expensive operations, ALWAYS use the `run_task` MCP tool instead of Bash.
 
