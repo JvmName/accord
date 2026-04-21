@@ -10,7 +10,12 @@ import dev.jvmname.accord.parcel.CommonParcelize
 import dev.jvmname.accord.parcel.ParcelableScreen
 
 @CommonParcelize
-data class ShowCodesScreen(val mat: Mat, val match: Match, val judgeCount: Int) : ParcelableScreen
+data class ShowCodesScreen(
+    val mat: Mat,
+    val match: Match,
+    val judgeCount: Int?,
+    val embedded : Boolean = false,
+) : ParcelableScreen
 
 @Immutable
 data class ShowCodesState(
@@ -18,6 +23,7 @@ data class ShowCodesState(
     val viewerCode: String,
     val joinedJudges: List<User>,
     val allJudgesJoined: Boolean,
+    val embedded: Boolean,
     val eventSink: (ShowCodesEvent) -> Unit,
 ) : CircuitUiState
 

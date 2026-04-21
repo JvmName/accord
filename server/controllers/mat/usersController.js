@@ -141,6 +141,21 @@ class UsersController extends ServerController {
         if (role == MatCode.ROLES.ADMIN) {
             await this.authorize("assign",            this.currentMat);
             await this.authorize("be assigned judge", this.currentMat);
+
+            const incompleteMatches = await this.currentMat.getIncompleteMatches();
+            const currentMatch = incompleteMatches.find(m => m.started);
+            if (currentMatch) {
+                const rounds = await currentMatch.getRounds();
+                const openRound = rounds.find(r => !r.ended);
+                if (openRound) {
+                    const activeVote = await openRound.currentRidingTimeVoteForJudge(this.currentUser);
+                    if (activeVote) {
+                        await activeVote.end();
+                    }
+                }
+                await currentMatch.removeJudge(this.currentUser);
+            }
+
             await this.currentMat.removeJudge(this.currentUser);
             logger.info(`Judge removed: user=${this.currentUser.id} mat=${this.currentMat.id}`);
         } else {
@@ -155,17 +170,23 @@ class UsersController extends ServerController {
         await this.authorize("be assigned judge", this.currentMat);
 
         const judges = await this.currentMat.getJudges()
-        if (judges.some(judge => judge.id == this.currentUser.id)) {
-            await this.renderErrors({matCode: ['user is already a judge']});
-            return;
+        if (!judges.some(judge => judge.id == this.currentUser.id)) {
+            await this.currentMat.addJudge(this.currentUser);
+            logger.info(`Judge added: user=${this.currentUser.id} mat=${this.currentMat.id}`);
         }
 
-        if (judges.length >= this.currentMat.judge_count) {
-            await this.renderErrors({matCode: ['maximum judge count reached']});
-            return;
+        const incompleteMatches = await this.currentMat.getIncompleteMatches();
+        const activeMatch = incompleteMatches.find(m => m.started);
+        if (activeMatch) {
+            const matchJudges = await activeMatch.getJudges();
+            if (matchJudges.length === 1) {
+                await this.renderErrors({matCode: ['cannot join a solo match in progress']});
+                return;
+            }
+            if (!matchJudges.some(j => j.id == this.currentUser.id)) {
+                await activeMatch.addJudge(this.currentUser);
+            }
         }
-        await this.currentMat.addJudge(this.currentUser);
-        logger.info(`Judge added: user=${this.currentUser.id} mat=${this.currentMat.id}`);
     }
 
 

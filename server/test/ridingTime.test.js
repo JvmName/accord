@@ -76,7 +76,7 @@ describe('calculateRidingTime', () => {
 
     it ('counts only the currently-active quorum period when a round has not ended', () => {
         // judge1Vote4 (4:00, open) and judge2Vote5 (4:05, open) are both active.
-        // For 3 judges, threshold = max(ceil(3/2), 2) = 2.
+        // For 3 judges, threshold = 2 (any multi-judge panel uses threshold 2).
         // The last quorum period starts when judge2Vote5 begins (2 of 3 judges active).
         // All earlier closed periods are independent; the open period at endAt is included.
         const votes  = [judge1Vote1, judge1Vote2, judge1Vote3, judge1Vote4,

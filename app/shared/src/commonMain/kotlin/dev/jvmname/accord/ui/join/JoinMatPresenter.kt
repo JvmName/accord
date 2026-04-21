@@ -34,6 +34,9 @@ class JoinMatPresenter(
     private val matManager: MatManager,
     private val scope: CoroutineScope,
 ) : Presenter<JoinMatState> {
+    private companion object{
+        @JvmStatic
+        private val trimChars = Regex("""\s|^[^a-z]+|[^a-z]+$""")                                                                                                   }
 
     private val log = Logger.withTag("UI/JoinMat")
 
@@ -50,8 +53,9 @@ class JoinMatPresenter(
                     scope.launch {
                         loading = true
                         error = null
-                        log.i { "join attempt code=${it.code.split('.').first()}..." }
-                        matManager.joinMat(it.code, it.name)
+                        val code = it.code.replace(trimChars, "")
+                        log.i { "join attempt code=${code.split('.').first()}..." }
+                        matManager.joinMat(code, it.name.trim())
                             .onEither(
                                 success = { mat ->
                                     val match = mat.currentMatch
@@ -63,7 +67,7 @@ class JoinMatPresenter(
                                         }
                                     val currentUserId = matManager.currentUserId()
                                     val isJudge = mat.judges.fastAny { j -> j.id == currentUserId }
-                                            || mat.codes.fastFirstOrNull { c -> c.code == it.code }
+                                            || mat.codes.fastFirstOrNull { c -> c.code == code }
                                                 ?.role == Role.ADMIN
                                     val role = if (isJudge) MatchRole.JUDGE else MatchRole.VIEWER
                                     val next = when {

@@ -83,7 +83,7 @@ class Mat(
     val id: MatId,
     val name: String,
     @SerialName("judge_count")
-    val judgeCount: Int,
+    val judgeCount: Int? = null,
     @SerialName("creator_id")
     val creatorId: UserId,
     val judges: List<User> = emptyList(),

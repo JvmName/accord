@@ -49,7 +49,7 @@ const Mat = {
             description: "Matches queued on this mat that have not yet started"
         }
     },
-    required: ["id", "name", "judge_count", "creator_id"]
+    required: ["id", "name", "creator_id"]
 };
 
 module.exports = { Mat };

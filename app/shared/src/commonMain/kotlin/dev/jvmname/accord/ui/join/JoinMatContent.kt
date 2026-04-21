@@ -99,8 +99,8 @@ fun JoinMatContent(state: JoinMatState, modifier: Modifier = Modifier) {
                 onClick = {
                     state.eventSink(
                         JoinMatEvent.OnJoinCodeEntered(
-                            codeState.text.toString().trim(),
-                            nameState.text.toString().trim()
+                            codeState.text.toString(),
+                            nameState.text.toString()
                         )
                     )
                 },

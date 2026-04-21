@@ -41,7 +41,7 @@ class MatsController extends ServerController {
                 request: {
                     body: {
                         name:        { type: "string",  required: true },
-                        judge_count: { type: "integer", required: true }
+                        judge_count: { type: "integer" }
                     }
                 },
                 response: {
@@ -68,9 +68,8 @@ class MatsController extends ServerController {
     * HELPERS
     ***********************************************************************************************/
     async createMat() {
-        const mat = await Mat.create({creator_id:  this.currentUser?.id,
-                                      judge_count: this.params.judge_count,
-                                      name:        this.params.name});
+        const mat = await Mat.create({creator_id: this.currentUser?.id,
+                                      name:       this.params.name});
         await this.createMatCode(mat, MatCode.ROLES.ADMIN);
         await this.createMatCode(mat, MatCode.ROLES.VIEWER);
 
@@ -85,8 +84,7 @@ class MatsController extends ServerController {
 
 
     get creationValidations() {
-        return {name: {presence: true},
-                judge_count: {isInteger: {gte: 1}}};
+        return {name: {presence: true}};
     }
 }
 

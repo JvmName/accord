@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.keepScreenOn
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -123,7 +124,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
     StandardScaffold(
         title = "Tablet: ${state.matName}",
         onBackClick = { state.eventSink(MasterSessionEvent.ReturnToMain) },
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.keepScreenOn().fillMaxSize(),
         topBarActions = {
             IconButton(onClick = { state.eventSink(MasterSessionEvent.ShowCodes) }) {
                 Icon(Icons.Default.Password, "")
