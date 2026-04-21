@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.keepScreenOn
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -88,7 +89,7 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
     }
     AudioPlayback(state.matchState.audio)
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(modifier = modifier.keepScreenOn().fillMaxSize()) {
         StandardScaffold(
             modifier = Modifier
                 .fillMaxSize()
