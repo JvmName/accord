@@ -103,6 +103,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          PRERELEASE_FLAG=""
+          if [[ "${{ needs.prepare.outputs.version }}" == *-* ]]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
           gh release create "server-${{ needs.prepare.outputs.version }}" \
             --title "Server ${{ needs.prepare.outputs.version }}" \
-            --notes "${{ steps.notes.outputs.notes }}"
+            --notes "${{ steps.notes.outputs.notes }}" \
+            $PRERELEASE_FLAG

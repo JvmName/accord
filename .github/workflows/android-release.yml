@@ -93,7 +93,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          PRERELEASE_FLAG=""
+          if [[ "${{ steps.version.outputs.version }}" == *-* ]]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
           gh release create "client-${{ steps.version.outputs.version }}" \
             --title "Client ${{ steps.version.outputs.version }}" \
             --notes "${{ steps.notes.outputs.notes }}" \
+            $PRERELEASE_FLAG \
             ${{ steps.apk.outputs.path }}
