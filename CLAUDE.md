@@ -288,6 +288,14 @@ Rules for writing socket.io and other JS interop code in `wasmJsMain`. These are
 - Files placed in `app/shared/webpack.config.d/` are injected into the generated Karma config for `wasmJsBrowserTest`. Confirmed via `build/wasm/packages/accord-shared-test/karma.conf.js`.
 - `socket-io.js` sets `config.node = false` per socket.io bundler docs to prevent webpack from processing Node.js-style dynamic requires.
 
+**Known Wasm GC bug — Metro + `@GraphExtension` (as of Apr 2026)**:
+- `wasmJsBrowserDevelopmentRun` fails in both Chrome and Firefox with `wasm validation error: type mismatch` / `call[1] expected type (ref null <ImplType>), found struct.get of type (ref null 11)` where type 11 = `kotlin.Any`.
+- **Root cause**: Metro generates `AccordGraph.Impl` with a `thisGraphInstance` field typed as `kotlin.Any`. In `Impl.<init>`, this field is read via `struct.get` and passed to child graph factory constructors that expect the concrete `Impl` type. The JVM backend emits `checkcast`; Kotlin/Wasm does not emit `ref.cast`, so the Wasm GC validator rejects the binary.
+- **Trigger**: the `@GraphExtension` child graph (`MatchGraph`) is what causes Metro to generate `thisGraphInstance`. Removing the child graph would fix it, but that's not viable.
+- **This is NOT**: a Compose/Skiko issue, a socket.io issue, or fixable by restructuring `@Provides` methods or `@ContributesTo` modules. All such changes shift the byte offset but do not resolve the error.
+- **Bug report**: `.ai/plans/metro-wasm-bug-report.md` — file against Metro and Kotlin/Wasm.
+- **Diagnosing Wasm type mismatches**: parse the name section of the `.wasm` binary with Node.js to map type indices to Kotlin class names (see conversation history for the script).
+
 ## Build Queue
 For expensive operations, ALWAYS use the `run_task` MCP tool instead of Bash.
 
