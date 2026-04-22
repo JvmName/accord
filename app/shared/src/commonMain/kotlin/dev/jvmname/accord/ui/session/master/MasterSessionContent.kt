@@ -54,6 +54,7 @@ import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.ui.LockLandscape
 import dev.jvmname.accord.ui.common.AudioPlayback
 import dev.jvmname.accord.ui.common.IconTextButton
+import dev.jvmname.accord.ui.common.PreventBack
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.MasterSessionEvent
 import dev.jvmname.accord.ui.session.MatchActions
@@ -68,6 +69,7 @@ import dev.jvmname.accord.ui.theme.TabletTimeDisplay
 @[Composable CircuitInject(MasterSessionScreen::class, MatchScope::class)]
 fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifier) {
     LockLandscape()
+    PreventBack()
     if (state.showEndRoundDialog) {
         OverlayEffect(state.showEndRoundDialog) {
             val result = show(

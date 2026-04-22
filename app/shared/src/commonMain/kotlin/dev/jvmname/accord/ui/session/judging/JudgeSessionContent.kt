@@ -62,6 +62,7 @@ import dev.jvmname.accord.domain.nameStr
 import dev.jvmname.accord.ui.StubVibrator
 import dev.jvmname.accord.ui.common.AudioPlayback
 import dev.jvmname.accord.ui.common.HoldingButton
+import dev.jvmname.accord.ui.common.PreventBack
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.JudgeSessionEvent
 import dev.jvmname.accord.ui.session.JudgeSessionEvent.ButtonPress
@@ -84,6 +85,7 @@ fun JudgeSessionContent(state: JudgeSessionState, modifier: Modifier) {
         else -> rememberVibrator()
     }
 
+    PreventBack()
     LaunchedEffect(state.hapticEvent) {
         state.hapticEvent?.effect?.consume()?.let { vibrator.vibrate(it) }
     }
