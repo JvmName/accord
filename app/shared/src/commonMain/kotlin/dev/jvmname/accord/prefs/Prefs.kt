@@ -60,7 +60,9 @@ class Prefs(
 
     fun observeMatInfo(): Flow<Mat?> {
         return datastore.data
-            .map { prefs -> prefs[MAT_INFO]?.let { json.decodeFromString<Mat>(it) } }
+            .map { prefs -> prefs[MAT_INFO] }
+            .map { j -> j?.let { json.decodeFromString<Mat>(it ) } }
+
     }
 
     suspend fun updateMainUser(user: User) {
@@ -87,7 +89,7 @@ class Prefs(
 
     fun observeCurrentMatch(): Flow<Match?> {
         return datastore.data.map { prefs ->
-            prefs[CURRENT_MATCH]?.let { json.decodeFromString<Match>(it) }
+            prefs[CURRENT_MATCH]?.let { runCatching { json.decodeFromString<Match>(it) }.getOrNull() }
         }
     }
 
