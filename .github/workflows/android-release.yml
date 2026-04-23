@@ -135,5 +135,9 @@ jobs:
         working-directory: app
         run: ./gradlew :shared:wasmJsBrowserDistribution
 
+      - name: Copy Railway config to build output
+        run: cp app/shared/railway.web.json app/shared/build/dist/wasmJs/productionExecutable/railway.json
+
       - name: Deploy to Railway
+        working-directory: app/shared/build/dist/wasmJs/productionExecutable
         run: railway up --service=${{ secrets.RAILWAY_WEB_SERVICE_ID }} --ci
