@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      exists: ${{ steps.check_release.outputs.exists }}
 
     steps:
       - name: Checkout
@@ -104,3 +107,33 @@ jobs:
             --notes "${{ steps.notes.outputs.notes }}" \
             $PRERELEASE_FLAG \
             ${{ steps.apk.outputs.path }}
+
+  web-deploy:
+    needs: release
+    if: needs.release.outputs.exists == 'false'
+    runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Make gradlew executable
+        run: chmod +x app/gradlew
+
+      - name: Build wasm distribution
+        working-directory: app
+        run: ./gradlew :shared:wasmJsBrowserDistribution
+
+      - name: Deploy to Railway
+        run: railway up --service=${{ secrets.RAILWAY_WEB_SERVICE_ID }} --ci
