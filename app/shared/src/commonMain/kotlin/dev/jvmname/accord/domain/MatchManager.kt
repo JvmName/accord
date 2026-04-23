@@ -45,7 +45,7 @@ class MatchManager(
     init {
         log.i { "MatchManager init matchId=${match.id}" }
         scope.launch {
-            val token = requireNotNull(prefs.getAuthToken())
+            val token = prefs.getAuthToken() ?: return@launch
             socket = socketFactory.create(token)
             getMatch(match.id, false)
             updateCache(match)
@@ -203,7 +203,7 @@ class MatchManager(
         }
     }
 
-    private fun updateCache(match: Match) {
+    internal fun updateCache(match: Match) {
         _currentMatch.update { curr ->
             curr?.let { match.merge(curr) } ?: match
         }
