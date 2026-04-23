@@ -4,6 +4,7 @@ import co.touchlab.kermit.Logger
 import com.github.michaelbull.result.Err
 import dev.jvmname.accord.di.MatchScope
 import dev.jvmname.accord.domain.Competitor
+import dev.jvmname.accord.domain.MatchManager
 import dev.jvmname.accord.domain.control.AudioEvent
 import dev.jvmname.accord.domain.control.ButtonEvent
 import dev.jvmname.accord.domain.control.ButtonPressTracker
@@ -17,6 +18,10 @@ import dev.jvmname.accord.domain.control.rounds.Timer
 import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.network.Match
 import dev.jvmname.accord.network.NetworkResult
+import dev.jvmname.accord.network.Round
+import dev.jvmname.accord.network.RoundResult
+import dev.jvmname.accord.network.RoundResultMethod
+import dev.jvmname.accord.network.RoundResultType
 import dev.jvmname.accord.ui.session.ManualEditAction
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
@@ -35,6 +40,7 @@ import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicReference
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -46,6 +52,8 @@ class SoloMatchSession(
     private val timer: Timer,
     private val scope: CoroutineScope,
     private val config: MatchConfig,
+    private val match: Match,
+    private val matchManager: MatchManager,
     hapticFactory: ScoreHapticFeedbackHelper.Factory,
     audioFactory: RoundAudioFeedbackHelper.Factory,
 ) : SoloSession {
@@ -53,6 +61,7 @@ class SoloMatchSession(
     private var roundNumber: Int = 1
     private var overallIndex: Int = 0
     private val totalRounds: Int = config.rounds.count { it is RoundInfo.Round }
+    private val completedRounds = mutableMapOf<Int, Round>() // roundNumber → finished Round
     private val _roundEvent = MutableStateFlow<RoundEvent?>(null)
     override val roundEvent: StateFlow<RoundEvent?> = _roundEvent.asStateFlow()
 
@@ -207,6 +216,11 @@ class SoloMatchSession(
     }
 
     override fun endRound() {
+        val event = _roundEvent.value
+        if (event != null && event.round is RoundInfo.Round && event.state != RoundEvent.RoundState.ENDED) {
+            recordRoundResult(event.roundNumber)
+        }
+
         timer.cancel()
 
         _roundEvent.update {
@@ -219,6 +233,53 @@ class SoloMatchSession(
                 state = RoundEvent.RoundState.ENDED
             )
         }
+    }
+
+    private fun recordRoundResult(roundNumber: Int) {
+        val score = _score.value
+        val winner = when {
+            score.techFallWin == Competitor.Orange -> match.red
+            score.techFallWin == Competitor.Green -> match.blue
+            score.redPoints > score.bluePoints -> match.red
+            score.bluePoints > score.redPoints -> match.blue
+            else -> null
+        }
+        val methodType = when {
+            score.techFallWin != null -> RoundResultType.TECH_FALL
+            score.redPoints == score.bluePoints -> RoundResultType.TIE
+            else -> RoundResultType.POINTS
+        }
+        val baseRound = match.rounds.getOrNull(roundNumber - 1) ?: return
+        completedRounds[roundNumber] = Round(
+            id = baseRound.id,
+            maxDuration = baseRound.maxDuration,
+            startedAt = baseRound.startedAt,
+            endedAt = Clock.System.now(),
+            score = emptyMap(),
+            result = RoundResult(
+                winner = winner,
+                method = RoundResultMethod(type = methodType, value = null),
+            ),
+        )
+        pushMatchUpdate(endedAt = null)
+    }
+
+    private fun pushMatchUpdate(endedAt: kotlin.time.Instant?) {
+        val updatedRounds = match.rounds.mapIndexed { idx, round ->
+            completedRounds[idx + 1] ?: round
+        }
+        matchManager.updateCache(
+            Match(
+                id = match.id,
+                creatorId = match.creatorId,
+                matId = match.matId,
+                startedAt = match.startedAt,
+                endedAt = endedAt,
+                red = match.red,
+                blue = match.blue,
+                rounds = updatedRounds,
+            )
+        )
     }
 
     override suspend fun endMatch(): NetworkResult<Match> {
@@ -237,6 +298,7 @@ class SoloMatchSession(
         }
 
         if (overallIndex >= config.rounds.size) {
+            pushMatchUpdate(endedAt = Clock.System.now())
             // No more rounds - emit final End event
             _roundEvent.update {
                 RoundEvent(
