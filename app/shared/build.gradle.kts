@@ -206,12 +206,29 @@ compose {
     }
 }
 
-ksp { arg("circuit.codegen.mode", "metro") }
-metro {
-    contributesAsInject = true
-    enableFullBindingGraphValidation = true
+ksp {
+    arg("circuit.codegen.mode", "metro")
 }
 
+metro {
+    contributesAsInject = true
+    enableCircuitCodegen = false
+    compilerOptions {
+//        enable("enable-full-binding-graph-validation")
+    }
+
+}
+
+
+dependencies {
+    add("kspCommonMainMetadata", libs.circuit.codegen)
+}
+
+tasks.withType<KspAATask>().configureEach {
+    if (name != "kspCommonMainKotlinMetadata") {
+        dependsOn("kspCommonMainKotlinMetadata")
+    }
+}
 
 val isRelease = providers.gradleProperty("release").isPresent
 buildConfig {
@@ -240,17 +257,5 @@ buildConfig {
             "BASE_URL",
             if (isRelease) "https://rdk.api.jvmname.dev" else "http://localhost:3000"
         )
-    }
-}
-
-dependencies {
-    add("kspCommonMainMetadata", libs.circuit.codegen)
-//    add("kspAndroid", libs.circuit.codegen)
-//    add("kspJvm", libs.circuit.codegen)
-}
-
-tasks.withType<KspAATask>().configureEach {
-    if (name != "kspCommonMainKotlinMetadata") {
-        dependsOn("kspCommonMainKotlinMetadata")
     }
 }
