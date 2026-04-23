@@ -5,10 +5,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.NextPlan
 import androidx.compose.material.icons.filled.HeartBroken
@@ -42,6 +45,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.overlay.OverlayEffect
 import com.slack.circuitx.overlays.BottomSheetOverlay
@@ -54,6 +58,7 @@ import dev.jvmname.accord.domain.control.score.Score
 import dev.jvmname.accord.ui.LockLandscape
 import dev.jvmname.accord.ui.common.AudioPlayback
 import dev.jvmname.accord.ui.common.IconTextButton
+import dev.jvmname.accord.ui.common.PreventBack
 import dev.jvmname.accord.ui.common.StandardScaffold
 import dev.jvmname.accord.ui.session.MasterSessionEvent
 import dev.jvmname.accord.ui.session.MatchActions
@@ -68,6 +73,263 @@ import dev.jvmname.accord.ui.theme.TabletTimeDisplay
 @[Composable CircuitInject(MasterSessionScreen::class, MatchScope::class)]
 fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifier) {
     LockLandscape()
+    PreventBack()
+
+    handleOverlays(state)
+
+    AudioPlayback(state.matchState.audio)
+
+    StandardScaffold(
+        title = "Tablet: ${state.matName}",
+        onBackClick = { state.eventSink(MasterSessionEvent.ReturnToMain) },
+        modifier = modifier.keepScreenOn().fillMaxSize(),
+        topBarActions = {
+            IconButton(onClick = { state.eventSink(MasterSessionEvent.ShowCodes) }) {
+                Icon(Icons.Default.Password, "")
+            }
+            IconButton(onClick = { state.eventSink(MasterSessionEvent.ShowScores) }) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .border(1.5.dp, LocalContentColor.current, RoundedCornerShape(4.dp))
+                ) {
+                    Text(
+                        "${state.matchState.roundScores[Competitor.Orange] ?: 0}:${state.matchState.roundScores[Competitor.Green] ?: 0}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
+    ) { padding ->
+        BoxWithConstraints(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
+            val isCompact = maxHeight < 600.dp
+            val verticalPadding = if (isCompact) 16.dp else 72.dp
+            val columnSpacing = if (isCompact) 8.dp else 16.dp
+            val buttonHeight = if (isCompact) 80.dp else 105.dp
+            val healthBarHeight = if (isCompact) 16.dp else 25.dp
+            val scoreTrim = if (isCompact) 64.dp else 32.dp
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(vertical = verticalPadding, horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(columnSpacing)
+            ) {
+
+                val redHealth by animateFloatAsState(
+                    state.redHealthFraction,
+                    label = "redHealth",
+                    animationSpec = tween(durationMillis = 250)
+                )
+                val blueHealth by animateFloatAsState(
+                    state.blueHealthFraction,
+                    label = "blueHealth",
+                    animationSpec = tween(durationMillis = 250)
+                )
+
+                // Combined scores + timer/label row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+//                verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(
+                        modifier = Modifier.weight(0.31f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(state.redName, style = MaterialTheme.typography.TabletCompetitor)
+                        Text(
+                            state.matchState.score.redPoints.toString(),
+                            style = MaterialTheme.typography.TabletScore,
+                            color = Competitor.Orange.color,
+                            autoSize = TextAutoSize.StepBased(
+                                minFontSize = 200.sp,
+                                maxFontSize = MaterialTheme.typography.TabletScore.fontSize,
+                                stepSize = 50.sp
+                            ),
+                            softWrap = false,
+                            modifier = Modifier.layout { measurable, constraints ->
+                                val placeable = measurable.measure(constraints)
+                                val trimmed =
+                                    (placeable.height - scoreTrim.roundToPx()).coerceAtLeast(0)
+                                layout(placeable.width, trimmed) { placeable.place(0, 0) }
+                            },
+                        )
+                        if (state.redHealthFraction > 0f) {
+                            LinearProgressIndicator(
+                                progress = { redHealth },
+                                modifier = Modifier.fillMaxWidth().height(healthBarHeight),
+                                color = Competitor.Orange.color,
+                                strokeCap = StrokeCap.Butt,
+                                trackColor = Competitor.Orange.color.copy(alpha = 0.2f),
+                                drawStopIndicator = {}
+                            )
+                        }
+                    }
+                    Column(
+                        modifier = Modifier.weight(0.38f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            state.matchState.timerDisplay,
+                            style = MaterialTheme.typography.TabletTimeDisplay,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        state.matchState.roundLabel?.let {
+                            Text(it, style = MaterialTheme.typography.displayLarge)
+                        }
+                    }
+                    Column(
+                        modifier = Modifier.weight(0.31f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(state.blueName, style = MaterialTheme.typography.TabletCompetitor)
+                        Text(
+                            "${state.matchState.score.bluePoints}",
+                            style = MaterialTheme.typography.TabletScore,
+                            color = Competitor.Green.color,
+                            softWrap = false,
+                            autoSize = TextAutoSize.StepBased(
+                                minFontSize = 200.sp,
+                                maxFontSize = MaterialTheme.typography.TabletScore.fontSize,
+                                stepSize = 50.sp
+                            ),
+                            modifier = Modifier.layout { measurable, constraints ->
+                                val placeable = measurable.measure(constraints)
+                                val trimmed =
+                                    (placeable.height - scoreTrim.roundToPx()).coerceAtLeast(0)
+                                layout(placeable.width, trimmed) { placeable.place(0, 0) }
+                            },
+                        )
+                        if (state.blueHealthFraction > 0f) {
+                            LinearProgressIndicator(
+                                progress = { blueHealth },
+                                modifier = Modifier.fillMaxWidth()
+                                    .height(healthBarHeight)
+                                    .scale(scaleX = -1f, scaleY = 1f),
+                                color = Competitor.Green.color,
+                                trackColor = Competitor.Green.color.copy(alpha = 0.2f),
+                                strokeCap = StrokeCap.Butt,
+                                drawStopIndicator = {}
+                            )
+                        }
+                    }
+                }
+
+                state.matchResult?.let { matchResult ->
+                    Text(
+                        "Match Complete",
+                        style = if (isCompact) MaterialTheme.typography.displayMedium
+                                else MaterialTheme.typography.displayLargeEmphasized,
+                    )
+                    Text(
+                        matchResult.toText(),
+                        style = if (isCompact) MaterialTheme.typography.displaySmall
+                                else MaterialTheme.typography.displayLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                // Control buttons
+                val roundInfo = state.matchState.roundInfo
+                val isActiveBreak =
+                    roundInfo?.round is RoundInfo.Break && roundInfo.state == RoundEvent.RoundState.STARTED
+                val buttonModifier = Modifier.width(275.dp).height(buttonHeight)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(
+                        12.dp,
+                        Alignment.CenterHorizontally
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (!isActiveBreak && roundInfo?.state == RoundEvent.RoundState.ENDED) {
+                        IconTextButton(
+                            modifier = buttonModifier,
+                            icon = Icons.AutoMirrored.Outlined.NextPlan,
+                            text = "Start Next Round",
+                            onClick = { state.eventSink(MasterSessionEvent.StartRound) }
+                        )
+                    }
+
+                    if (!state.isMatchStarted && state.matchResult == null) {
+                        IconTextButton(
+                            modifier = buttonModifier,
+                            icon = Icons.Outlined.PlayArrow,
+                            text = "Start Match",
+                            onClick = { state.eventSink(MasterSessionEvent.StartMatch) }
+                        )
+                    }
+
+                    state.actions.pause?.let { pause ->
+                        IconTextButton(
+                            modifier = buttonModifier,
+                            icon = Icons.Default.Pause,
+                            text = "Pause",
+                            onClick = pause,
+                        )
+                    }
+                    state.actions.endRound?.let { endRound ->
+                        IconTextButton(
+                            modifier = buttonModifier,
+                            icon = Icons.Default.HeartBroken,
+                            text = "Submission",
+                            onClick = endRound,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        )
+                    }
+                    state.actions.resume?.let { resume ->
+                        IconTextButton(
+                            modifier = buttonModifier,
+                            icon = Icons.Outlined.PlayArrow,
+                            text = "Resume",
+                            onClick = resume
+                        )
+                    }
+                    if (state.isMatchStarted && state.matchResult == null && isActiveBreak) {
+                        IconTextButton(
+                            modifier = buttonModifier,
+                            icon = Icons.Default.StopCircle,
+                            text = "End Match",
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                            onClick = { state.eventSink(MasterSessionEvent.ShowEndMatchDialog) }
+                        )
+                    }
+                    if (state.matchResult != null) {
+                        IconTextButton(
+                            modifier = buttonModifier,
+                            icon = Icons.Default.Home,
+                            text = "Return to Main",
+                            onClick = { state.eventSink(MasterSessionEvent.ReturnToMain) }
+                        )
+                        // TODO: navigate to NewMatchScreen — wire in task 10 (already built)
+                    }
+                }
+
+                state.error?.let {
+                    Text(
+                        it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun handleOverlays(
+    state: MasterSessionState,
+) {
     if (state.showEndRoundDialog) {
         OverlayEffect(state.showEndRoundDialog) {
             val result = show(
@@ -118,230 +380,13 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             state.eventSink(MasterSessionEvent.DismissScores)
         }
     }
-
-    AudioPlayback(state.matchState.audio)
-
-    StandardScaffold(
-        title = "Tablet: ${state.matName}",
-        onBackClick = { state.eventSink(MasterSessionEvent.ReturnToMain) },
-        modifier = modifier.keepScreenOn().fillMaxSize(),
-        topBarActions = {
-            IconButton(onClick = { state.eventSink(MasterSessionEvent.ShowCodes) }) {
-                Icon(Icons.Default.Password, "")
-            }
-            IconButton(onClick = { state.eventSink(MasterSessionEvent.ShowScores) }) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(28.dp)
-                        .border(1.5.dp, LocalContentColor.current, RoundedCornerShape(4.dp))
-                ) {
-                    Text(
-                        "${state.matchState.roundScores[Competitor.Orange] ?: 0}:${state.matchState.roundScores[Competitor.Green] ?: 0}",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .padding(vertical = 72.dp, horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-
-            val redHealth by animateFloatAsState(
-                state.redHealthFraction,
-                label = "redHealth",
-                animationSpec = tween(durationMillis = 250)
-            )
-            val blueHealth by animateFloatAsState(
-                state.blueHealthFraction,
-                label = "blueHealth",
-                animationSpec = tween(durationMillis = 250)
-            )
-
-            // Combined scores + timer/label row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier.weight(0.31f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(state.redName, style = MaterialTheme.typography.TabletCompetitor)
-                    Text(
-                        state.matchState.score.redPoints.toString(),
-                        style = MaterialTheme.typography.TabletScore,
-                        color = Competitor.Orange.color,
-                        softWrap = false,
-                        modifier = Modifier.layout { measurable, constraints ->
-                            val placeable = measurable.measure(constraints)
-                            val trimmed = (placeable.height - 32.dp.roundToPx()).coerceAtLeast(0)
-                            layout(placeable.width, trimmed) { placeable.place(0, 0) }
-                        },
-                    )
-                    if (state.redHealthFraction > 0f) {
-                        LinearProgressIndicator(
-                            progress = { redHealth },
-                            modifier = Modifier.fillMaxWidth().height(25.dp),
-                            color = Competitor.Orange.color,
-                            strokeCap = StrokeCap.Butt,
-                            trackColor = Competitor.Orange.color.copy(alpha = 0.2f),
-                            drawStopIndicator = {}
-                        )
-                    }
-                }
-                Column(
-                    modifier = Modifier.weight(0.38f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        state.matchState.timerDisplay,
-                        style = MaterialTheme.typography.TabletTimeDisplay,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    state.matchState.roundLabel?.let {
-                        Text(it, style = MaterialTheme.typography.displayLarge)
-                    }
-                }
-                Column(
-                    modifier = Modifier.weight(0.31f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(state.blueName, style = MaterialTheme.typography.TabletCompetitor)
-                    Text(
-                        "${state.matchState.score.bluePoints}",
-                        style = MaterialTheme.typography.TabletScore,
-                        color = Competitor.Green.color,
-                        softWrap = false,
-                        modifier = Modifier.layout { measurable, constraints ->
-                            val placeable = measurable.measure(constraints)
-                            val trimmed = (placeable.height - 32.dp.roundToPx()).coerceAtLeast(0)
-                            layout(placeable.width, trimmed) { placeable.place(0, 0) }
-                        },
-                    )
-                    if (state.blueHealthFraction > 0f) {
-                        LinearProgressIndicator(
-                            progress = { blueHealth },
-                            modifier = Modifier.fillMaxWidth()
-                                .height(25.dp)
-                                .scale(scaleX = -1f, scaleY = 1f),
-                            color = Competitor.Green.color,
-                            trackColor = Competitor.Green.color.copy(alpha = 0.2f),
-                            strokeCap = StrokeCap.Butt,
-                            drawStopIndicator = {}
-                        )
-                    }
-                }
-            }
-
-            // Control buttons
-            val roundInfo = state.matchState.roundInfo
-            val isActiveBreak =
-                roundInfo?.round is RoundInfo.Break && roundInfo.state == RoundEvent.RoundState.STARTED
-            val buttonModifier = Modifier.width(275.dp).height(105.dp)
-            FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(top = 64.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                if (!isActiveBreak && roundInfo?.state == RoundEvent.RoundState.ENDED) {
-                    IconTextButton(
-                        modifier = buttonModifier,
-                        icon = Icons.AutoMirrored.Outlined.NextPlan,
-                        text = "Start Next Round",
-                        onClick = { state.eventSink(MasterSessionEvent.StartRound) }
-                    )
-                }
-
-                if (!state.isMatchStarted && state.matchResult == null) {
-                    IconTextButton(
-                        modifier = buttonModifier,
-                        icon = Icons.Outlined.PlayArrow,
-                        text = "Start Match",
-                        onClick = { state.eventSink(MasterSessionEvent.StartMatch) }
-                    )
-                }
-
-                state.actions.pause?.let { pause ->
-                    IconTextButton(
-                        modifier = buttonModifier,
-                        icon = Icons.Default.Pause,
-                        text = "Pause",
-                        onClick = pause,
-                    )
-                }
-                state.actions.endRound?.let { endRound ->
-                    IconTextButton(
-                        modifier = buttonModifier,
-                        icon = Icons.Default.HeartBroken,
-                        text = "Submission",
-                        onClick = endRound,
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    )
-                }
-                state.actions.resume?.let { resume ->
-                    IconTextButton(
-                        modifier = buttonModifier,
-                        icon = Icons.Outlined.PlayArrow,
-                        text = "Resume",
-                        onClick = resume
-                    )
-                }
-                if (state.isMatchStarted && state.matchResult == null && isActiveBreak) {
-                    IconTextButton(
-                        modifier = buttonModifier,
-                        icon = Icons.Default.StopCircle,
-                        text = "End Match",
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                        onClick = { state.eventSink(MasterSessionEvent.ShowEndMatchDialog) }
-                    )
-                }
-            }
-
-            state.matchResult?.let { matchResult ->
-                Text(
-                    "Match Complete",
-                    style = MaterialTheme.typography.displayLargeEmphasized,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                Text(
-                    matchResult.toText(),
-                    style = MaterialTheme.typography.displayLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                IconTextButton(
-                    modifier = buttonModifier,
-                    icon = Icons.Default.Home,
-                    text = "Return to Main",
-                    onClick = { state.eventSink(MasterSessionEvent.ReturnToMain) }
-                )
-                // TODO: navigate to NewMatchScreen — wire in task 10 (already built)
-            }
-
-            state.error?.let {
-                Text(
-                    it,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
-    }
 }
 
 
 // Match started, active round in progress — pause + end round + end match visible
 // Health bars: red ~half (11/24), blue ~full (23/24)
 @Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
+@Preview(device = "spec:width=1429dp,height=589dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_ActiveRound_Preview() {
     AccordTheme {
@@ -426,6 +471,7 @@ private fun MasterSessionContent_BetweenRounds_Preview() {
 
 // Pre-match start. Health bars: both full (1.0f).
 @Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
+@Preview(device = "spec:width=1429dp,height=589dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_Start_Preview() {
     AccordTheme {
@@ -461,6 +507,7 @@ private fun MasterSessionContent_Start_Preview() {
 
 // Match ended. No health bars.
 @Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
+@Preview(device = "spec:width=1429dp,height=589dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun MasterSessionContent_Ended_Preview() {
     AccordTheme {
@@ -500,6 +547,7 @@ private fun MasterSessionContent_Ended_Preview() {
         )
     }
 }
+
 
 @Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
