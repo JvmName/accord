@@ -113,7 +113,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
             val columnSpacing = if (isCompact) 8.dp else 16.dp
             val buttonHeight = if (isCompact) 80.dp else 105.dp
             val healthBarHeight = if (isCompact) 16.dp else 25.dp
-            val scoreTrim = if (isCompact) 16.dp else 32.dp
+            val scoreTrim = if (isCompact) 64.dp else 32.dp
 
             Column(
                 modifier = Modifier
@@ -222,6 +222,20 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                     }
                 }
 
+                state.matchResult?.let { matchResult ->
+                    Text(
+                        "Match Complete",
+                        style = if (isCompact) MaterialTheme.typography.displayMedium
+                                else MaterialTheme.typography.displayLargeEmphasized,
+                    )
+                    Text(
+                        matchResult.toText(),
+                        style = if (isCompact) MaterialTheme.typography.displaySmall
+                                else MaterialTheme.typography.displayLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
                 Spacer(Modifier.weight(1f))
 
                 // Control buttons
@@ -289,28 +303,15 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                             onClick = { state.eventSink(MasterSessionEvent.ShowEndMatchDialog) }
                         )
                     }
-                }
-
-                state.matchResult?.let { matchResult ->
-                    Text(
-                        "Match Complete",
-                        style = MaterialTheme.typography.displayLargeEmphasized,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-
-                    Text(
-                        matchResult.toText(),
-                        style = MaterialTheme.typography.displayLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    IconTextButton(
-                        modifier = buttonModifier,
-                        icon = Icons.Default.Home,
-                        text = "Return to Main",
-                        onClick = { state.eventSink(MasterSessionEvent.ReturnToMain) }
-                    )
-                    // TODO: navigate to NewMatchScreen — wire in task 10 (already built)
+                    if (state.matchResult != null) {
+                        IconTextButton(
+                            modifier = buttonModifier,
+                            icon = Icons.Default.Home,
+                            text = "Return to Main",
+                            onClick = { state.eventSink(MasterSessionEvent.ReturnToMain) }
+                        )
+                        // TODO: navigate to NewMatchScreen — wire in task 10 (already built)
+                    }
                 }
 
                 state.error?.let {
