@@ -25,7 +25,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           java-version: '21'
-          distribution: 'temurin'
+          distribution: 'zulu'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
@@ -123,7 +123,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           java-version: '21'
-          distribution: 'temurin'
+          distribution: 'zulu'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
@@ -135,8 +135,10 @@ jobs:
         working-directory: app
         run: ./gradlew :shared:wasmJsBrowserDistribution
 
-#      - name: Copy Railway config to build output
-#        run: cp app/shared/railway.web.json app/shared/build/dist/wasmJs/productionExecutable/railway.json
+      - name: Copy Railway config to build output
+        run: |
+          cp app/shared/railway.web.json app/shared/build/dist/wasmJs/productionExecutable/railway.json
+          cp app/shared/Staticfile.web app/shared/build/dist/wasmJs/productionExecutable/Staticfile
 
       - name: Deploy to Railway
         working-directory: app/shared/build/dist/wasmJs/productionExecutable
