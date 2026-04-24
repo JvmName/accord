@@ -112,7 +112,6 @@ jobs:
     needs: release
     if: needs.release.outputs.exists == 'false'
     runs-on: ubuntu-latest
-    container: ghcr.io/railwayapp/cli:latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
@@ -127,6 +126,9 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
+
+      - name: Install Railway CLI
+        run: npm i -g @railway/cli
 
       - name: Make gradlew executable
         run: chmod +x app/gradlew
