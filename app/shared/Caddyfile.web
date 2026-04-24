@@ -1,0 +1,18 @@
+{
+	admin off
+}
+
+:8080 {
+	root * .
+	encode gzip
+
+	@notFile not file
+	rewrite @notFile /index.html
+
+	file_server
+
+	header Content-Security-Policy "default-src 'self'; img-src 'self' data: https: *; style-src 'self' 'unsafe-inline' https: *; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https: *; font-src 'self' data: https: *; connect-src 'self' https: *; media-src 'self' https: *; object-src 'none'; frame-src 'self' https: *;"
+	header X-Content-Type-Options "nosniff"
+	header X-XSS-Protection "1; mode=block"
+	header Referrer-Policy "strict-origin-when-cross-origin"
+}

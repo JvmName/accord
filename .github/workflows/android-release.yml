@@ -144,7 +144,7 @@ jobs:
       - name: Copy Railway config to build output
         run: |
           cp app/shared/railway.web.json app/shared/build/dist/wasmJs/productionExecutable/railway.json
-          cp app/shared/Staticfile.web app/shared/build/dist/wasmJs/productionExecutable/Staticfile
+          cp app/shared/Caddyfile.web app/shared/build/dist/wasmJs/productionExecutable/Caddyfile
 
       - name: Deploy to Railway
         working-directory: app/shared/build/dist/wasmJs/productionExecutable
