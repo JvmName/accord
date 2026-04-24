@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
@@ -31,13 +33,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -74,28 +74,22 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
             contentAlignment = Alignment.TopCenter,
         ) {
             val isTablet = maxWidth >= 600.dp
-            val verticalPadding = if (isTablet) 64.dp else 32.dp
-            val sectionSpacing = if (isTablet) 24.dp else 16.dp
+            val isCompact = maxHeight < 670.dp
+            val verticalPadding = if (isCompact) 12.dp else if (isTablet) 64.dp else 32.dp
+            val sectionSpacing = if (isCompact) 8.dp else if (isTablet) 24.dp else 16.dp
 
-            val matNameState = rememberTextFieldState()
             val redNameState = rememberTextFieldState()
             val blueNameState = rememberTextFieldState()
             var judgeCount by remember { mutableIntStateOf(3) }
-            var hasAttemptedSubmit by remember { mutableStateOf(false) }
-
-            val matNameError = hasAttemptedSubmit && matNameState.text.isBlank()
-            val redNameError = hasAttemptedSubmit && redNameState.text.isBlank()
-            val blueNameError = hasAttemptedSubmit && blueNameState.text.isBlank()
+            var matNumber by remember { mutableIntStateOf(1) }
 
             fun submitForm() {
-                hasAttemptedSubmit = true
-                if (matNameState.text.isBlank() || redNameState.text.isBlank() || blueNameState.text.isBlank()) return
                 state.eventSink(
                     CreateMatMatchEvent.CreateMat(
-                        matName = matNameState.text.toString(),
+                        matName = "Mat $matNumber",
                         judgeCount = judgeCount,
-                        redName = redNameState.text.toString(),
-                        blueName = blueNameState.text.toString(),
+                        redName = redNameState.text.toString().ifBlank { "Orange" },
+                        blueName = blueNameState.text.toString().ifBlank { "Green" },
                     )
                 )
             }
@@ -107,25 +101,16 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
                     .padding(vertical = verticalPadding, horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("Mat Info", style = AccordTypography.titleLarge)
+                Text(
+                    "Create a Mat + Match", style = AccordTypography.displayMedium,
+                    modifier = Modifier.combinedClickable(
+                        onLongClick = { state.eventSink(CreateMatMatchEvent.LongClick) },
+                        onClick = {}
+                    ))
 
-                Spacer(Modifier.height(sectionSpacing))
+                Spacer(Modifier.height(sectionSpacing * 2))
 
-                OutlinedTextField(
-                    matNameState,
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Mat #1") },
-                    label = { Text("Mat Name *") },
-                    isError = matNameError,
-                    supportingText = if (matNameError) {
-                        { Text("Required") }
-                    } else null,
-                    lineLimits = TextFieldLineLimits.SingleLine,
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        capitalization = KeyboardCapitalization.Words,
-                        imeAction = ImeAction.Next,
-                    ),
-                )
+                MatNumberSelector(matNumber) { matNumber = it }
 
                 Spacer(Modifier.height(sectionSpacing))
 
@@ -133,22 +118,12 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
 
                 Spacer(Modifier.height(sectionSpacing))
 
-                Text(
-                    "Match Info", style = AccordTypography.titleLarge,
-                    modifier = Modifier.combinedClickable(
-                        onLongClick = { state.eventSink(CreateMatMatchEvent.LongClick) },
-                        onClick = {}
-                    )
-                )
-
-                Spacer(Modifier.height(sectionSpacing))
 
                 CompetitorEditText(
                     competitor = Competitor.Orange,
                     state = redNameState,
                     imeAction = ImeAction.Next,
                     modifier = Modifier.fillMaxWidth(),
-                    isError = redNameError,
                 )
 
                 Spacer(Modifier.height(sectionSpacing))
@@ -158,11 +133,10 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
                     state = blueNameState,
                     imeAction = ImeAction.Done,
                     modifier = Modifier.fillMaxWidth(),
-                    isError = blueNameError,
                     onKeyboardAction = { submitForm() },
                 )
 
-                Spacer(Modifier.height(if (isTablet) 80.dp else 64.dp))
+                Spacer(Modifier.height(if (isCompact) 24.dp else if (isTablet) 80.dp else 64.dp))
 
                 Button(
                     modifier = Modifier.fillMaxWidth(),
@@ -186,6 +160,26 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
 }
 
 @Composable
+private fun MatNumberSelector(matNumber: Int, onMatNumberChange: (Int) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
+    ) {
+        Text("Mat #:", style = AccordTypography.titleLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (n in 1..3) {
+                if (matNumber == n) {
+                    FilledIconButton(onClick = {}) { Text(n.toString()) }
+                } else {
+                    OutlinedIconButton(onClick = { onMatNumberChange(n) }) { Text(n.toString()) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun JudgeCountEditText(judgeCount: Int, onJudgeCountChange: (count: Int) -> Unit) {
     val textState = rememberTextFieldState(judgeCount.toString())
     LaunchedEffect(judgeCount) {
@@ -194,7 +188,7 @@ private fun JudgeCountEditText(judgeCount: Int, onJudgeCountChange: (count: Int)
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)
     ) {
         OutlinedIconButton(
             modifier = Modifier.padding(top = 6.dp),
@@ -207,7 +201,7 @@ private fun JudgeCountEditText(judgeCount: Int, onJudgeCountChange: (count: Int)
         OutlinedTextField(
             label = { Text("# Judges") },
             state = textState,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.width(120.dp),
             lineLimits = TextFieldLineLimits.SingleLine,
             inputTransformation = InputTransformation.byValue { current, proposed ->
                 proposed.toString()
@@ -234,7 +228,7 @@ private fun JudgeCountEditText(judgeCount: Int, onJudgeCountChange: (count: Int)
 
 @Preview
 @Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
-
+@Preview(device = "spec:width=1429dp,height=589dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun CreateMatMatchContentPreview() {
     AccordTheme {
@@ -244,6 +238,7 @@ private fun CreateMatMatchContentPreview() {
 
 @Preview
 @Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
+@Preview(device = "spec:width=1429dp,height=589dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun CreateMatMatchContentLoadingPreview() {
     AccordTheme {

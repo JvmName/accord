@@ -66,13 +66,13 @@ fun ShowCodesContent(state: ShowCodesState, modifier: Modifier = Modifier) {
                 Spacer(Modifier.height(sectionSpacing))
 
                 Text(
-                    text = "Judges joined: ${state.joinedJudges.size} ${if (state.allJudgesJoined) "✅" else ""}",
+                    text = "Judges joined: ${state.joinedJudges.size} / ${state.totalJudges} ${if (state.totalJudges == state.joinedJudges.size) "✅" else ""}",
                     style = MaterialTheme.typography.titleLarge,
                 )
 
                 Spacer(Modifier.height(64.dp))
 
-                if(!state.embedded) {
+                if (!state.embedded) {
                     Button(
                         modifier = Modifier.fillMaxWidth(),
                         onClick = { state.eventSink(ShowCodesEvent.Ready) },
@@ -134,7 +134,7 @@ private fun ShowCodesContentPreview() {
                 adminCode = "scuba.horse.bicycle.stapler",
                 viewerCode = "battery.horse.stapler",
                 joinedJudges = listOf(User(UserId("j1"), "Charlie")),
-                allJudgesJoined = true,
+                totalJudges = 3,
                 embedded = false,
                 eventSink = {},
             ),

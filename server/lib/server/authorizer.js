@@ -49,7 +49,7 @@ class Authorizer {
                 if (this.#matCode.mat_id != scope.id) return false;
                 return this.#matCode.isAdminCode;
             case 'create':
-                return true;
+                return Boolean(this.#user);
             case 'be assigned judge':
                 return true;
             case 'view':

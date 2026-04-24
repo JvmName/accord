@@ -1,6 +1,6 @@
 {
     "name": "server",
-    "version": "1.0.0-rc03",
+    "version": "1.0.0-rc04",
     "private": true,
     "scripts": {
         "start": "nodemon ./bin/www",
