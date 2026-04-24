@@ -1,5 +1,6 @@
 package dev.jvmname.accord.ui.main
 
+import accord.shared.BuildConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -93,6 +94,12 @@ fun MainContent(state: MainState, modifier: Modifier) {
                     title = "Control Time (Offline Mode)",
                     description = "Practice timing without a network connection",
                     onClick = { state.eventSink(SoloRideTime) }
+                )
+                Text(
+                    "v${BuildConfig.VERSION_NAME}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
             }
         }

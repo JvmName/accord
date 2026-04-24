@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'app/androidApp/build.gradle.kts'
+      - 'app/gradle.properties'
 
 jobs:
   release:
@@ -35,7 +35,7 @@ jobs:
       - name: Extract versionName
         id: version
         run: |
-          VERSION=$(grep 'versionName = ' app/androidApp/build.gradle.kts | grep -oP '"\K[^"]+')
+          VERSION=$(grep '^VERSION_NAME=' app/gradle.properties | cut -d'=' -f2)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Detected version: $VERSION"
 

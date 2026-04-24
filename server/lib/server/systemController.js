@@ -1,4 +1,5 @@
 const { ServerController } = require('./serverController');
+const { version } = require('../../package.json');
 
 
 class SystemController extends ServerController {
@@ -9,7 +10,7 @@ class SystemController extends ServerController {
 
 
     getIndex() {
-        this.render('Hello World');
+        this.render(`Hello World v${version}`);
     }
 
 
