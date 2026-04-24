@@ -1,0 +1,5 @@
+# root directory to serve
+root: shared/build/dist/wasmJs/productionExecutable/
+
+# enable SPA routing: fall back to index.html for unmatched routes
+index_fallback: true
