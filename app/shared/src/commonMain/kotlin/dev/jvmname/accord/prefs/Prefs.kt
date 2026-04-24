@@ -1,6 +1,7 @@
 package dev.jvmname.accord.prefs
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.Storage
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
@@ -8,6 +9,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import dev.jvmname.accord.common.Dispatchers
 import dev.jvmname.accord.network.AuthToken
 import dev.jvmname.accord.network.Mat
 import dev.jvmname.accord.network.Match
@@ -16,12 +18,15 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.plus
 import kotlinx.serialization.json.Json
+import okio.Path
+
+
+expect fun createPrefsStorage(path: Path): Storage<Preferences>
 
 @[Inject SingleIn(AppScope::class)]
 class Prefs(
@@ -31,18 +36,19 @@ class Prefs(
 ) {
 
     private val datastore: DataStore<Preferences> by lazy {
-        PreferenceDataStoreFactory.createWithPath(
+        PreferenceDataStoreFactory.create(
+            storage = createPrefsStorage(dirs.getDataStorePath(FILENAME)),
             corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
             migrations = emptyList(),
             scope = scope + Dispatchers.IO,
-            produceFile = { dirs.getDataStorePath(FILENAME) },
         )
     }
 
     suspend fun setAuthToken(token: AuthToken?) {
+        val tokenStr = token?.token
         datastore.edit { prefs ->
-            prefs.remove(AUTH_TOKEN)
-            token?.let { prefs[AUTH_TOKEN] = it.token }
+            if (tokenStr != null) prefs[AUTH_TOKEN] = tokenStr
+            else if (prefs[AUTH_TOKEN] != null) prefs.remove(AUTH_TOKEN)
         }
     }
 
@@ -60,7 +66,9 @@ class Prefs(
 
     fun observeMatInfo(): Flow<Mat?> {
         return datastore.data
-            .map { prefs -> prefs[MAT_INFO]?.let { json.decodeFromString<Mat>(it) } }
+            .map { prefs -> prefs[MAT_INFO] }
+            .map { j -> j?.let { json.decodeFromString<Mat>(it ) } }
+
     }
 
     suspend fun updateMainUser(user: User) {
@@ -76,25 +84,23 @@ class Prefs(
     }
 
     suspend fun updateCurrentMatch(match: Match?) {
+        val matchStr = match?.let { json.encodeToString(it) }
         datastore.edit { prefs ->
-            if (match == null) {
-                prefs.remove(CURRENT_MATCH)
-            } else {
-                prefs[CURRENT_MATCH] = json.encodeToString(match)
-            }
+            if (matchStr != null) prefs[CURRENT_MATCH] = matchStr
+            else if (prefs[CURRENT_MATCH] != null) prefs.remove(CURRENT_MATCH)
         }
     }
 
     fun observeCurrentMatch(): Flow<Match?> {
         return datastore.data.map { prefs ->
-            prefs[CURRENT_MATCH]?.let { json.decodeFromString<Match>(it) }
+            prefs[CURRENT_MATCH]?.let { runCatching { json.decodeFromString<Match>(it) }.getOrNull() }
         }
     }
 
     suspend fun updateJoinCode(code: String?) {
         datastore.edit { prefs ->
-            if (code == null) prefs.remove(JOIN_CODE)
-            else prefs[JOIN_CODE] = code
+            if (code != null) prefs[JOIN_CODE] = code
+            else if (prefs[JOIN_CODE] != null) prefs.remove(JOIN_CODE)
         }
     }
 
@@ -111,7 +117,9 @@ class Prefs(
     }
 
     suspend fun clearPreBoostVolume() {
-        datastore.edit { it.remove(PRE_BOOST_VOLUME) }
+        datastore.edit { prefs ->
+            if (prefs[PRE_BOOST_VOLUME] != null) prefs.remove(PRE_BOOST_VOLUME)
+        }
     }
 
     companion object {

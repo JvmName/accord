@@ -40,7 +40,7 @@ cd app
 ./gradlew assembleRelease   # Build Android release APK (requires signing config)
 
 # Run
-./gradlew :app:run          # Run JVM desktop app
+./gradlew :shared:run       # Run JVM desktop app
 
 # Android deployment
 ./gradlew installDebug      # Install debug APK to connected device
@@ -52,7 +52,7 @@ cd app
 
 The application's defining feature is **threshold-based consensus** for tracking control time (`/server/lib/ridingTime.js`):
 
-- **Vote Threshold**: For multiple judges, threshold = `max(ceil(judgeCount/2), 2)`
+- **Vote Threshold**: Single judge: threshold = 1. Multiple judges: threshold = 2 (always, regardless of judge count)
 - **Control Recognition**: Control is only counted when active votes ≥ threshold
 - **Time Accumulation**: Riding time accumulates only during periods when threshold is met
 - **Winner Determination**: Competitor with more riding time wins (or by submission if called)
@@ -66,7 +66,7 @@ Users (authenticated via API token)
   ↓
 Mats (training locations with word-based invite codes like "morning.coffee.bicycle")
   ↓
-Matches (red vs blue competitor)
+Matches (orange vs green competitor)
   ↓
 Rounds (sequential sub-matches with RidingTimeVotes and RoundPauses)
   ↓
@@ -95,7 +95,7 @@ RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
   - `round.tech-fall` — fired once when tech fall threshold is reached and round is ended
   - `break.ended` — fired once when a break expires and the next round has been auto-started
 
-- **Client**: Flow-based observation (`/app/app/src/commonMain/kotlin/dev/jvmname/accord/network/SocketClient.kt`)
+- **Client**: Flow-based observation (`/app/shared/src/commonMain/kotlin/dev/jvmname/accord/network/SocketClient.kt`)
   - `observeMatch(matchId): Flow<Match>` auto-joins room on collection and listens to `match.update`, `round.tech-fall`, and `break.ended`
   - Auto-leaves room on cancellation
 
@@ -125,7 +125,7 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 ### Android App Architecture
 
 **UI Framework**: Slack Circuit (Presenter pattern)
-- Screens in `/app/app/src/commonMain/kotlin/dev/jvmname/accord/ui/`
+- Screens in `/app/shared/src/commonMain/kotlin/dev/jvmname/accord/ui/`
 - Each screen has: `Screen.kt` (route), `Presenter.kt` (logic), `Content.kt` (UI)
 - Navigation is stack-based with gesture support
 
@@ -134,13 +134,14 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 - `MatchScope`: Per-match scoped dependencies
 - Assisted injection for screen parameters
 
-**Domain Layer** (`/app/app/src/commonMain/kotlin/dev/jvmname/accord/domain/`):
+**Domain Layer** (`/app/shared/src/commonMain/kotlin/dev/jvmname/accord/domain/`):
 - `MatchManager`: Match lifecycle, API calls, caching
 - `MatManager`: Mat operations
 - `UserManager`: Authentication and profile
 - `RoundTracker`: Local round timing for solo mode
+- `RoundAudioFeedbackHelper`: Plays audible alerts (start/stop/end of round, control changes) based on match state transitions
 
-**Network Layer** (`/app/app/src/commonMain/kotlin/dev/jvmname/accord/network/`):
+**Network Layer** (`/app/shared/src/commonMain/kotlin/dev/jvmname/accord/network/`):
 - `AccordClient`: HTTP client (Ktor) for REST API
 - `SocketClient`: WebSocket client (Socket.IO) for real-time updates
 - `ApiResult<T>`: Sealed interface for Success/Error responses
@@ -154,7 +155,7 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 
 **Server** (JavaScript with Sequelize):
 - `User`: `id`, `name`, `api_token`
-- `Mat`: `id`, `name`, `judge_count`, `creator_id`
+- `Mat`: `id`, `name`, `judge_count` (optional, no longer required on creation), `creator_id`
 - `Match`: `id`, `mat_id`, `creator_id`, `red_competitor_id`, `blue_competitor_id`, `red_score`, `blue_score`, `started_at`, `ended_at`, `break_started_at`, `break_duration`
 - `Round`: `id`, `match_id`, `ended_at`, `declared_winner_id`, `stoppage`
 - `RidingTimeVote`: `id`, `round_id`, `judge_id`, `competitor_id`, `ended_at`
@@ -177,13 +178,13 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 
 5. **Room-Based Broadcasting**: WebSocket rooms keep server scalable; all interested clients receive updates atomically
 
-6. **Match Extensions in `models_ext.kt`**: All winner/score derivation from `Match` belongs in `/app/app/src/commonMain/kotlin/dev/jvmname/accord/network/models_ext.kt`, not inlined in presenters. Key extensions: `Match.winner(roundIndex)`, `Match.winnerCompetitor`, `Match.roundScore()`, `Match.toMatchResult()`. `toMatchResult()` always returns a non-null `MatchResult` for any ended match — do NOT add a `winner ?: return null` guard; a null winner on an ended match is a valid draw. `Match.merge(other)` handles cache updates — some HTTP endpoints return partial payloads (omitting `judges`, `mat`, etc.) and merge preserves cached values for those. `break_remaining` is a worker-computed field that is only present in WebSocket `match.update` payloads — HTTP responses always return it as `null`. `merge` uses `if (breakStartedAt != null) breakRemaining ?: other.breakRemaining else null` to preserve the last WebSocket value during an active break and clear it once the break ends.
+6. **Match Extensions in `models_ext.kt`**: All winner/score derivation from `Match` belongs in `/app/shared/src/commonMain/kotlin/dev/jvmname/accord/network/models_ext.kt`, not inlined in presenters. Key extensions: `Match.winner(roundIndex)`, `Match.winnerCompetitor`, `Match.roundScore()`, `Match.toMatchResult()`. `toMatchResult()` always returns a non-null `MatchResult` for any ended match — do NOT add a `winner ?: return null` guard; a null winner on an ended match is a valid draw. `Match.merge(other)` handles cache updates — some HTTP endpoints return partial payloads (omitting `judges`, `mat`, etc.) and merge preserves cached values for those. `break_remaining` is a worker-computed field that is only present in WebSocket `match.update` payloads — HTTP responses always return it as `null`. `merge` uses `if (breakStartedAt != null) breakRemaining ?: other.breakRemaining else null` to preserve the last WebSocket value during an active break and clear it once the break ends.
 
 7. **`MatchResult` is shared across screens**: Defined in `JudgeSessionScreen.kt` but imported by `MasterSessionScreen.kt` as well. Has `winConditions: String` and `roundWinners: List<Competitor>`. Empty `roundWinners` means all rounds were tied (draw); `toText()` handles this case.
 
 8. **Judge vs Master role separation**: Judges only vote on control time — they do NOT handle meta-round actions (submission, stoppage, manual score edits are master-only). `JudgeSessionEvent.EndRound` is a simple `data object` that ends the round with no params. All structured end-round actions (submission name, who submitted/stopped, stoppage vs submission choice) belong exclusively in the master session.
 
-9. **Master session overlay pattern**: The master uses Circuit's `OverlayEffect` + `BottomSheetOverlay` for dialogs (not `AlertDialog`). The end-round dialog is `SubmissionDialog` in `/app/.../ui/session/master/overlay.kt`, which returns a `SubmissionResult` sealed class. `SubmissionResult.Confirmed` carries `winner` and `stoppage`. The content maps the result to `MasterSessionEvent.RecordRoundResult(winner, stoppage)` — NOT `EndRound`. `EndRound` is a `data object` that fires `POST /rounds/end` immediately on button tap and opens the dialog; `RecordRoundResult` fires `PATCH /rounds/result` when the dialog is confirmed.
+9. **Master session overlay pattern**: The master uses Circuit's `OverlayEffect` + `BottomSheetOverlay` for dialogs (not `AlertDialog`). The end-round dialog is `SubmissionDialog` in `/app/.../ui/session/master/overlay.kt`, which returns a `SubmissionResult` sealed class. `SubmissionResult.Confirmed` carries `winner` and `stoppage`. The content maps the result to `MasterSessionEvent.RecordRoundResult(winner, stoppage)` — NOT `EndRound`. `EndRound` is a `data object` that fires `POST /rounds/end` immediately on button tap and opens the dialog; `RecordRoundResult` fires `PATCH /rounds/result` when the dialog is confirmed. There is also a separate `EndMatchConfirmDialog` (triggered by `MasterSessionEvent.ShowEndMatchDialog` / `DismissEndMatchDialog`) that shows a confirmation prompt before ending the entire match — distinct from the per-round end flow. `MasterSessionState` includes `showEndMatchDialog`, `orangeHealthFraction`, and `greenHealthFraction` for the health bar UI.
 
 10. **All rounds always play out**: A match always runs all `maxRounds` (3) rounds — there is no early exit when a competitor reaches 2 wins. The match winner is determined by best-2-of-3 only after all 3 rounds have completed. `Match.getWinner()` returns `null` while rounds are still in progress. Do not reintroduce early-exit logic in `Round.end()` or `Match.getWinner()`.
 
@@ -236,7 +237,7 @@ WebSocket authentication uses `socket.handshake.auth.apiToken`.
 
 ### Adding a New Screen (Android)
 
-1. Create screen directory in `/app/app/src/commonMain/kotlin/dev/jvmname/accord/ui/<screen-name>/`
+1. Create screen directory in `/app/shared/src/commonMain/kotlin/dev/jvmname/accord/ui/<screen-name>/`
 2. Create three files:
    - `<ScreenName>Screen.kt` - Screen data class (route)
    - `<ScreenName>Presenter.kt` - Business logic with `@CircuitInject` annotation
@@ -253,6 +254,68 @@ WebSocket authentication uses `socket.handshake.auth.apiToken`.
 5. Update `/server/README.md` with endpoint documentation
 
 
+## Kotlin/Wasm JS Interop (wasmJsMain)
+
+Rules for writing socket.io and other JS interop code in `wasmJsMain`. These are not derivable from the code and were learned the hard way.
+
+**File structure**:
+- External declarations with `@file:JsModule("...")` must be in their own file — `js()` helper functions in the same file are treated as module imports and fail to compile.
+- `js()` helpers live in the `actual` implementation file (e.g., `SocketClient.wasmJs.kt`), never in the `@file:JsModule` file.
+- All files using `JsAny`, `js()`, or any Wasm/JS interop API need `@file:OptIn(ExperimentalWasmJsInterop::class)` at the top.
+
+**External class rules**:
+- All `external class` declarations must extend `: JsAny` — this is required for Wasm GC reference typing.
+- When the Kotlin name differs from the JS export name, use `@JsName("ExactJsName")`. Example: socket.io-client exports `Socket`, not `JsSocket`, so `@JsName("Socket")` is required.
+
+**`js()` intrinsic rules**:
+- Argument must be a string literal (no variables, no concatenation).
+- Single-line preferred — multiline/triple-quoted behavior is unconfirmed.
+- Function parameters are accessible by their Kotlin names inside the string.
+- Add `@Suppress("UNUSED_PARAMETER")` on every `js()` helper — the IDE can't see parameter usage inside the string literal.
+
+**Type rules**:
+- Kotlin `String` maps directly to JS `String` in `external` signatures. It is NOT a subtype of `JsAny` — don't use `JsAny` where `String` is correct and vice versa.
+- For event callbacks, use three separate payload helpers depending on the event:
+  - Match objects → `js("JSON.stringify(obj)")` then `json.decodeFromString<Match>(...)`
+  - Disconnect reason (plain string) → `js("String(obj)")`
+  - connect_error (JS Error) → `js("err.message || String(err)")` — `JSON.stringify` returns `"{}"` for Error objects
+
+**Lambda identity**:
+- Kotlin/Wasm uses `getCachedJsObject` for lambda-to-JS-function conversion. The same Kotlin `val` reference always produces the same JS wrapper.
+- `socket.on(event, listener)` + `socket.off(event, listener)` with the same `val` correctly de-registers. No dispatch-map escape hatch is needed.
+
+**webpack.config.d**:
+- Files placed in `app/shared/webpack.config.d/` are injected into the generated Karma config for `wasmJsBrowserTest`. Confirmed via `build/wasm/packages/accord-shared-test/karma.conf.js`.
+- `socket-io.js` sets `config.node = false` per socket.io bundler docs to prevent webpack from processing Node.js-style dynamic requires.
+
+**`Cannot cast null to kotlin.String` — diagnosing on Wasm**:
+- This error means a null value reached a non-nullable `String` position at the Wasm GC level. Common causes:
+  1. A DB column that is `allowNull: true` on the server but mapped to a non-nullable value class (e.g. `UserId`, `AuthToken`) in Kotlin. Fix: add a migration to enforce `NOT NULL` on the column.
+  2. Stale data in `DataStore` (serialized with a field that was later made non-nullable). Fix: wrap `json.decodeFromString<T>()` in `runCatching { }.getOrNull()` in `observeMatInfo()` / `observeCurrentMatch()` so corrupt cache silently returns null.
+  3. `MutablePreferences.remove(key)` in DataStore 1.3.0-alpha on Wasm — see below.
+
+**Known DataStore bug — `MutablePreferences.remove(key)` on Kotlin/Wasm (as of Apr 2026)**:
+- `prefs.remove(key)` crashes with `Cannot cast null to kotlin.String` when the key does not yet exist in the store. Internally, DataStore casts the null return of `map.remove()` to non-nullable `String` — a DataStore alpha Wasm GC codegen bug.
+- **Affected**: any `Preferences.Key<String>` passed to `remove`. `Int` keys may not be affected.
+- **Fix**: never call `remove` on the path where you're about to `set`. Restructure as:
+  ```kotlin
+  val valueStr = value?.extractString()
+  datastore.edit { prefs ->
+      if (valueStr != null) prefs[KEY] = valueStr
+      else prefs.remove(KEY)   // only reached when genuinely clearing
+  }
+  ```
+  This avoids `remove` on first-write (key not yet present), which is when the crash occurs.
+- **Pure-remove callers** (`clearPreBoostVolume`, null-clearing branches in other methods) still use `remove` and will crash if the key was never previously set.
+
+**Known Wasm GC bug — Metro + `@GraphExtension` (as of Apr 2026)**:
+- `wasmJsBrowserDevelopmentRun` fails in both Chrome and Firefox with `wasm validation error: type mismatch` / `call[1] expected type (ref null <ImplType>), found struct.get of type (ref null 11)` where type 11 = `kotlin.Any`.
+- **Root cause**: Metro generates `AccordGraph.Impl` with a `thisGraphInstance` field typed as `kotlin.Any`. In `Impl.<init>`, this field is read via `struct.get` and passed to child graph factory constructors that expect the concrete `Impl` type. The JVM backend emits `checkcast`; Kotlin/Wasm does not emit `ref.cast`, so the Wasm GC validator rejects the binary.
+- **Trigger**: the `@GraphExtension` child graph (`MatchGraph`) is what causes Metro to generate `thisGraphInstance`. Removing the child graph would fix it, but that's not viable.
+- **This is NOT**: a Compose/Skiko issue, a socket.io issue, or fixable by restructuring `@Provides` methods or `@ContributesTo` modules. All such changes shift the byte offset but do not resolve the error.
+- **Bug report**: `.ai/plans/metro-wasm-bug-report.md` — file against Metro and Kotlin/Wasm.
+- **Diagnosing Wasm type mismatches**: parse the name section of the `.wasm` binary with Node.js to map type indices to Kotlin class names (see conversation history for the script).
+
 ## Build Queue
 For expensive operations, ALWAYS use the `run_task` MCP tool instead of Bash.
 
@@ -267,6 +330,19 @@ For expensive operations, ALWAYS use the `run_task` MCP tool instead of Bash.
 - env_vars: Optional like "KEY=value,KEY2=value2"
 
 NEVER run these via Bash. Always use run_task MCP tool.
+
+## Deployment
+
+The project deploys two services to Railway, both triggered by GHA on push to `main`:
+
+- **API server** (`.github/workflows/server-deploy.yml`): triggers on `server/package.json` change (version bump). Uses `railway up` from repo root with `railway.json` at root.
+- **Web client** (`.github/workflows/android-release.yml`, `web-deploy` job): triggers alongside the Android release on `app/androidApp/build.gradle.kts` change (version bump). Builds `:shared:wasmJsBrowserDistribution` via Gradle, copies `app/shared/railway.web.json` into the output as `railway.json`, then runs `railway up` from `app/shared/build/dist/wasmJs/productionExecutable/`.
+
+**Key Railway CLI behavior**: `railway up <path>` fails with "prefix not found" for untracked directories (build output). Always `cd` into the target directory and run `railway up` from there instead.
+
+**CORS**: The API server allows `http://localhost:8080` for local dev and reads `WEB_ORIGIN` env var for the production web client URL. Set `WEB_ORIGIN=https://<web-service-domain>` on the Railway API service.
+
+**Required GitHub secrets**: `RAILWAY_TOKEN`, `RAILWAY_SERVICE_ID` (API), `RAILWAY_WEB_SERVICE_ID` (web client).
 
 ## Plans
 

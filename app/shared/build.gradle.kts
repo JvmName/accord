@@ -1,9 +1,15 @@
-@file:OptIn(DelicateMetroGradleApi::class, ExperimentalKotlinGradlePluginApi::class)
+@file:OptIn(
+    DelicateMetroGradleApi::class,
+    ExperimentalKotlinGradlePluginApi::class,
+    ExperimentalWasmDsl::class
+)
 
 import com.google.devtools.ksp.gradle.KspAATask
 import dev.zacsweers.metro.gradle.DelicateMetroGradleApi
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 plugins {
@@ -33,6 +39,12 @@ kotlin {
 
     jvm {}
 
+    wasmJs {
+        browser()
+        binaries.executable()
+    }
+
+
     applyDefaultHierarchyTemplate()
 
     sourceSets {
@@ -44,7 +56,7 @@ kotlin {
                 implementation(libs.material3)
                 implementation(libs.ui)
                 implementation(libs.ui.tooling.preview)
-                implementation(libs.compose.ui.tooling)
+//                implementation(libs.compose.ui.tooling)
                 implementation(libs.compose.ui.util)
                 implementation(libs.material.icons)
                 implementation(libs.kotlinx.coroutines.core)
@@ -76,7 +88,7 @@ kotlin {
         val commonJvm by creating {
             dependsOn(commonMain.get())
             dependencies {
-                implementation(libs.socketio.client)
+                implementation(libs.socketio.client.jvm)
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.ui.tooling.preview)
                 implementation(libs.compose.ui.tooling)
@@ -100,10 +112,24 @@ kotlin {
             }
         }
 
+        wasmJsMain {
+//            dependsOn(commonMain.get())
+            dependencies {
+                implementation(npm("socket.io-client", "4.8.3"))
+            }
+
+        }
+
         commonTest {
             dependencies {
                 implementation(kotlin("test"))
                 implementation(libs.kotlinx.coroutines.test)
+            }
+        }
+
+        val wasmJsTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
             }
         }
 
@@ -127,6 +153,7 @@ kotlin {
                 freeCompilerArgs.addAll(
                     "-Xexpect-actual-classes",
                     "-Xcontext-sensitive-resolution",
+                    "-Xwasm-use-new-exception-proposal"
                 )
             }
         }
@@ -154,6 +181,12 @@ tasks.withType<JavaCompile>().configureEach {
     }
 }
 
+tasks.withType<KotlinJsCompile>().configureEach{
+    compilerOptions {
+        target = "2015"
+    }
+}
+
 compose {
     resources {
         publicResClass = true
@@ -173,12 +206,29 @@ compose {
     }
 }
 
-ksp { arg("circuit.codegen.mode", "metro") }
-metro {
-    contributesAsInject = true
-    enableFullBindingGraphValidation = true
+ksp {
+    arg("circuit.codegen.mode", "metro")
 }
 
+metro {
+    contributesAsInject = true
+    enableCircuitCodegen = false
+    compilerOptions {
+//        enable("enable-full-binding-graph-validation")
+    }
+
+}
+
+
+dependencies {
+    add("kspCommonMainMetadata", libs.circuit.codegen)
+}
+
+tasks.withType<KspAATask>().configureEach {
+    if (name != "kspCommonMainKotlinMetadata") {
+        dependsOn("kspCommonMainKotlinMetadata")
+    }
+}
 
 val isRelease = providers.gradleProperty("release").isPresent
 buildConfig {
@@ -201,16 +251,11 @@ buildConfig {
             if (isRelease) "https://rdk.api.jvmname.dev" else "http://[fec0::2]:3000"
         )
     }
-}
 
-dependencies {
-    add("kspCommonMainMetadata", libs.circuit.codegen)
-//    add("kspAndroid", libs.circuit.codegen)
-//    add("kspJvm", libs.circuit.codegen)
-}
-
-tasks.withType<KspAATask>().configureEach {
-    if (name != "kspCommonMainKotlinMetadata") {
-        dependsOn("kspCommonMainKotlinMetadata")
+    sourceSets.named("wasmJsMain") {
+        buildConfigField(
+            "BASE_URL",
+            if (isRelease) "https://rdk.api.jvmname.dev" else "http://localhost:3000"
+        )
     }
 }

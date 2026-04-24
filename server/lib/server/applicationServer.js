@@ -1,4 +1,5 @@
 const   CONSTANTS          = require('../constants');
+const   cors               = require('cors');
 const   express            = require('express');
 const   fs                 = require('fs');
 const   httpLogger         = require('pino-http')
@@ -108,6 +109,7 @@ class ApplicationServer {
     * MIDDLEWARE
     ***********************************************************************************************/
     setupMiddleware() {
+        this.use(cors({ origin: this.corsOrigin, credentials: true }));
         this.use(this.jsonParsingMiddleware);
         this.use(express.urlencoded({ extended: true }));
         this.use(responseTime())
@@ -179,7 +181,11 @@ class ApplicationServer {
     * SETTINGS
     ***********************************************************************************************/
     get corsOrigin() {
-        return [];
+        const origins = ['http://localhost:8080'];
+        if (process.env.WEB_ORIGIN) {
+            origins.push(process.env.WEB_ORIGIN);
+        }
+        return origins;
     }
     
 

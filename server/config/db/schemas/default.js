@@ -109,45 +109,6 @@ module.exports = {
             "unique": false
         }
     },
-    "mats": {
-        "id": {
-            "type": "UUID",
-            "allowNull": false,
-            "primaryKey": true,
-            "unique": true
-        },
-        "name": {
-            "type": "VARCHAR(255)",
-            "allowNull": false,
-            "primaryKey": false,
-            "unique": false
-        },
-        "judge_count": {
-            "type": "INTEGER",
-            "allowNull": false,
-            "defaultValue": "1",
-            "primaryKey": false,
-            "unique": false
-        },
-        "created_at": {
-            "type": "DATETIME",
-            "allowNull": false,
-            "primaryKey": false,
-            "unique": false
-        },
-        "updated_at": {
-            "type": "DATETIME",
-            "allowNull": false,
-            "primaryKey": false,
-            "unique": false
-        },
-        "creator_id": {
-            "type": "UUID",
-            "allowNull": true,
-            "primaryKey": false,
-            "unique": false
-        }
-    },
     "matches": {
         "id": {
             "type": "UUID",
@@ -410,6 +371,45 @@ module.exports = {
         "stoppage": {
             "type": "TINYINT(1)",
             "allowNull": true,
+            "primaryKey": false,
+            "unique": false
+        }
+    },
+    "mats": {
+        "id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": true,
+            "unique": true
+        },
+        "name": {
+            "type": "VARCHAR(255)",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "judge_count": {
+            "type": "INTEGER",
+            "allowNull": false,
+            "defaultValue": "1",
+            "primaryKey": false,
+            "unique": false
+        },
+        "creator_id": {
+            "type": "UUID",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "created_at": {
+            "type": "DATETIME",
+            "allowNull": false,
+            "primaryKey": false,
+            "unique": false
+        },
+        "updated_at": {
+            "type": "DATETIME",
+            "allowNull": false,
             "primaryKey": false,
             "unique": false
         }

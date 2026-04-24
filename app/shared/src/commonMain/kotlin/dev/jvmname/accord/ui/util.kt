@@ -2,7 +2,6 @@ package dev.jvmname.accord.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.RememberObserver
-
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.annotation.UnsafeResultErrorAccess
 import com.github.michaelbull.result.annotation.UnsafeResultValueAccess
@@ -14,7 +13,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import top.ltfan.multihaptic.HapticEffect
 import top.ltfan.multihaptic.vibrator.Vibrator
-import java.util.Locale
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
@@ -41,11 +39,6 @@ fun rememberRetainedCoroutineScope(): CoroutineScope {
             override fun onRemembered() = Unit
         }
     }.scope
-}
-
-/** truly the dumbest thing I've needed to write; replaces [kotlin.text.capitalize]*/
-fun String.capitalize(): String {
-    return replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else "" }
 }
 
 inline fun <T> catchRunning(block: () -> T): Result<T, Throwable> = runCatching(block)

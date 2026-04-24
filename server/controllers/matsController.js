@@ -68,7 +68,7 @@ class MatsController extends ServerController {
     * HELPERS
     ***********************************************************************************************/
     async createMat() {
-        const mat = await Mat.create({creator_id: this.currentUser?.id,
+        const mat = await Mat.create({creator_id: this.currentUser.id,
                                       name:       this.params.name});
         await this.createMatCode(mat, MatCode.ROLES.ADMIN);
         await this.createMatCode(mat, MatCode.ROLES.VIEWER);
