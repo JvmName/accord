@@ -336,9 +336,15 @@ NEVER run these via Bash. Always use run_task MCP tool.
 The project deploys two services to Railway, both triggered by GHA on push to `main`:
 
 - **API server** (`.github/workflows/server-deploy.yml`): triggers on `server/package.json` change (version bump). Uses `railway up` from repo root with `railway.json` at root.
-- **Web client** (`.github/workflows/android-release.yml`, `web-deploy` job): triggers alongside the Android release on `app/androidApp/build.gradle.kts` change (version bump). Builds `:shared:wasmJsBrowserDistribution` via Gradle, copies `app/shared/railway.web.json` into the output as `railway.json`, then runs `railway up` from `app/shared/build/dist/wasmJs/productionExecutable/`.
+- **Web client** (`.github/workflows/android-release.yml`, `web-deploy` job): triggers alongside the Android release on `app/gradle.properties` change (version bump). Builds `:shared:wasmJsBrowserDistribution` via Gradle, copies `app/shared/railway.web.json` into the output as `railway.json`, then runs `railway up` from `app/shared/build/dist/wasmJs/productionExecutable/`.
+
+**Version bumping**: `VERSION_NAME` and `VERSION_CODE` in `app/gradle.properties` are the single source of truth for the app version. They flow into `androidApp` `versionName`/`versionCode`, the shared `BuildConfig.VERSION_NAME` (displayed in the UI on `MainContent`), and the GHA release tag. To cut a new release, bump both values there. The API server version is separately managed via `server/package.json`.
 
 **Key Railway CLI behavior**: `railway up <path>` fails with "prefix not found" for untracked directories (build output). Always `cd` into the target directory and run `railway up` from there instead.
+
+**Web client static serving**: The web client uses Caddy (not nginx). The workflow copies `app/shared/Caddyfile.web` into the build output as `Caddyfile`. When Railpack detects a `Caddyfile`, it uses Caddy directly with that config. Previously this used a `Staticfile`, which caused Railpack to select the `staticfile` Nixpacks provider — that provider also uses Caddy internally but generates its own Caddyfile with a hardcoded CSP that cannot be customized. **Do not revert to `Staticfile` if you need to control response headers.**
+
+**CSP for WebAssembly**: The Caddyfile must include `'wasm-unsafe-eval'` in `script-src`, or the browser will block `.wasm` instantiation. This is not a CORS issue — it's a distinct CSP directive. The browser error is `CompileError: call to WebAssembly.instantiateStreaming() blocked by CSP`.
 
 **CORS**: The API server allows `http://localhost:8080` for local dev and reads `WEB_ORIGIN` env var for the production web client URL. Set `WEB_ORIGIN=https://<web-service-domain>` on the Railway API service.
 

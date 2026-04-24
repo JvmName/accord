@@ -8,6 +8,7 @@
     "numReplicas": 1,
     "sleepApplication": false,
     "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
+    "restartPolicyMaxRetries": 10,
+    "startCommand": "caddy run --config /app/Caddyfile.override --adapter caddyfile"
   }
 }
