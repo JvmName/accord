@@ -108,7 +108,7 @@ fun MasterSessionContent(state: MasterSessionState, modifier: Modifier = Modifie
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            val isCompact = maxHeight < 600.dp
+            val isCompact = maxHeight < 670.dp
             val verticalPadding = if (isCompact) 16.dp else 72.dp
             val columnSpacing = if (isCompact) 8.dp else 16.dp
             val buttonHeight = if (isCompact) 80.dp else 105.dp

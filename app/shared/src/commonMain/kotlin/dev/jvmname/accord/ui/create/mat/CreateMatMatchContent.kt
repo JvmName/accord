@@ -74,7 +74,7 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
             contentAlignment = Alignment.TopCenter,
         ) {
             val isTablet = maxWidth >= 600.dp
-            val isCompact = maxHeight < 600.dp
+            val isCompact = maxHeight < 670.dp
             val verticalPadding = if (isCompact) 12.dp else if (isTablet) 64.dp else 32.dp
             val sectionSpacing = if (isCompact) 8.dp else if (isTablet) 24.dp else 16.dp
 
