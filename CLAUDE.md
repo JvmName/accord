@@ -288,6 +288,26 @@ Rules for writing socket.io and other JS interop code in `wasmJsMain`. These are
 - Files placed in `app/shared/webpack.config.d/` are injected into the generated Karma config for `wasmJsBrowserTest`. Confirmed via `build/wasm/packages/accord-shared-test/karma.conf.js`.
 - `socket-io.js` sets `config.node = false` per socket.io bundler docs to prevent webpack from processing Node.js-style dynamic requires.
 
+**`Cannot cast null to kotlin.String` — diagnosing on Wasm**:
+- This error means a null value reached a non-nullable `String` position at the Wasm GC level. Common causes:
+  1. A DB column that is `allowNull: true` on the server but mapped to a non-nullable value class (e.g. `UserId`, `AuthToken`) in Kotlin. Fix: add a migration to enforce `NOT NULL` on the column.
+  2. Stale data in `DataStore` (serialized with a field that was later made non-nullable). Fix: wrap `json.decodeFromString<T>()` in `runCatching { }.getOrNull()` in `observeMatInfo()` / `observeCurrentMatch()` so corrupt cache silently returns null.
+  3. `MutablePreferences.remove(key)` in DataStore 1.3.0-alpha on Wasm — see below.
+
+**Known DataStore bug — `MutablePreferences.remove(key)` on Kotlin/Wasm (as of Apr 2026)**:
+- `prefs.remove(key)` crashes with `Cannot cast null to kotlin.String` when the key does not yet exist in the store. Internally, DataStore casts the null return of `map.remove()` to non-nullable `String` — a DataStore alpha Wasm GC codegen bug.
+- **Affected**: any `Preferences.Key<String>` passed to `remove`. `Int` keys may not be affected.
+- **Fix**: never call `remove` on the path where you're about to `set`. Restructure as:
+  ```kotlin
+  val valueStr = value?.extractString()
+  datastore.edit { prefs ->
+      if (valueStr != null) prefs[KEY] = valueStr
+      else prefs.remove(KEY)   // only reached when genuinely clearing
+  }
+  ```
+  This avoids `remove` on first-write (key not yet present), which is when the crash occurs.
+- **Pure-remove callers** (`clearPreBoostVolume`, null-clearing branches in other methods) still use `remove` and will crash if the key was never previously set.
+
 **Known Wasm GC bug — Metro + `@GraphExtension` (as of Apr 2026)**:
 - `wasmJsBrowserDevelopmentRun` fails in both Chrome and Firefox with `wasm validation error: type mismatch` / `call[1] expected type (ref null <ImplType>), found struct.get of type (ref null 11)` where type 11 = `kotlin.Any`.
 - **Root cause**: Metro generates `AccordGraph.Impl` with a `thisGraphInstance` field typed as `kotlin.Any`. In `Impl.<init>`, this field is read via `struct.get` and passed to child graph factory constructors that expect the concrete `Impl` type. The JVM backend emits `checkcast`; Kotlin/Wasm does not emit `ref.cast`, so the Wasm GC validator rejects the binary.
@@ -310,6 +330,19 @@ For expensive operations, ALWAYS use the `run_task` MCP tool instead of Bash.
 - env_vars: Optional like "KEY=value,KEY2=value2"
 
 NEVER run these via Bash. Always use run_task MCP tool.
+
+## Deployment
+
+The project deploys two services to Railway, both triggered by GHA on push to `main`:
+
+- **API server** (`.github/workflows/server-deploy.yml`): triggers on `server/package.json` change (version bump). Uses `railway up` from repo root with `railway.json` at root.
+- **Web client** (`.github/workflows/android-release.yml`, `web-deploy` job): triggers alongside the Android release on `app/androidApp/build.gradle.kts` change (version bump). Builds `:shared:wasmJsBrowserDistribution` via Gradle, copies `app/shared/railway.web.json` into the output as `railway.json`, then runs `railway up` from `app/shared/build/dist/wasmJs/productionExecutable/`.
+
+**Key Railway CLI behavior**: `railway up <path>` fails with "prefix not found" for untracked directories (build output). Always `cd` into the target directory and run `railway up` from there instead.
+
+**CORS**: The API server allows `http://localhost:8080` for local dev and reads `WEB_ORIGIN` env var for the production web client URL. Set `WEB_ORIGIN=https://<web-service-domain>` on the Railway API service.
+
+**Required GitHub secrets**: `RAILWAY_TOKEN`, `RAILWAY_SERVICE_ID` (API), `RAILWAY_WEB_SERVICE_ID` (web client).
 
 ## Plans
 
