@@ -74,8 +74,9 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
             contentAlignment = Alignment.TopCenter,
         ) {
             val isTablet = maxWidth >= 600.dp
-            val verticalPadding = if (isTablet) 64.dp else 32.dp
-            val sectionSpacing = if (isTablet) 24.dp else 16.dp
+            val isCompact = maxHeight < 600.dp
+            val verticalPadding = if (isCompact) 12.dp else if (isTablet) 64.dp else 32.dp
+            val sectionSpacing = if (isCompact) 8.dp else if (isTablet) 24.dp else 16.dp
 
             val matNameState = rememberTextFieldState()
             val redNameState = rememberTextFieldState()
@@ -162,7 +163,7 @@ fun CreateMatMatchContent(state: CreateMatMatchState, modifier: Modifier) {
                     onKeyboardAction = { submitForm() },
                 )
 
-                Spacer(Modifier.height(if (isTablet) 80.dp else 64.dp))
+                Spacer(Modifier.height(if (isCompact) 24.dp else if (isTablet) 80.dp else 64.dp))
 
                 Button(
                     modifier = Modifier.fillMaxWidth(),
@@ -234,7 +235,7 @@ private fun JudgeCountEditText(judgeCount: Int, onJudgeCountChange: (count: Int)
 
 @Preview
 @Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
-
+@Preview(device = "spec:width=1429dp,height=589dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun CreateMatMatchContentPreview() {
     AccordTheme {
@@ -244,6 +245,7 @@ private fun CreateMatMatchContentPreview() {
 
 @Preview
 @Preview(device = "spec:width=1429dp,height=857dp,dpi=224,isRound=false,orientation=landscape")
+@Preview(device = "spec:width=1429dp,height=589dp,dpi=224,isRound=false,orientation=landscape")
 @Composable
 private fun CreateMatMatchContentLoadingPreview() {
     AccordTheme {
