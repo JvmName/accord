@@ -28,10 +28,10 @@ fun CompetitorEditText(
     OutlinedTextField(
         state = state,
         modifier = modifier,
-        label = { Text("${competitor.nameStr} Competitor") },
-        placeholder = { Text("Competitor name") },
+        label = { Text("${competitor.nameStr} Competitor (optional)") },
+        placeholder = { Text(competitor.nameStr) },
         isError = isError,
-        supportingText = if (isError) { @Composable { Text("Required") } } else null,
+        supportingText = null,
         lineLimits = TextFieldLineLimits.SingleLine,
         keyboardOptions = KeyboardOptions.Default.copy(
             capitalization = KeyboardCapitalization.Words,

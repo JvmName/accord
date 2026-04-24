@@ -22,7 +22,7 @@ data class ShowCodesState(
     val adminCode: String,
     val viewerCode: String,
     val joinedJudges: List<User>,
-    val allJudgesJoined: Boolean,
+    val totalJudges: Int,
     val embedded: Boolean,
     val eventSink: (ShowCodesEvent) -> Unit,
 ) : CircuitUiState

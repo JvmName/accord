@@ -43,7 +43,7 @@ class ShowCodesPresenter(
             adminCode = screen.mat.adminCode.code,
             viewerCode = screen.mat.viewerCode.code,
             joinedJudges = joinedJudges,
-            allJudgesJoined = screen.mat.judgeCount == joinedJudges.size,
+            totalJudges = screen.mat.judgeCount ?: 0,
             embedded = screen.embedded
         ) { event ->
             when (event) {
