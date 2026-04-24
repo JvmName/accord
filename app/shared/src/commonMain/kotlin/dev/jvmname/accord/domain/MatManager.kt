@@ -1,6 +1,8 @@
 package dev.jvmname.accord.domain
 
 import co.touchlab.kermit.Logger
+import com.github.michaelbull.result.andThen
+import com.github.michaelbull.result.andThenRecoverIf
 import com.github.michaelbull.result.coroutines.coroutineBinding
 import com.github.michaelbull.result.onOk
 import dev.jvmname.accord.domain.user.UserManager
@@ -38,7 +40,15 @@ class MatManager(
             userManager.hasUser() -> userManager.user()
             else -> userManager.createUser(masterName).bind()
         }
-        val mat = client.createMat(matName, judgeCount).bind()
+        val mat = client.createMat(matName, judgeCount)
+            .andThenRecoverIf(
+                predicate = { "unauthorized" in it["status"].orEmpty() }, //this is horrible.
+                transform = {
+                    userManager.createUser(masterName)
+                        .andThen { client.createMat(matName, judgeCount) }
+                }
+            )
+            .bind()
         val match = client.createMatch(
             matCode = mat.adminCode.code,
             redCompetitor = CompetitorRequest(name = redName),

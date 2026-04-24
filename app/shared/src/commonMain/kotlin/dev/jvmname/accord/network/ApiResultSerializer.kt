@@ -61,7 +61,7 @@ class ApiResultSerializer<T>(private val dataSerializer: KSerializer<T>) :
                     }
 
                     else -> mapOf("error" to listOf(status))
-                }
+                }.plus("status" to listOf(status))
             )
         }
     }
