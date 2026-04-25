@@ -14,10 +14,9 @@ import dev.zacsweers.metro.createGraphFactory
 import kotlin.time.Clock
 
 fun main() {
-    ComposeViewport {
-        val graph =
-            createGraphFactory<AccordGraph.Factory>().create(EmptyPlatformContext, Clock.System)
+    val graph = createGraphFactory<AccordGraph.Factory>().create(EmptyPlatformContext, Clock.System)
 
+    ComposeViewport {
         CompositionLocalProvider(
             LocalGraph provides graph,
             LocalPlatformContext provides EmptyPlatformContext,

@@ -1,5 +1,7 @@
 package dev.jvmname.accord.network
 
+import com.github.michaelbull.result.getOrElse
+import dev.jvmname.accord.ui.catchRunning
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
@@ -53,7 +55,13 @@ class ApiResultSerializer<T>(private val dataSerializer: KSerializer<T>) :
                             String.serializer(),
                             ListSerializer(String.serializer())
                         )
-                        jsonDecoder.json.decodeFromJsonElement(errorsSerializer, dataElement["errors"]!!)
+                        catchRunning {
+                            jsonDecoder.json.decodeFromJsonElement(
+                                errorsSerializer,
+                                dataElement["errors"]!!
+                            )
+                        }
+                            .getOrElse { mapOf("errors" to listOf(dataElement["errors"].toString())) }
                     }
 
                     is JsonObject if dataElement.containsKey("error") -> {

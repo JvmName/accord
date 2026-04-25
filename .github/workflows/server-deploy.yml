@@ -70,7 +70,7 @@ jobs:
 
       - name: Deploy to Railway
 #        working-directory: server
-        run: railway up --service=${{ secrets.RAILWAY_SERVICE_ID }} --ci
+        run: railway up --service=${{ secrets.RAILWAY_SERVICE_ID }} --detach
 
   release:
     needs: [prepare, deploy]
