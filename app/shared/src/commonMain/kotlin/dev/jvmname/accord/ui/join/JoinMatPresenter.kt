@@ -54,7 +54,7 @@ class JoinMatPresenter(
                     scope.launch {
                         loading = true
                         error = null
-                        val code = it.code.replace(trimChars, "")
+                        val code = it.code.replace(trimChars, "").lowercase()
                         log.i { "join attempt code=${code.split('.').first()}..." }
                         matManager.joinMat(code, it.name.trim())
                             .onEither(

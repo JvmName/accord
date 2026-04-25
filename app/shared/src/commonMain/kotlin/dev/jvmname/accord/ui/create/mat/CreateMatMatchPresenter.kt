@@ -63,7 +63,6 @@ class CreateMatMatchPresenter(
                             redName = event.redName,
                             blueName = event.blueName,
                         )
-                            //TODO if the creator wants to join a judge, then we'd .join here
                             .onEither(
                                 success = { (mat, match) ->
                                     log.i { "mat+match created, navigating to ShowCodes" }
