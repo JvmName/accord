@@ -18,10 +18,15 @@
         ],
         "setupFilesAfterEnv": ["jest-extended/all"]
     },
+    "engines": {
+        "bun": ">=1.4.0"
+    },
     "dependencies": {
         "commander": "^14.0.0",
+        "cors": "^2.8.5",
         "express": "^5.0.0",
         "http-errors": "~1.6.3",
+        "inflection": "^1.13.4",
         "pg": "^8.0.0",
         "pino": "^10.0.0",
         "pino-http": "^11.0.0",
