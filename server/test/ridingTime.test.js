@@ -1,3 +1,4 @@
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
 const { calculateRidingTime } = require('../lib/ridingTime');
 const   TestHelpers           = require('./helpers');
 

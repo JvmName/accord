@@ -1,3 +1,15 @@
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
+// bun's `mock.module()` does not hoist above requires the way `jest.mock()`
+// does, and a bare package specifier is not matched — it must be registered
+// under the resolved path, before anything requires it.
+mock.module(require.resolve('sequelize'), () => {
+    class MockSequelize {
+        transaction = jest.fn()
+    }
+    return {Sequelize: MockSequelize};
+});
+
+
 const { Connection }              = require('../../../lib/activeRecord/db/connection');
 const { ConnectionConfiguration } = require('../../../lib/activeRecord/db/connectionConfiguration');
 const { QueryInterface }          = require('../../../lib/activeRecord/db/queryInterface');
@@ -11,12 +23,6 @@ const MockQueryInterface = {
     showAllTables: jest.fn(()          => [tableName1, tableName2]),
     describeTable: jest.fn((tableName) => ({name: tableName}))
 }
-jest.mock('sequelize', () => {
-    class MockSequelize {
-        transaction = jest.fn()
-    }
-    return {Sequelize: MockSequelize};
-});
 
 Sequelize.prototype.getQueryInterface = () => MockQueryInterface;
 

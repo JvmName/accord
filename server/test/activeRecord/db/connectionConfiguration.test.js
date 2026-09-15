@@ -1,3 +1,4 @@
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn } = require('bun:test');
 const { ConnectionConfiguration } = require('../../../lib/activeRecord/db/connectionConfiguration');
 const   CONSTANTS                 = require('../../../lib/constants');
 const   TestHelpers               = require('../../helpers');

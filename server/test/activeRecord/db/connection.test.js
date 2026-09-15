@@ -1,10 +1,7 @@
-const { Connection }              = require('../../../lib/activeRecord/db/connection');
-const { ConnectionConfiguration } = require('../../../lib/activeRecord/db/connectionConfiguration');
-const   CONSTANTS                 = require('../../../lib/constants');
-const   TestHelpers               = require('../../helpers');
-
-
-jest.mock('sequelize', () => {
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
+// bun's `mock.module()` does not hoist above requires the way `jest.mock()`
+// does, so it must be declared before the module under test is required.
+mock.module(require.resolve('sequelize'), () => {
     class MockSequelize {
         constructor(_1, _2, _3, options) {
             this.options = options;
@@ -15,6 +12,12 @@ jest.mock('sequelize', () => {
     }
     return {Sequelize: MockSequelize};
 });
+
+
+const { Connection }              = require('../../../lib/activeRecord/db/connection');
+const { ConnectionConfiguration } = require('../../../lib/activeRecord/db/connectionConfiguration');
+const   CONSTANTS                 = require('../../../lib/constants');
+const   TestHelpers               = require('../../helpers');
 
 
 let spy;

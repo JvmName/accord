@@ -1,0 +1,21 @@
+test/activeRecord/baseRecord.test.js: 15 passed, 0 failed, 0 skipped
+test/activeRecord/db/connection.test.js: 12 passed, 0 failed, 0 skipped
+test/activeRecord/db/connectionConfiguration.test.js: 15 passed, 0 failed, 0 skipped
+test/activeRecord/db/migrator.test.js: 17 passed, 0 failed, 0 skipped
+test/activeRecord/db/queryInterface.test.js: 4 passed, 0 failed, 0 skipped
+test/controllers/mat/usersController.test.js: 19 passed, 0 failed, 0 skipped
+test/http/client.test.js: 21 passed, 0 failed, 0 skipped
+test/http/error.test.js: 8 passed, 0 failed, 0 skipped
+test/models/round.test.js: 26 passed, 0 failed, 0 skipped
+test/ridingTime.test.js: 16 passed, 0 failed, 0 skipped
+test/rules/rDojoKombat.test.js: 24 passed, 0 failed, 0 skipped
+test/server/applicationServer.test.js: 10 passed, 0 failed, 0 skipped
+test/server/authorizer.test.js: 39 passed, 0 failed, 0 skipped
+test/server/serverController.test.js: 35 passed, 0 failed, 0 skipped
+test/server/webSocket.test.js: 6 passed, 0 failed, 0 skipped
+test/server/webSocketServer.test.js: 5 passed, 0 failed, 0 skipped
+test/server/workerWebSocket.test.js: 3 passed, 0 failed, 0 skipped
+test/workerQueue/matchUpdateWorker.test.js: 6 passed, 0 failed, 0 skipped
+
+TOTAL SUITES: 18 (18 passed, 0 failed)
+TOTAL TESTS: 281 (281 passed, 0 failed, 0 skipped)

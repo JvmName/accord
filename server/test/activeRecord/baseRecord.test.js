@@ -1,22 +1,8 @@
-const { BaseRecord }              = require('../../lib/activeRecord/baseRecord');
-const { Connection}               = require('../../lib/activeRecord/db/connection');
-const { ConnectionConfiguration } = require('../../lib/activeRecord/db/connectionConfiguration');
-const { getActiveRecordSchema }   = require('../../lib/activeRecord/db/schema');
-const   importSchema              = require('../../lib/activeRecord/db/importSchema');
-const { Model, Sequelize }        = require('sequelize');
-const   TestHelpers               = require('../helpers');
-
-
-const connectionConfig = {database: ' ', host: ' ', password: ' ', username: ' '};
-const configSpy        = jest.spyOn(ConnectionConfiguration, '_fetchAllConfigs');
-configSpy.mockImplementation(() => ({default: {test: connectionConfig}}));
-
-const mockSequelize = new (class MockSequelize {})();
-const connectionSpy = jest.spyOn(Connection.prototype, '_sequelize', 'get');
-connectionSpy.mockImplementation(() => mockSequelize);
-
-
-jest.mock('sequelize', () => {
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
+// bun's `mock.module()` does not hoist above requires the way `jest.mock()`
+// does, and a bare package specifier is not matched — it must be registered
+// under the resolved path, before anything requires it.
+mock.module(require.resolve('sequelize'), () => {
     class MockModel {
         static init     = jest.fn()
         static findByPk = jest.fn();
@@ -35,13 +21,40 @@ jest.mock('sequelize', () => {
     return { Model: MockModel, Sequelize } ;
 });
 
+// `lib/activeRecord/db/importSchema` is `module.exports = function(...)`.
+// bun's `mock.module()` always materialises an ES module namespace object, so a
+// mocked module can never itself be callable — its CJS consumer
+// (lib/activeRecord/db/schema.js) would get a namespace instead of a function.
+// Priming bun's CJS require cache before the consumer loads is the faithful
+// equivalent of Jest's `jest.mock(path, () => jest.fn())` here.
+const importSchemaPath = require.resolve('../../lib/activeRecord/db/importSchema');
+require('../../lib/activeRecord/db/importSchema');
+require.cache[importSchemaPath].exports = jest.fn();
+
+
+const { BaseRecord }              = require('../../lib/activeRecord/baseRecord');
+const { Connection}               = require('../../lib/activeRecord/db/connection');
+const { ConnectionConfiguration } = require('../../lib/activeRecord/db/connectionConfiguration');
+const { getActiveRecordSchema }   = require('../../lib/activeRecord/db/schema');
+const   importSchema              = require('../../lib/activeRecord/db/importSchema');
+const { Model, Sequelize }        = require('sequelize');
+const   TestHelpers               = require('../helpers');
+
+
+const connectionConfig = {database: ' ', host: ' ', password: ' ', username: ' '};
+const configSpy        = jest.spyOn(ConnectionConfiguration, '_fetchAllConfigs');
+configSpy.mockImplementation(() => ({default: {test: connectionConfig}}));
+
+const mockSequelize = new (class MockSequelize {})();
+const connectionSpy = TestHelpers.spyOnGetter(Connection.prototype, '_sequelize');
+connectionSpy.mockImplementation(() => mockSequelize);
+
+
 const dataTypeKey1   = Object.keys(Sequelize.DataTypes)[0];
 const dataTypeKey2   = Object.keys(Sequelize.DataTypes)[1];
 const dataTypeValue1 = Sequelize.DataTypes[dataTypeKey1].types.postgres[0];
 const dataTypeValue2 = Sequelize.DataTypes[dataTypeKey2].types.postgres[0];
 
-
-jest.mock('../../lib/activeRecord/db/importSchema', () => jest.fn());
 importSchema.mockImplementation(() => ({created_at: {type: dataTypeValue1}, updated_at: {type: dataTypeValue2}}));
 
 
@@ -192,7 +205,7 @@ describe('ActiveRecord', () => {
         class Person extends BaseRecord {}
         it ('only returns keys specified by `apiSafeKeys`', async () => {
             const person = new Person();
-            const spy    = jest.spyOn(person, 'apiSafeKeys', 'get');
+            const spy    = TestHelpers.spyOnGetter(person, 'apiSafeKeys');
             spy.mockImplementation(() => ['key1', 'created_at']);
             Object.assign(person, {key1: 'foo', key2: 'bar', created_at: 'baz', updated_at: 'ban'});
             const response = await person.toApiResponse();

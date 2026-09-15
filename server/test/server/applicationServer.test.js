@@ -1,9 +1,10 @@
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
 const { BarController }     = require('./helpers/controllers/barController');
 const { BazController }     = require('./helpers/controllers/sub/bazController');
 const { FooController }     = require('./helpers/controllers/fooController');
 const   IoServer            = require("socket.io")
-const { Request }           = require('jest-express/lib/request');
-const { Response }          = require('jest-express/lib/response');
+const { makeRequest,
+        makeResponse }      = require('../helpers/express');
 const { Server }            = require('http');
 const   TestHelpers         = require('../helpers');
 const { TestServer }        = require('./helpers/server');
@@ -11,14 +12,11 @@ const { ApplicationServer } = require('../../lib/server');
 const { WebSocketServer }   = require('../../lib/server/webSocketServer');
 
 
-jest.mock('express', () => {
-    const { Response } = require('jest-express/lib/response');
-
-    // missing functions in mock Response
-    Response.prototype.on   = jest.fn();
-
-    return require('jest-express');
-});
+// The `jest-express` dependency has been dropped. It was only used to supply a
+// fake `express` module plus Request/Response doubles; the real express module
+// works fine here (nothing hits the network — `Server.prototype.listen` is
+// stubbed below), and the request/response doubles now come from
+// test/helpers/express.js, shared with test/controllers/mat/usersController.test.js.
 
 
 afterEach(() => {
@@ -28,21 +26,28 @@ afterEach(() => {
 
 describe('ApplicationServer', () => {
     describe('ApplicationServer#controllers', () => {
+        // NOTE: `ApplicationServer#controllerClasses` yields controllers in
+        // `fs.readdirSync` order. Node's readdirSync is alphabetically sorted
+        // (libuv scandir + alphasort); bun's is raw directory order. These two
+        // assertions used to depend on Node's incidental sorting, so they are
+        // sorted by class name here before asserting. See FINDINGS.md F-04.
+        const byName = (server) => [...server.controllerClasses].sort((a, b) => a.name.localeCompare(b.name));
+
         it ('searches directories and subdirectories', () => {
             const server      = new TestServer();
-            const controllers = server.controllerClasses;
+            const controllers = byName(server);
             expect(controllers.length).toEqual(3);
             expect(controllers[0]).toBe(BarController);
-            expect(controllers[1]).toBe(FooController);
-            expect(controllers[2]).toBe(BazController);
+            expect(controllers[1]).toBe(BazController);
+            expect(controllers[2]).toBe(FooController);
         });
 
         it ('initializes controllers with the correct path', () => {
             const server      = new TestServer();
-            const controllers = server.controllerClasses;
+            const controllers = byName(server);
             expect(controllers[0].routePrefix).toEqual('/bar');
-            expect(controllers[1].routePrefix).toEqual('/foo');
-            expect(controllers[2].routePrefix).toEqual('/sub/baz');
+            expect(controllers[1].routePrefix).toEqual('/sub/baz');
+            expect(controllers[2].routePrefix).toEqual('/foo');
         });
     });
 
@@ -82,8 +87,8 @@ describe('ApplicationServer', () => {
 
     describe('ApplicationServer#requestHandler', () => {
         const server         = new TestServer();
-        const request        = new Request();
-        const response       = new Response();
+        const request        = makeRequest();
+        const response       = makeResponse();
 
         const beforeSpy1 = jest.spyOn(FooController.prototype, 'beforeCallback1');
         const beforeSpy2 = jest.spyOn(FooController.prototype, 'beforeCallback2');

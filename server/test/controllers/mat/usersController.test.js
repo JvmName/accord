@@ -1,3 +1,4 @@
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
 /**
  * Tests for mat/UsersController — judge join/leave mid-match behaviour.
  *
@@ -12,7 +13,7 @@
 // ---------------------------------------------------------------------------
 // Silence logger noise in test output
 // ---------------------------------------------------------------------------
-jest.mock('../../../lib/logger', () => ({
+mock.module('../../../lib/logger', () => ({
     logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() }
 }));
 
@@ -20,7 +21,7 @@ jest.mock('../../../lib/logger', () => ({
 // ---------------------------------------------------------------------------
 // Mock BaseRecord so model constructors work without a real DB
 // ---------------------------------------------------------------------------
-jest.mock('../../../lib/activeRecord', () => {
+mock.module('../../../lib/activeRecord', () => {
     class BaseRecord {
         #cachedAssociations = {};
 
@@ -69,19 +70,10 @@ const { calculateRidingTime } = require('../../../lib/ridingTime');
 
 
 // ---------------------------------------------------------------------------
-// Minimal request / response factory (mirrors jest-express shape)
+// Minimal request / response factory, shared with
+// test/server/applicationServer.test.js
 // ---------------------------------------------------------------------------
-function makeRequest({ headers = {}, params = {}, body = {}, query = {} } = {}) {
-    return { headers, params, body, query };
-}
-
-function makeResponse() {
-    const res = { statusCode: 200, headers: {} };
-    res.json = jest.fn(body => { res._body = body; });
-    res.set  = jest.fn();
-    res.send = jest.fn();
-    return res;
-}
+const { makeRequest, makeResponse } = require('../../helpers/express');
 
 
 // ---------------------------------------------------------------------------

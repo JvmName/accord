@@ -1,0 +1,19 @@
+[test]
+preload = ["./test/setup.js"]
+
+# Mirrors the former Jest config: collectCoverage + coveragePathIgnorePatterns.
+# NOTE: bun matches these as globs, not as Jest's substring/regex patterns,
+# so `/helpers/` must be written `**/helpers/**`.
+coverage = true
+coveragePathIgnorePatterns = ["**/helpers/**", "**/models/**"]
+
+# IMPORTANT: run the suite with `bun run test` (or `bun test --isolate`), never a
+# bare `bun test`.
+#
+# Jest gives every test file its own module registry. bun shares one registry
+# across all test files unless `--isolate` is passed, and the per-file
+# `mock.module()` registrations in test/activeRecord/**, test/models/round.test.js
+# and test/controllers/mat/usersController.test.js then leak into one another
+# (four files mock `sequelize` with different doubles). `--isolate` restores
+# Jest's semantics. As of bun 1.4.2 there is no bunfig equivalent for it, so it
+# lives in the `test` script in package.json.

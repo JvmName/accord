@@ -1,3 +1,4 @@
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
 /**
  * Tests for Round#pause, Round#resume, Round#paused, and Round#end.
  *
@@ -8,7 +9,7 @@
 // Mock BaseRecord so that Round.initialize() is a no-op and instances are
 // plain objects with the helpers Round#pause/resume/end rely on.
 // ---------------------------------------------------------------------------
-jest.mock('../../lib/activeRecord', () => {
+mock.module('../../lib/activeRecord', () => {
     class BaseRecord {
         #cachedAssociations = {};
 
@@ -53,7 +54,7 @@ jest.mock('../../lib/activeRecord', () => {
 // ---------------------------------------------------------------------------
 // Provide minimal mocks for all models / libs that Round imports
 // ---------------------------------------------------------------------------
-jest.mock('../../models/ridingTimeVote', () => {
+mock.module('../../models/ridingTimeVote', () => {
     class RidingTimeVote {
         constructor(attrs = {}) { Object.assign(this, attrs); }
         static async findAll() { return []; }
@@ -61,7 +62,7 @@ jest.mock('../../models/ridingTimeVote', () => {
     return { RidingTimeVote };
 });
 
-jest.mock('../../models/user', () => {
+mock.module('../../models/user', () => {
     class User {
         constructor(attrs = {}) { Object.assign(this, attrs); }
         static initialize() {}
@@ -71,7 +72,7 @@ jest.mock('../../models/user', () => {
     return { User };
 });
 
-jest.mock('../../lib/rules', () => ({
+mock.module('../../lib/rules', () => ({
     RDojoKombatRules: {
         roundDurations: [300, 300, 300],
         scoreRound:     jest.fn(() => ({ redScore: 0, blueScore: 0 })),
@@ -86,7 +87,7 @@ jest.mock('../../lib/rules', () => ({
 const mockRoundPauseCreate = jest.fn();
 const mockRoundPauseFindAll = jest.fn();
 
-jest.mock('../../models/roundPause', () => {
+mock.module('../../models/roundPause', () => {
     // A minimal RoundPause class whose instances track their own state
     class RoundPause {
         constructor(attrs = {}) {
