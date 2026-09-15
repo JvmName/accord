@@ -1,0 +1,47 @@
+{
+  // NOTE: tsc is a TYPECHECK GATE, NOT A BUILD STEP.
+  // bun is the runtime and strips types natively at execution time — there is
+  // no compilation/emit step in this project. `tsc --noEmit` only ever
+  // verifies types; it never produces the files that run. Do not add an
+  // `emit`/`build`/`tsc` step to any script that ships code — that is bun's
+  // job, not tsc's. (server-ts task 03)
+  "compilerOptions": {
+    "target": "ES2022",
+    // CommonJS is deliberate — do NOT "modernize" to ESM. Four synchronous
+    // dynamic `require(variablePath)` sites are load-bearing architecture
+    // with no ESM equivalent (ESM only offers async `await import()`, which
+    // would force async propagation into synchronous getters like
+    // `BaseRecord.connection`/`BaseRecord.initialize()` and into server
+    // boot). Confirmed still present at:
+    //   - lib/server/applicationServer.js:334 (controller autoloading)
+    //   - lib/activeRecord/db/migrator.js:63 (migration loading)
+    //   - lib/activeRecord/db/importSchema.js:3 (DB schema loading)
+    //   - lib/activeRecord/db/connectionConfiguration.js:79 (DB config loading)
+    // Three of these four disappear in task 11 and one in task 14, but all
+    // exist for most of this project — CommonJS stays until then.
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "types": ["node", "bun-types"],
+
+    "noEmit": true,        // bun strips types; tsc is a gate, not a build
+    "allowJs": true,       // .js and .ts coexist during migration
+    "checkJs": false,      // do NOT typecheck untouched .js
+
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+
+    "strict": false,                    // flipped on in task 18
+    // Required while Sequelize lives. `BaseRecord extends Model` depends on
+    // Sequelize's prototype-level attribute accessors; with this flag `true`,
+    // a class field emits an own-property `defineProperty` in the
+    // constructor that SHADOWS those accessors, silently breaking every
+    // attribute read. Revisit only after task 11 removes Sequelize.
+    "useDefineForClassFields": false
+  },
+  "include": ["**/*.ts", "**/*.js"],
+  "exclude": ["node_modules", "coverage", "public"]
+}

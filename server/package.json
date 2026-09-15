@@ -6,6 +6,7 @@
         "start": "nodemon ./bin/www",
         "worker": "nodemon ./bin/worker",
         "test": "bun test --isolate",
+        "typecheck": "tsc --noEmit",
         "db:create_migration": "./bin/migrate create_migration",
         "db:migrate": "./bin/migrate migrate",
         "db:rollback": "./bin/migrate rollback"
@@ -31,7 +32,13 @@
         "express-openapi-validator": "^5.0.0"
     },
     "devDependencies": {
+        "@types/cors": "^2.8.19",
+        "@types/express": "^5.0.6",
+        "@types/node": "^26.5.1",
+        "@types/response-time": "^2.3.9",
+        "bun-types": "^1.4.2",
         "nodemon": "^3.1.11",
-        "socket.io-client": "^4.0.0"
+        "socket.io-client": "^4.0.0",
+        "typescript": "5.9.3"
     }
 }
