@@ -1,0 +1,39 @@
+# Complete route table as registered by ApplicationServer#registerControllers.
+#
+# Format: METHOD<space>path<tab>Controller#action
+# Paths are the RAW Express paths (`:param`), not the OpenAPI-normalised
+# `{param}` form used by .ai/plans/server-ts/artifacts/route-table.txt.
+#
+# "DEV" entries are registered only when CONSTANTS.DEV is true
+# (i.e. NODE_ENV=development). Under NODE_ENV=test only the 20 non-DEV entries
+# are actually registered; all 23 are listed so this fixture stays comparable
+# with the task-01 artifact, which was captured in development mode.
+#
+# Sorted. Registration ORDER is NOT asserted: #importControllers walks
+# fs.readdirSync, which bun does not sort (FINDINGS.md F-04). This is a set.
+#
+# Lines beginning with '#' and blank lines are ignored.
+
+DELETE /mat/:matCode/join	UsersController#deleteJoin
+DELETE /match/:matchId/ridingTime	RidingTimeVoteController#deleteEndRidingTime
+GET /	SystemController#getIndex
+GET /async-docs.json	DocsController#getAsyncDocsJson	DEV
+GET /docs	DocsController#getDocs	DEV
+GET /docs.json	DocsController#getDocsJson	DEV
+GET /mat/:matCode/judges	UsersController#getJudges
+GET /mat/:matCode/viewers	UsersController#getViewers
+GET /mat/:matId	MatsController#getMat
+GET /match/:matchId	MatchesController#getMatch
+GET /system/healthCheck	SystemController#getHealthCheck
+PATCH /match/:matchId/rounds/result	RoundsController#patchRoundResult
+POST /mat/:matCode/join	UsersController#postJoin
+POST /mat/:matCode/matches	MatchesController#postIndex
+POST /match/:matchId/end	MatchesController#postEndMatch
+POST /match/:matchId/ridingTime	RidingTimeVoteController#postStartRidingTime
+POST /match/:matchId/rounds	RoundsController#postStartRound
+POST /match/:matchId/rounds/end	RoundsController#postEndRound
+POST /match/:matchId/rounds/pause	RoundsController#postPauseRound
+POST /match/:matchId/rounds/resume	RoundsController#postResumeRound
+POST /match/:matchId/start	MatchesController#postStartMatch
+POST /mats	MatsController#postIndex
+POST /users	UsersController#postIndex
