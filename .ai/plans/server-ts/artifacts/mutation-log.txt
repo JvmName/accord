@@ -68,3 +68,18 @@ M7  change an error status code
 
 Post-run state: `git status` clean for server/ apart from the new, intended
 test/contract/ directory. Every mutated file restored byte-for-byte.
+
+-------------------------------------------------------------------------------
+Task 05 — the Zod schema gate (test/contract/schemas.test.ts)
+-------------------------------------------------------------------------------
+
+The schema gate reads goldens off disk rather than booting the server, so the
+mutations above do not exercise it. One mutation was applied to the SCHEMA side
+to prove the sweep is not vacuous (a schema loose enough to accept anything
+would parse all 85 goldens and report success).
+
+M8  loosen a wire type in the schema, not the server
+    src/contract/round.ts        paused: z.boolean()  ->  z.string()
+    gate: 11 pass / 4 fail       CAUGHT        reverted: yes
+    (the HTTP sweep, the WebSocket sweep and two optionality pins all fail —
+     confirming the goldens are actually parsed, not merely counted)
