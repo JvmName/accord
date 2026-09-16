@@ -1,0 +1,21 @@
+{
+  "name": "http.ridingTime.start.unknownMatch.404",
+  "route": "POST /match/{matchId}/ridingTime",
+  "why": "The ridingTime controller's own 404 branch, which runs BEFORE its no-active-round 400 — so an unknown match and a match without a round answer differently.",
+  "request": {
+    "method": "POST",
+    "path": "/match/<uuid:1>/ridingTime",
+    "as": "judgeA",
+    "body": {
+      "rider": "red"
+    }
+  },
+  "response": {
+    "status": 404,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": null,
+      "status": "not found"
+    }
+  }
+}

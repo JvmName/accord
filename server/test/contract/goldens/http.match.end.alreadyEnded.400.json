@@ -1,0 +1,25 @@
+{
+  "name": "http.match.end.alreadyEnded.400",
+  "route": "POST /match/{matchId}/end",
+  "why": "The second 400 branch of postEndMatch.",
+  "request": {
+    "method": "POST",
+    "path": "/match/<match:toEnd>/end",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matchId": [
+            "this match has already ended"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}

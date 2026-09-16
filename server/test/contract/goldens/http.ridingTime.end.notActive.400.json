@@ -1,0 +1,25 @@
+{
+  "name": "http.ridingTime.end.notActive.400",
+  "route": "DELETE /match/{matchId}/ridingTime",
+  "why": "\"Riding time is not active\" rendered 400.",
+  "request": {
+    "method": "DELETE",
+    "path": "/match/<match:toVote>/ridingTime?rider=red",
+    "as": "judgeA",
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matchId": [
+            "Riding time is not active"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "name": "http.mat.get.byCode",
+  "route": "GET /mat/{matId}",
+  "why": "The :matId segment doubles as a mat code when it matches MatCode.CODE_REGEXP (FINDINGS F-12). Same payload as by-id.",
+  "request": {
+    "method": "GET",
+    "path": "/mat/<code:main-viewer>",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "mat": {
+          "creator_id": "<user:creator>",
+          "current_match": {
+            "blue_competitor": {
+              "id": "<user:blue>",
+              "name": "Blair Blue"
+            },
+            "break_duration": null,
+            "break_remaining": null,
+            "break_started_at": null,
+            "creator_id": "<user:creator>",
+            "ended_at": null,
+            "id": "<match:open>",
+            "mat_id": "<mat:main>",
+            "red_competitor": {
+              "id": "<user:red>",
+              "name": "Rory Red"
+            },
+            "started_at": "2026-01-01T12:07:50.000Z",
+            "winner": null
+          },
+          "id": "<mat:main>",
+          "judge_count": 2,
+          "judges": [
+            {
+              "id": "<user:judgeA>",
+              "name": "Jordan Judge"
+            },
+            {
+              "id": "<user:judgeB>",
+              "name": "Jamie Judge"
+            }
+          ],
+          "name": "Main Mat",
+          "upcoming_matches": [
+            {
+              "blue_competitor": {
+                "id": "<user:blue2>",
+                "name": "Bailey Blue"
+              },
+              "break_duration": null,
+              "break_remaining": null,
+              "break_started_at": null,
+              "creator_id": "<user:creator>",
+              "ended_at": null,
+              "id": "<match:upcoming>",
+              "mat_id": "<mat:main>",
+              "red_competitor": {
+                "id": "<user:red2>",
+                "name": "Robin Red"
+              },
+              "started_at": null,
+              "winner": null
+            }
+          ]
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

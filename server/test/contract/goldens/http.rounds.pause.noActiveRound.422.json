@@ -1,0 +1,24 @@
+{
+  "name": "http.rounds.pause.noActiveRound.422",
+  "route": "POST /match/{matchId}/rounds/pause",
+  "why": "The second status-less 422 envelope (F-21).",
+  "request": {
+    "method": "POST",
+    "path": "/match/<match:notStarted>/rounds/pause",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 422,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matchId": [
+            "No active round to pause"
+          ]
+        }
+      }
+    }
+  }
+}

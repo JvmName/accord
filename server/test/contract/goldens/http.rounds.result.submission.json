@@ -1,0 +1,72 @@
+{
+  "name": "http.rounds.result.submission",
+  "route": "PATCH /match/{matchId}/rounds/result",
+  "why": "Step 2 of the end-round flow. winner + stoppage:false yields method.type \"submission\" with a NULL value.",
+  "request": {
+    "method": "PATCH",
+    "path": "/match/<match:toSubmission>/rounds/result",
+    "as": "creator",
+    "body": {
+      "stoppage": false,
+      "winner": "red"
+    }
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "match": {
+          "blue_competitor": {
+            "id": "<user:blue>",
+            "name": "Blair Blue"
+          },
+          "break_duration": 60,
+          "break_remaining": 55,
+          "break_started_at": "2026-01-01T12:09:55.000Z",
+          "creator_id": "<user:creator>",
+          "ended_at": null,
+          "id": "<match:toSubmission>",
+          "mat": {
+            "creator_id": "<user:creator>",
+            "id": "<mat:flow>",
+            "judge_count": 2,
+            "name": "Flow Mat"
+          },
+          "mat_id": "<mat:flow>",
+          "red_competitor": {
+            "id": "<user:red>",
+            "name": "Rory Red"
+          },
+          "rounds": [
+            {
+              "ended_at": "2026-01-01T12:09:55.000Z",
+              "id": "<round:toSubmission>",
+              "max_duration": 180,
+              "paused": false,
+              "result": {
+                "method": {
+                  "type": "submission",
+                  "value": null
+                },
+                "winner": {
+                  "id": "<user:red>",
+                  "name": "Rory Red"
+                }
+              },
+              "score": {
+                "<user:blue>": 0,
+                "<user:red>": 0
+              },
+              "started_at": "2026-01-01T12:09:05.000Z",
+              "time_remaining": null
+            }
+          ],
+          "started_at": "2026-01-01T12:09:05.000Z",
+          "winner": null
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

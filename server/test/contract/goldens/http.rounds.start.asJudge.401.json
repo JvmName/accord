@@ -1,0 +1,19 @@
+{
+  "name": "http.rounds.start.asJudge.401",
+  "route": "POST /match/{matchId}/rounds",
+  "why": "RoundsController#authenticateMatch authorizes \"manage\" for EVERY action, so judges are refused on all round routes.",
+  "request": {
+    "method": "POST",
+    "path": "/match/<match:toStartRound>/rounds",
+    "as": "judgeA",
+    "body": null
+  },
+  "response": {
+    "status": 401,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": null,
+      "status": "unauthorized"
+    }
+  }
+}

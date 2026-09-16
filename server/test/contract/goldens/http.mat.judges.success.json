@@ -1,0 +1,30 @@
+{
+  "name": "http.mat.judges.success",
+  "route": "GET /mat/{matCode}/judges",
+  "why": "Bare user list, no envelope nesting beyond {data:{judges:[...]}}. api_token is stripped by User#apiSafeKeys — its absence here is contract.",
+  "request": {
+    "method": "GET",
+    "path": "/mat/<code:main-admin>/judges",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "judges": [
+          {
+            "id": "<user:judgeA>",
+            "name": "Jordan Judge"
+          },
+          {
+            "id": "<user:judgeB>",
+            "name": "Jamie Judge"
+          }
+        ]
+      },
+      "status": "ok"
+    }
+  }
+}

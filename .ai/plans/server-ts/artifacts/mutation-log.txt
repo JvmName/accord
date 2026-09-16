@@ -1,0 +1,70 @@
+NEGATIVE CONTROL — MUTATION LOG (task 04, plan step 7b)
+=======================================================
+
+Why this exists
+---------------
+Coverage proves code was EXECUTED during capture. It does not prove the
+resulting golden ASSERTS anything about it. The only way to tell "captured"
+from "actually protected" is to break the server on purpose and check that the
+gate goes red.
+
+Procedure (scripted, one mutation at a time)
+--------------------------------------------
+  1. copy the target file aside
+  2. apply the mutation to the UNMODIFIED server
+  3. run:  cd server && bun test --isolate test/contract/contract.test.js
+  4. restore the file from the copy and verify it is byte-identical
+
+Baseline, unmutated:  7 pass  0 fail
+
+RESULTS — 7 applied, 7 caught, 7 reverted
+------------------------------------------
+
+The four mutations the plan names explicitly are M1-M4.
+
+M1  rename a field in a toApiResponse() override
+    models/match.js
+      response.red_competitor = ...   ->   response.redCompetitor = ...
+    gate: 4 pass / 3 fail        CAUGHT        reverted: yes
+    (fails the byte replay, the models.kt population check for red_competitor,
+     AND the nullability conformance walk — three independent instruments)
+
+M2  turn an explicit null into an OMITTED key on a nullable field
+    lib/activeRecord/baseRecord.js
+      response[key] = this[key] || null;  ->  if (this[key]) response[key] = this[key];
+    gate: 5 pass / 2 fail        CAUGHT        reverted: yes
+    (this is the null-vs-absent distinction models_ext.kt's merge() depends on;
+     it is the single most important thing these goldens protect)
+
+M3  drop break_remaining from the WebSocket payload only
+    lib/workerQueue/matchUpdateWorker.js
+      + delete response.break_remaining;   before notifyServer(MATCH_UPDATE)
+    gate: 6 pass / 1 fail        CAUGHT        reverted: yes
+    (HTTP goldens are unaffected — only the WebSocket goldens catch it, which
+     is exactly why the WS surface could not be skipped)
+
+M4  change a RoundResultType enum value
+    lib/rules/rDojoKombat.js
+      'tech-fall'  ->  'techfall'
+    gate: 5 pass / 2 fail        CAUGHT        reverted: yes
+    (byte replay + the models.kt enum-value check)
+
+Three further mutations were added to probe instrument classes the first four
+do not reach: the envelope, computed numerics, and status codes.
+
+M5  change the response envelope status text
+    lib/server/serverController.js       'ok'  ->  'success'
+    gate: 6 pass / 1 fail        CAUGHT        reverted: yes
+
+M6  change a computed VALUE rather than a key name
+    lib/rules/rDojoKombat.js       Math.floor(d / 3)  ->  Math.floor(d / 4)
+    gate: 5 pass / 2 fail        CAUGHT        reverted: yes
+    (proves the goldens assert real riding-time scores, not just their presence
+     — the frozen-clock seed is what makes this assertable)
+
+M7  change an error status code
+    lib/server/serverController.js   renderErrors(..., statusCode = 400)  ->  422
+    gate: 6 pass / 1 fail        CAUGHT        reverted: yes
+
+Post-run state: `git status` clean for server/ apart from the new, intended
+test/contract/ directory. Every mutated file restored byte-for-byte.

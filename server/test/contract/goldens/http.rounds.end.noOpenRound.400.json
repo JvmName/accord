@@ -1,0 +1,25 @@
+{
+  "name": "http.rounds.end.noOpenRound.400",
+  "route": "POST /match/{matchId}/rounds/end",
+  "why": "\"No available round to end\" rendered as 400.",
+  "request": {
+    "method": "POST",
+    "path": "/match/<match:toEndRound>/rounds/end",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matchId": [
+            "No available round to end"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}

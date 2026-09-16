@@ -1,0 +1,29 @@
+{
+  "name": "http.mat.get.empty",
+  "route": "GET /mat/{matId}",
+  "why": "A mat with no judges and no matches: judges [], current_match null, upcoming_matches []. Proves the empty shapes are null/[] rather than absent. Also shows judge_count defaulting to 1 when creation omitted it.",
+  "request": {
+    "method": "GET",
+    "path": "/mat/<mat:empty>",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "mat": {
+          "creator_id": "<user:creator>",
+          "current_match": null,
+          "id": "<mat:empty>",
+          "judge_count": 1,
+          "judges": [],
+          "name": "Empty Mat",
+          "upcoming_matches": []
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "http.rounds.result.explicitNull.400",
+  "route": "PATCH /match/{matchId}/rounds/result",
+  "why": "FINDINGS F-24: an EXPLICIT `winner: null` is REJECTED with 400. The validation enum is [undefined, \"red\", \"blue\"], so only an OMITTED winner clears a result, even though README/CLAUDE.md document the body as {winner: \"red\"|\"blue\"|null}. The Kotlin client is unaffected only because kotlinx.serialization omits default-valued nulls (encodeDefaults is false).",
+  "request": {
+    "method": "PATCH",
+    "path": "/match/<match:toClearResult>/rounds/result",
+    "as": "creator",
+    "body": {
+      "stoppage": false,
+      "winner": null
+    }
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "winner": [
+            "must be one of [red, blue]"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}
