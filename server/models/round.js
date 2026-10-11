@@ -2,7 +2,9 @@ const { BaseRecord }          = require('../lib/activeRecord');
 const { logger }              = require('../lib/logger');
 const { RidingTimeVote }      = require('./ridingTimeVote');
 const { RoundPause }          = require('./roundPause');
-const { RDojoKombatRules }    = require('../lib/rules');
+const { RDojoKombatRules }    = require('../src/domain/rules');
+const { getRoundScore,
+        getRoundResult }      = require('../src/domain/scoring');
 const { User }                = require('./user');
 
 
@@ -252,12 +254,12 @@ class Round extends BaseRecord {
     async #getScore(red, blue, judges) {
         const votes  = await this.getRidingTimeVotes();
         const pauses = await this.getPauses();
-        return this.rules.scoreRound(red, blue, judges, votes, pauses);
+        return getRoundScore(this.rules, red, blue, judges, votes, pauses);
     }
 
 
     #determineWinner(red, blue, redScore, blueScore, roundNumber) {
-        return this.rules.determineWinner(red, blue, redScore, blueScore, roundNumber, this);
+        return getRoundResult(this.rules, red, blue, redScore, blueScore, roundNumber, this);
     }
 
 

@@ -72,7 +72,7 @@ mock.module('../../models/user', () => {
     return { User };
 });
 
-mock.module('../../lib/rules', () => ({
+mock.module('../../src/domain/rules', () => ({
     RDojoKombatRules: {
         roundDurations: [300, 300, 300],
         scoreRound:     jest.fn(() => ({ redScore: 0, blueScore: 0 })),

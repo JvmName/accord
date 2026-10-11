@@ -277,7 +277,7 @@ async function makeRound(clock: Clock, spec: RoundSpec) {
  * Creates one riding-time vote per judge for `competitorId`, all starting at
  * `from` and (optionally) ending at `to`.
  *
- * With two judges the consensus threshold is 2 (`lib/ridingTime.js`), so both
+ * With two judges the consensus threshold is 2 (`src/domain/ridingTime.ts`), so both
  * votes must overlap for any control time to accrue. Score is
  * `floor(seconds / 3)` per `RDojoKombatRules.scoreRound`.
  */

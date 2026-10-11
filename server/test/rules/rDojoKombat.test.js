@@ -1,5 +1,5 @@
 const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
-const { RDojoKombatRules } = require('../../lib/rules/rDojoKombat');
+const { RDojoKombatRules } = require('../../src/domain/rules/rDojoKombat');
 
 // ---------------------------------------------------------------------------
 // Shared fixtures

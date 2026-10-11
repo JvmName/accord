@@ -1,20 +1,44 @@
+/**
+ * Consensus riding-time calculator — the application's core algorithm.
+ *
+ * Moved from `lib/ridingTime.js` in server-ts task 08; the algorithm is
+ * unchanged. Threshold is 1 for a single judge and ALWAYS 2 for any
+ * multi-judge panel. Time derives from vote timestamps, never increments.
+ *
+ * Pure: no imports outside `src/domain`.
+ */
+import type { Judge, PauseInput, RidingTimeModule, RidingTimeVoteInput } from './types';
+
+type EventType = 'voteStart' | 'voteEnd' | 'pausedAt' | 'resumedAt';
+interface CalcEvent {
+    time: Date;
+    type: EventType;
+    vote?: RidingTimeVoteInput;
+}
+
+// `Date - Date` is valid JS (both operands go through valueOf) but not valid
+// TS, so the subtractions below cast `as unknown as number`. The casts are
+// type-only; the emitted subtraction is byte-for-byte the original.
+
+
 class RidingTimeCalculator {
-    #activeVotes = {};
-    #controlStartedAt;
-    #endAt;
-    #controlPeriods = [];
-    #votes;
-    #voteThreshold;
-    #events = [];
+    #activeVotes: Record<string, RidingTimeVoteInput> = {};
+    #controlStartedAt: Date | null | undefined;
+    #endAt: Date;
+    #controlPeriods: number[] = [];
+    #votes: RidingTimeVoteInput[];
+    #voteThreshold: number;
+    #events: CalcEvent[] = [];
     #pendingControlTime = 0;
     #paused = false;
-    #pauses;
-    #resumedAt = null;
+    #pauses: readonly PauseInput[];
+    #resumedAt: Date | null = null;
 
-    constructor(votes, judges, endAt, pauses = []) {
+    constructor(votes: RidingTimeVoteInput[], judges: readonly Judge[], endAt?: Date | null, pauses: readonly PauseInput[] = []) {
         this.#endAt  = endAt || new Date();
         this.#votes  = votes;
-        this.#votes.sort((v1,v2) => v1.started_at - v2.started_at);
+        // NOTE: sorts the caller's array IN PLACE. Preserved behaviour.
+        this.#votes.sort((v1,v2) => (v1.started_at as unknown as number) - (v2.started_at as unknown as number));
         this.#pauses = pauses;
 
         this.#voteThreshold = judges.length === 1 ? 1 : 2;
@@ -52,7 +76,7 @@ class RidingTimeCalculator {
     #sortEvents() {
         // Sort chronologically; for ties, process pause events before vote events
         this.#events.sort((a, b) => {
-            const diff = a.time - b.time;
+            const diff = (a.time as unknown as number) - (b.time as unknown as number);
             if (diff !== 0) return diff;
             const order = { pausedAt: 0, resumedAt: 0, voteStart: 1, voteEnd: 1 };
             return (order[a.type] || 0) - (order[b.type] || 0);
@@ -81,7 +105,7 @@ class RidingTimeCalculator {
     }
 
 
-    #handlePause(pausedAt) {
+    #handlePause(pausedAt: Date) {
         if (this.#controlStartedAt !== null && this.#controlStartedAt !== undefined) {
             // Suspend the in-progress control period without discarding it
             this.#pendingControlTime = pausedAt.getTime() - this.#controlStartedAt.getTime();
@@ -91,7 +115,7 @@ class RidingTimeCalculator {
     }
 
 
-    #handleResume(resumedAt) {
+    #handleResume(resumedAt: Date) {
         this.#paused = false;
         this.#resumedAt = resumedAt;
         if (this.controlActive) {
@@ -103,7 +127,7 @@ class RidingTimeCalculator {
     }
 
 
-    #startVote(vote) {
+    #startVote(vote: RidingTimeVoteInput) {
         this.#activeVotes[vote.judge_id] = vote;
         if (!this.#paused && !this.#controlStartedAt && this.controlActive) {
             const voteTime = new Date(vote.started_at).getTime();
@@ -115,7 +139,7 @@ class RidingTimeCalculator {
     }
 
 
-    #endVote(vote) {
+    #endVote(vote: RidingTimeVoteInput) {
         delete this.#activeVotes[vote.judge_id];
         if (!this.controlActive && !this.#paused && this.#controlStartedAt) {
             this.#endControlPeriod(vote.ended_at);
@@ -133,18 +157,23 @@ class RidingTimeCalculator {
     get controlPeriods() { return this.#controlPeriods; }
     get controlActive() { return this.numVotes >= this.#voteThreshold }
     get numVotes()      { return Object.values(this.#activeVotes).length }
+    // Unused (no caller anywhere). `Math.MIN_VALUE` does not exist (it is
+    // `Number.MIN_VALUE`), so an open vote sorts as NaN. Dead code, preserved
+    // as-is — see FINDINGS.md F-35.
     get activeVotes()   {
         const activeVotes = Object.values(this.#activeVotes);
         activeVotes.sort((vote1,vote2) => {
+            // @ts-expect-error -- Math.MIN_VALUE is undefined at runtime (F-35)
             const val1 = vote1.ended_at || Math.MIN_VALUE;
+            // @ts-expect-error -- Math.MIN_VALUE is undefined at runtime (F-35)
             const val2 = vote2.ended_at || Math.MIN_VALUE;
-            return val1 - val2;
+            return (val1 as unknown as number) - (val2 as unknown as number);
         });
         return activeVotes
     }
 
 
-    #endControlPeriod(endAt) {
+    #endControlPeriod(endAt: Date) {
         const ms = endAt.getTime() - this.#controlStartedAt.getTime();
         this.#controlPeriods.push(ms / 1000);
         this.#controlStartedAt = null;
@@ -152,14 +181,15 @@ class RidingTimeCalculator {
 }
 
 
-function calculateRidingTime(votes, judges, endAt, pauses = []) {
+function calculateRidingTime(votes: RidingTimeVoteInput[], judges: readonly Judge[], endAt?: Date | null, pauses: readonly PauseInput[] = []): number[] {
     const calculator = new RidingTimeCalculator(votes, judges, endAt, pauses);
     calculator.calculate();
     return calculator.controlPeriods;
 }
 
 
-
-module.exports = {
+const ridingTime: RidingTimeModule = {
     calculateRidingTime
 };
+
+module.exports = ridingTime;

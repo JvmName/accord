@@ -3,7 +3,7 @@
  *
  * **`RidingTimeVote` has no wire representation.** It is a first-class entity
  * in the database (`round_id`, `judge_id`, `competitor_id`, `ended_at`) and
- * the input to the consensus algorithm in `lib/ridingTime.js`, but it is
+ * the input to the consensus algorithm in `src/domain/ridingTime.ts`, but it is
  * never serialised: `models.kt` declares no `RidingTimeVote` class, and both
  * vote endpoints render the enclosing **Match** instead —
  *

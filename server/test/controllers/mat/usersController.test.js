@@ -66,7 +66,7 @@ mock.module('../../../lib/activeRecord', () => {
 // ---------------------------------------------------------------------------
 const { UsersController } = require('../../../controllers/mat/usersController');
 const { MatCode }         = require('../../../models/matCode');
-const { calculateRidingTime } = require('../../../lib/ridingTime');
+const { calculateRidingTime } = require('../../../src/domain/ridingTime');
 
 
 // ---------------------------------------------------------------------------
