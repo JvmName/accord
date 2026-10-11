@@ -2,6 +2,9 @@ const { ConnectionConfiguration } = require('./connectionConfiguration');
 const { logger }                  = require('../../logger');
 const { QueryInterface }          = require('./queryInterface');
 const { Sequelize }               = require('sequelize');
+// Side effect: Sequelize DATE stores ISO 8601 text. Must load before the first
+// `new Sequelize` (FINDINGS F-39). Delete with the Sequelize layer (task 15).
+require('./isoDateTime');
 
 
 let   sequelizeConnectionsCache = {};
