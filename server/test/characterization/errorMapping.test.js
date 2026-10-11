@@ -10,7 +10,7 @@
  * the exact JSON body are observed as a client would see them.
  *
  * Consumed by task 12, which must reproduce all four mappings. The Sequelize
- * branch becomes a Postgres/Drizzle unique-violation branch, so its OUTPUT
+ * branch becomes a SQLite/Drizzle unique-violation branch, so its OUTPUT
  * shape is pinned independently of what triggers it.
  */
 const { beforeEach, describe, expect, it, jest, mock } = require('bun:test');

@@ -14,9 +14,9 @@ mock.module(require.resolve('sequelize'), () => {
     const dataTypeKey2   = TestHelpers.Faker.Text.randomString(10);
     const dataTypeValue2 = TestHelpers.Faker.Text.randomString(10);
     const Sequelize = {DataTypes: {
-        [dataTypeKey1]: {types: {postgres: [dataTypeValue1]}, key: dataTypeKey1},
-        [dataTypeKey2]: {types: {postgres: [dataTypeValue2]}, key: dataTypeKey2},
-        postgres:       {}
+        [dataTypeKey1]: {types: {sqlite: [dataTypeValue1]}, key: dataTypeKey1},
+        [dataTypeKey2]: {types: {sqlite: [dataTypeValue2]}, key: dataTypeKey2},
+        sqlite:         {}
     }};
     return { Model: MockModel, Sequelize } ;
 });
@@ -52,8 +52,8 @@ connectionSpy.mockImplementation(() => mockSequelize);
 
 const dataTypeKey1   = Object.keys(Sequelize.DataTypes)[0];
 const dataTypeKey2   = Object.keys(Sequelize.DataTypes)[1];
-const dataTypeValue1 = Sequelize.DataTypes[dataTypeKey1].types.postgres[0];
-const dataTypeValue2 = Sequelize.DataTypes[dataTypeKey2].types.postgres[0];
+const dataTypeValue1 = Sequelize.DataTypes[dataTypeKey1].types.sqlite[0];
+const dataTypeValue2 = Sequelize.DataTypes[dataTypeKey2].types.sqlite[0];
 
 importSchema.mockImplementation(() => ({created_at: {type: dataTypeValue1}, updated_at: {type: dataTypeValue2}}));
 

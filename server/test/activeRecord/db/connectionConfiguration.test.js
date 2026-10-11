@@ -48,11 +48,6 @@ describe('ConnectionConfiguration', () => {
         expect(() => new ConnectionConfiguration(databaseId1)).toThrow();
     });
 
-    it ('throws an error when there is missing information for postgres', () => {
-        spy.mockImplementation(() => ({[databaseId1]: {test: {port: Math.random()}}}));
-        expect(() => new ConnectionConfiguration(databaseId1)).toThrow();
-    });
-
     it ('does not require database details for sqlite', () => {
         spy.mockImplementation(() => ({[databaseId1]: {test: sqliteConfig}}));
         expect(() => new ConnectionConfiguration(databaseId1)).not.toThrow();
@@ -157,10 +152,10 @@ describe('ConnectionConfiguration', () => {
 
 
     describe('ConnectionConfiguration#dialect', () => {
-        it ('defaults to postgres', () => {
+        it ('defaults to sqlite', () => {
             spy.mockImplementation(() => ({[databaseId1]: { test }}));
             const config = new ConnectionConfiguration(databaseId1);
-            expect(config.dialect).toEqual('postgres');
+            expect(config.dialect).toEqual('sqlite');
         });
 
         it ('returns sqlite when configured to do so', () => {

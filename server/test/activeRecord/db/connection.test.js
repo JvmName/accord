@@ -91,30 +91,7 @@ describe('Connection', () => {
             expect(conn1._sequelize).not.toBe(conn2._sequelize);
         });
 
-        describe('settings (postgres)', () => {
-            it ('sets the connection settings to the correct values', () => {
-                const conn1 = new Connection();
-                expect(conn1._sequelize.options.database).toEqual(config1.database);
-                expect(conn1._sequelize.options.dialect).toEqual('postgres');
-                expect(conn1._sequelize.options.host).toEqual(config1.host);
-                expect(conn1._sequelize.options.password).toEqual(config1.password);
-                expect(conn1._sequelize.options.port).toEqual(config1.port);
-                expect(conn1._sequelize.options.username).toEqual(config1.username);
-
-                const conn2 = new Connection(databaseId1);
-                expect(conn2._sequelize.options.database).toEqual(config2.database);
-                expect(conn2._sequelize.options.dialect).toEqual('postgres');
-                expect(conn2._sequelize.options.host).toEqual(config2.host);
-                expect(conn2._sequelize.options.password).toEqual(config2.password);
-                expect(conn2._sequelize.options.port).toEqual(config2.port);
-                expect(conn2._sequelize.options.username).toEqual(config2.username);
-            });
-
-            it ('requires ssl when the configuration says to', () => {
-                const conn = new Connection(databaseId2);
-                expect(conn._sequelize.options.dialectOptions).toEqual({ssl: {require: true}});
-            });
-
+        describe('settings (general)', () => {
             it ('enables logging when log level is debug', () => {
                 CONSTANTS.LOG_LEVEL = 'debug';
                 process.env.LOG_SQL = 1;
@@ -129,66 +106,9 @@ describe('Connection', () => {
                 expect(conn._sequelize.options.logging).toBeFalsy();
             });
 
-            it ('sets the connection pool to the configured values', () => {
-                const conn1 = new Connection();
-                expect(conn1._sequelize.options.pool).toEqual(config1.pool);
-
-                const conn2 = new Connection(databaseId1);
-                expect(conn2._sequelize.options.pool).toEqual({min: 0, max: 5})
-            });
-
             it ('configures the connection to use underscores for columns', () => {
                 const conn = new Connection();
                 expect(conn._sequelize.options.define.underscored).toBeTruthy();
-            });
-
-
-            describe('replication', () => {
-                it ('configures a read and writer when replicas are configured', () => {
-                    const config = {
-                        database: TestHelpers.Faker.Text.randomString(10),
-                        host:     TestHelpers.Faker.Text.randomString(10),
-                        password: TestHelpers.Faker.Text.randomString(10),
-                        port:     Math.random(),
-                        username: TestHelpers.Faker.Text.randomString(10),
-                        readers: [
-                            {
-                                database: TestHelpers.Faker.Text.randomString(10),
-                                host:     TestHelpers.Faker.Text.randomString(10),
-                                password: TestHelpers.Faker.Text.randomString(10),
-                                port:     Math.random(),
-                                username: TestHelpers.Faker.Text.randomString(10),
-                            },
-                            {
-                                database: TestHelpers.Faker.Text.randomString(10),
-                                host:     TestHelpers.Faker.Text.randomString(10),
-                                password: TestHelpers.Faker.Text.randomString(10),
-                                port:     Math.random(),
-                                username: TestHelpers.Faker.Text.randomString(10),
-                            },
-                        ]
-                    }
-                    spy.mockImplementation(() => ({default: {test: config }}));
-                    const conn    = new Connection();
-                    const options = conn._sequelize.options;
-                    expect(options.database).toBe(undefined);
-                    expect(options.dialect).toBe('postgres');
-                    expect(options.host).toBe(undefined);
-                    expect(options.password).toBe(undefined);
-                    expect(options.port).toBe(undefined);
-                    expect(options.username).toBe(undefined);
-
-                    expect(options.replication).toEqual({
-                        write: {
-                            database: config.database,
-                            host:     config.host,
-                            password: config.password,
-                            port:     config.port,
-                            username: config.username,
-                        },
-                        read: config.readers
-                    });
-                });
             });
         });
 
