@@ -79,3 +79,49 @@ checks the table list, columns, NOT NULL on value-class columns, unique
 constraints, round trips and relational queries. `test/db/datetime.test.js`
 opens one temp-file DB from both Sequelize and Drizzle and checks the stored
 ISO format, cross-stack reads, ordering and NULLs.
+
+## Repositories (task 10)
+
+`repositories/{users,mats,matCodes,matches,rounds,votes}.ts` and
+`transaction.ts`. The inventory that drove the API (every legacy call site ->
+function, or -> task 10b) is
+`.ai/plans/server-ts/artifacts/repository-inventory.md`.
+
+- **Plain functions, no classes.** Each is `async fn(db, ...)` where `db` is
+  the `createDb()` handle or a `transaction()` handle (`DbOrTx`), returning
+  Drizzle rows (`types.ts`). No ActiveRecord base, no `save()`, no
+  `toApiResponse`/`apiSafeKeys`: rows carry every column (including
+  `users.api_token`) and serialisation is task 11. ES `export`, like
+  `schema.ts`: only TS/new code and tests load them (`require()` works under
+  bun; smoke-tested in `test/db/repositories/matCodes.test.js`).
+- **Association caching is dropped, not ported.** `BaseRecord`'s
+  per-instance `#cachedAssociations` existed because every association was a
+  lazy round trip, and it brought stale-cache bugs with it (manual
+  `clearCachedAssociation` calls, F-34). The hot path now loads in one
+  relational query instead: `findMatchGraph` / `findMatchGraphsByIds`
+  (match + mat + competitors + judges + rounds + votes + pauses) and
+  `findMatGraph`. A worker tick that cost ~127 queries on the contract seed
+  costs 3 (F-49). If profiling ever shows a need, add an explicit
+  request-scoped cache then.
+- **Legacy semantics kept:** `null` vs `undefined` exactly as the models
+  returned them (`findMatByCode` -> `undefined` for an unknown code,
+  `findOpenVoteForJudge` -> `undefined`, everything else `null`); lookups
+  passed `undefined` throw like Sequelize's `where`; ordering reproduces the
+  implicit legacy order explicitly (F-48); creates set
+  `created_at = updated_at = now`, updates bump `updated_at`; join-table adds
+  are idempotent like `belongsToMany#add`, `setMatchJudges` behaves like
+  `belongsToMany#set`.
+- **Write primitives only.** Lifecycle commands (start/end match or round,
+  votes, pause/resume, set result) are composed from these primitives in
+  task 10b.
+- **`transaction(db, async (tx) => ...)`** really is atomic: BEGIN DEFERRED,
+  COMMIT on resolve, ROLLBACK + rethrow on error, resolves to the callback's
+  value, nested calls become SAVEPOINTs, top-level transactions on one
+  connection are queued. It does NOT use Drizzle's `db.transaction()`, which
+  on bun-sqlite commits at the callback's first `await`. Caveat: other
+  non-transactional queries on the same connection that run while a
+  transaction is open join it. The legacy `BaseRecord.transaction` was not
+  atomic at all and returned `undefined` (F-50); whether the ported call
+  sites use the atomic version is a 10b/13a decision.
+- **`stoppage`** reads as `true/false/null` here; Sequelize returns `1/0/null`
+  from a legacy `TINYINT(1)` column (F-51). Only truthiness is used.

@@ -157,3 +157,20 @@ export interface ScoringModule {
                                          roundNumber: number,
                                          round: RoundStatusInput): RoundResult<C>;
 }
+
+/** A mat-code role (`mat_codes.role`). */
+export type MatCodeRole = 'admin' | 'viewer';
+
+/** Runtime export shape of `src/domain/matCode.ts` (CommonJS, typed at the `require`). */
+export interface MatCodeModule {
+    /** Legacy `MatCode.CODE_REGEXP`, preserved exactly: UNANCHORED (FINDINGS F-12). */
+    readonly CODE_REGEXP: RegExp;
+    /** Legacy `MatCode.ROLES`. */
+    readonly ROLES: { readonly ADMIN: 'admin'; readonly VIEWER: 'viewer' };
+    /** `CODE_REGEXP.test(s)` — the code-vs-id discrimination of `ServerController#initCurrentMat`. */
+    isMatCode(s: string): boolean;
+    /** Legacy `MatCode#isAdminCode` (loose `==`). */
+    isAdminCode(code: { role: string }): boolean;
+    /** Legacy `MatCode#isViewerCode` (loose `==`). */
+    isViewerCode(code: { role: string }): boolean;
+}
