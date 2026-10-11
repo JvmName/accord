@@ -7,7 +7,7 @@
 import { z } from 'zod';
 import { matSchema } from './mat';
 import { leakedRoundSchema, roundSchema } from './round';
-import { idSchema, isoDateTimeSchema } from './scalars';
+import { idSchema, isoDateTimeSchema, nullableRef } from './scalars';
 import { leakedUserSchema, userSchema } from './user';
 
 /**
@@ -49,7 +49,7 @@ const makeMatchSchema = (competitorUser: z.ZodType, round: z.ZodType) =>
         ended_at: isoDateTimeSchema.nullable(),
         red_competitor: competitorUser,
         blue_competitor: competitorUser,
-        winner: competitorUser.nullable(),
+        winner: nullableRef(competitorUser),
 
         // Association-dependent — absent unless explicitly included.
         mat: z.lazy(() => matSchema).optional(),

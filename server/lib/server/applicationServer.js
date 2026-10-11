@@ -168,6 +168,10 @@ class ApplicationServer {
 
 
     #openApiValidatorMiddleware() {
+        // DEV request/response validation intentionally stays on the hand-written spec from
+        // lib/openapi (which includes `paths`) until task 12/14. The generated server/openapi.json
+        // (task 06) is components-only; feeding it here would validate against an empty path set
+        // and silently pass everything.
         const OpenApiValidator = require('express-openapi-validator');
         return OpenApiValidator.middleware({
             apiSpec:           getOpenApiSpec(),

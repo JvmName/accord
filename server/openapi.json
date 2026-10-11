@@ -1,0 +1,715 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Accord API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "API server"
+    }
+  ],
+  "security": [
+    {
+      "ApiToken": []
+    }
+  ],
+  "paths": {},
+  "components": {
+    "securitySchemes": {
+      "ApiToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Api-Token"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "MatCode": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        },
+        "required": [
+          "code",
+          "role"
+        ],
+        "additionalProperties": false
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "admin",
+          "viewer"
+        ]
+      },
+      "Mat": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "judge_count": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "creator_id": {
+            "type": "string"
+          },
+          "judges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            }
+          },
+          "codes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatCode"
+            }
+          },
+          "current_match": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Match"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "upcoming_matches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Match"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "judge_count",
+          "creator_id"
+        ],
+        "additionalProperties": false
+      },
+      "Match": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "creator_id": {
+            "type": "string"
+          },
+          "mat_id": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "ended_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "red_competitor": {
+            "$ref": "#/components/schemas/User"
+          },
+          "blue_competitor": {
+            "$ref": "#/components/schemas/User"
+          },
+          "winner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mat": {
+            "$ref": "#/components/schemas/Mat"
+          },
+          "judges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            }
+          },
+          "rounds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Round"
+            }
+          },
+          "break_started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "break_duration": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "break_remaining": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "creator_id",
+          "mat_id",
+          "started_at",
+          "ended_at",
+          "red_competitor",
+          "blue_competitor",
+          "winner",
+          "break_started_at",
+          "break_duration",
+          "break_remaining"
+        ],
+        "additionalProperties": false
+      },
+      "Round": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "max_duration": {
+            "type": "integer"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ended_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "score": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "paused": {
+            "type": "boolean"
+          },
+          "time_remaining": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "winner": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/User"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "method": {
+                "$ref": "#/components/schemas/RoundResultMethod"
+              }
+            },
+            "required": [
+              "winner",
+              "method"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "max_duration",
+          "started_at",
+          "ended_at",
+          "score",
+          "paused",
+          "time_remaining",
+          "result"
+        ],
+        "additionalProperties": false
+      },
+      "RoundResultMethod": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/RoundResultType"
+          },
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "RoundResultType": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "submission",
+          "stoppage",
+          "points",
+          "tie",
+          "tech-fall",
+          null
+        ]
+      },
+      "CompetitorColor": {
+        "type": "string",
+        "enum": [
+          "red",
+          "blue"
+        ]
+      },
+      "RoundResult": {
+        "type": "object",
+        "properties": {
+          "winner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "method": {
+            "$ref": "#/components/schemas/RoundResultMethod"
+          }
+        },
+        "required": [
+          "winner",
+          "method"
+        ],
+        "additionalProperties": false
+      },
+      "LeakedUser": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "api_token": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "api_token",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": false
+      },
+      "LeakedMatch": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "creator_id": {
+            "type": "string"
+          },
+          "mat_id": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "ended_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "red_competitor": {
+            "$ref": "#/components/schemas/LeakedUser"
+          },
+          "blue_competitor": {
+            "$ref": "#/components/schemas/LeakedUser"
+          },
+          "winner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeakedUser"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mat": {
+            "$ref": "#/components/schemas/Mat"
+          },
+          "judges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            }
+          },
+          "rounds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeakedRound"
+            }
+          },
+          "break_started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "break_duration": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "break_remaining": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "creator_id",
+          "mat_id",
+          "started_at",
+          "ended_at",
+          "red_competitor",
+          "blue_competitor",
+          "winner",
+          "break_started_at",
+          "break_duration",
+          "break_remaining"
+        ],
+        "additionalProperties": false
+      },
+      "LeakedRound": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "max_duration": {
+            "type": "integer"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ended_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "score": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "paused": {
+            "type": "boolean"
+          },
+          "time_remaining": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "winner": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/LeakedUser"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "method": {
+                "$ref": "#/components/schemas/RoundResultMethod"
+              }
+            },
+            "required": [
+              "winner",
+              "method"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "max_duration",
+          "started_at",
+          "ended_at",
+          "score",
+          "paused",
+          "time_remaining",
+          "result"
+        ],
+        "additionalProperties": false
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CreateMatRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "judge_count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "JoinMatRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CompetitorRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateMatchRequest": {
+        "type": "object",
+        "properties": {
+          "red": {
+            "$ref": "#/components/schemas/CompetitorRequest"
+          },
+          "blue": {
+            "$ref": "#/components/schemas/CompetitorRequest"
+          }
+        },
+        "required": [
+          "red",
+          "blue"
+        ]
+      },
+      "EndRoundRequest": {
+        "type": "object",
+        "properties": {
+          "winner": {
+            "$ref": "#/components/schemas/CompetitorColor"
+          },
+          "stoppage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StartRidingTimeVoteRequest": {
+        "type": "object",
+        "properties": {
+          "rider": {
+            "$ref": "#/components/schemas/CompetitorColor"
+          }
+        },
+        "required": [
+          "rider"
+        ]
+      },
+      "CreateUserResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "api_token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "user",
+          "api_token"
+        ],
+        "additionalProperties": false
+      },
+      "MatResponse": {
+        "type": "object",
+        "properties": {
+          "mat": {
+            "$ref": "#/components/schemas/Mat"
+          }
+        },
+        "required": [
+          "mat"
+        ],
+        "additionalProperties": false
+      },
+      "MatchResponse": {
+        "type": "object",
+        "properties": {
+          "match": {
+            "$ref": "#/components/schemas/Match"
+          }
+        },
+        "required": [
+          "match"
+        ],
+        "additionalProperties": false
+      },
+      "JoinMatResponse": {
+        "type": "object",
+        "properties": {
+          "mat": {
+            "$ref": "#/components/schemas/Mat"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "api_token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mat",
+          "user",
+          "api_token"
+        ],
+        "additionalProperties": false
+      },
+      "JudgesResponse": {
+        "type": "object",
+        "properties": {
+          "judges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            }
+          }
+        },
+        "required": [
+          "judges"
+        ],
+        "additionalProperties": false
+      },
+      "ViewersResponse": {
+        "type": "object",
+        "properties": {
+          "viewers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            }
+          }
+        },
+        "required": [
+          "viewers"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "parameters": {}
+  }
+}

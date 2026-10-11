@@ -25,3 +25,19 @@ export const isoDateTimeSchema = z.iso.datetime();
 /** `CompetitorColor` in `models.kt`. */
 export const competitorColorSchema = z.enum(['red', 'blue']);
 export type CompetitorColor = z.infer<typeof competitorColorSchema>;
+
+/**
+ * `schema | null` for a schema that is registered as an OpenAPI component
+ * (`Match.winner`, `Round.result.winner`, ...).
+ *
+ * Use this instead of `.nullable()` on such schemas. zod-to-openapi 9.1.0
+ * emits `registered.nullable()` as `allOf: [{ $ref }, { type: ['object', 'null'] }]`,
+ * and `allOf` needs both branches, so the referenced object rejects `null`.
+ * A union emits `anyOf: [{ $ref }, { type: 'null' }]`, which is correct. The
+ * Zod-side behaviour is identical, so the wire shape is unchanged.
+ *
+ * Upstream: https://github.com/asteasolutions/zod-to-openapi/pull/387 and
+ * https://github.com/asteasolutions/zod-to-openapi/issues/248. Remove this
+ * helper (back to `.nullable()`) once a release containing the fix is adopted.
+ */
+export const nullableRef = <T extends z.ZodType>(schema: T) => z.union([schema, z.null()]);

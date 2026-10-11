@@ -7,6 +7,7 @@
         "worker": "nodemon ./bin/worker",
         "test": "bun test --isolate",
         "typecheck": "tsc --noEmit",
+        "generate:openapi": "bun run bin/generate-openapi.ts",
         "db:create_migration": "./bin/migrate create_migration",
         "db:migrate": "./bin/migrate migrate",
         "db:rollback": "./bin/migrate rollback"
@@ -33,10 +34,12 @@
         "zod": "^4.6.5"
     },
     "devDependencies": {
+        "@asteasolutions/zod-to-openapi": "^9.1.0",
         "@types/cors": "^2.8.19",
         "@types/express": "^5.0.6",
         "@types/node": "^26.5.1",
         "@types/response-time": "^2.3.9",
+        "ajv": "^8.20.0",
         "bun-types": "^1.4.2",
         "nodemon": "^3.1.11",
         "socket.io-client": "^4.0.0",

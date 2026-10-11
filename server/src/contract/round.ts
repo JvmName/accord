@@ -7,7 +7,7 @@
  * `RoundPause` rows, and `result` from `RDojoKombatRules.determineWinner`.
  */
 import { z } from 'zod';
-import { idSchema, isoDateTimeSchema } from './scalars';
+import { idSchema, isoDateTimeSchema, nullableRef } from './scalars';
 import { leakedUserSchema, userSchema } from './user';
 
 export const roundResultTypeSchema = z.enum([
@@ -36,7 +36,7 @@ export const roundResultMethodSchema = z.strictObject({
 
 const makeRoundResultSchema = (winner: z.ZodType) =>
     z.strictObject({
-        winner: winner.nullable(),
+        winner: nullableRef(winner),
         method: roundResultMethodSchema,
     });
 
