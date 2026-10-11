@@ -1,4 +1,12 @@
-const WORDS = [
+interface WordEntry {
+    word:     string;
+    length:   number;
+    category: string;
+    language: string;
+}
+
+
+const WORDS: WordEntry[] = [
     {
         "word": "lion",
         "length": 4,
@@ -844,9 +852,9 @@ const WORDS = [
 
 class WordGenerator {
 
-    getWords(count) {
-        const picked = [];
-        const used = new Set();
+    getWords(count: number): string[] {
+        const picked: string[] = [];
+        const used = new Set<number>();
 
         while (picked.length < count && picked.length < WORDS.length) {
             const idx = Math.floor(Math.random() * WORDS.length);

@@ -1,29 +1,52 @@
-const { logger }    = require('../logger');
+import type { Logger } from 'pino';
+
+const { logger }: { logger: Logger } = require('../logger');
 const { HttpError } = require('./error');
 
 
+type HttpHeaders    = Record<string, string>;
+type RequestData    = Record<string, any>;
+
+interface RequestOptions {
+    requestParams?: RequestData;
+    body?:          RequestData;
+    headers?:       HttpHeaders;
+}
+
+interface RequestPayload {
+    headers: HttpHeaders;
+    method:  string;
+    body?:   string;
+}
+
+interface HttpResponse<T = any> {
+    data:   T;
+    status: number;
+}
+
+
 class HttpClient {
-    async get(endpoint, { requestParams, headers }={}) {
+    async get(endpoint: string, { requestParams, headers }: RequestOptions={}): Promise<HttpResponse> {
         return await this.#makeRequest(endpoint, "GET", arguments[1]);
     }
 
 
-    async post(endpoint, { body, headers }={}) {
+    async post(endpoint: string, { body, headers }: RequestOptions={}): Promise<HttpResponse> {
         return await this.#makeRequest(endpoint, "POST", arguments[1]);
     }
 
 
-    async put(endpoint, { body, headers }={}) {
+    async put(endpoint: string, { body, headers }: RequestOptions={}): Promise<HttpResponse> {
         return await this.#makeRequest(endpoint, "PUT", arguments[1]);
     }
 
 
-    async delete(endpoint, { requestParams, headers }={}) {
+    async delete(endpoint: string, { requestParams, headers }: RequestOptions={}): Promise<HttpResponse> {
         return await this.#makeRequest(endpoint, "DELETE", arguments[1]);
     }
 
 
-    async #makeRequest(endpoint, method, { requestParams, body, headers }={}) {
+    async #makeRequest(endpoint: string, method: string, { requestParams, body, headers }: RequestOptions={}): Promise<HttpResponse> {
         this.#logRequest(method, endpoint);
 
         endpoint            = `${this.urlRoot}${endpoint}`;
@@ -42,8 +65,8 @@ class HttpClient {
     }
 
 
-    #prepareRequestPayload(url, requestData, headers, method) {
-        const payload = {};
+    #prepareRequestPayload(url: URL, requestData: RequestData, headers: HttpHeaders | undefined, method: string): RequestPayload {
+        const payload = {} as RequestPayload;
 
         headers       ||= {};
         payload.headers = {...this.defaultHeaders, ...headers};
@@ -54,7 +77,7 @@ class HttpClient {
     }
 
 
-    #addRequestData(payload, requestData, method, url, headers) {
+    #addRequestData(payload: RequestPayload, requestData: RequestData, method: string, url: URL, headers: HttpHeaders): void {
         if (method == "POST" || method == "PUT") {
             payload.body = JSON.stringify(requestData || {});
         } else {
@@ -62,7 +85,7 @@ class HttpClient {
         }
     }
 
-    #addUrlRequestData(url, requestData, headers) {
+    #addUrlRequestData(url: URL, requestData: RequestData, headers: HttpHeaders): void {
         const contentType = headers['Content-Type'];
         if (contentType == 'application/json') {
             this.#addJsonUrlRequestData(requestData, url);
@@ -72,7 +95,7 @@ class HttpClient {
     }
 
 
-    #addJsonUrlRequestData(requestData, url) {
+    #addJsonUrlRequestData(requestData: RequestData, url: URL): void {
         Object.entries(requestData).forEach(([paramName, val]) => {
             if (typeof val == 'object') {
                 val = JSON.stringify(val);
@@ -82,19 +105,20 @@ class HttpClient {
     }
 
 
-    #addFormUrlRequestData(requestData, url) {
+    #addFormUrlRequestData(requestData: RequestData, url: URL): void {
         Object.entries(requestData).forEach(([paramName, val]) => {
             this.#appendUrlRequestValue(paramName, val, url)
         });
     }
 
 
-    #appendUrlRequestValue(paramName, val, url) {
+    #appendUrlRequestValue(paramName: string, val: any, url: URL): void {
         if (Array.isArray(val)) {
             val.forEach(v => url.searchParams.append(paramName, v));
 
         } else if (typeof val == 'object') {
             for (const [subParamName, subValue] of Object.entries(val)) {
+                // @ts-expect-error -- `formData` is undeclared (latent bug, see FINDINGS F-31); behavior intentionally unchanged
                 this.#appendUrlRequestValue(`${paramName}[${subParamName}]`, val, formData);
             };
 
@@ -104,12 +128,12 @@ class HttpClient {
     }
 
 
-    #logRequest(method, endpoint) {
+    #logRequest(method: string, endpoint: string): void {
         logger.info(`API CALL: ${method} ${endpoint}`);
     }
 
 
-    get defaultHeaders() {
+    get defaultHeaders(): HttpHeaders {
         return {
             Accept: "application/json",
             "Content-Type": "application/json",
@@ -117,7 +141,7 @@ class HttpClient {
     }
 
 
-    get urlRoot() {
+    get urlRoot(): string {
         return "";
     }
 }

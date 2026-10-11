@@ -1,9 +1,12 @@
+/** The subset of the fetch `Response` that HttpError reads. */
+type ErrorResponse = Pick<Response, 'status' | 'statusText' | 'headers' | 'url' | 'text'>;
+
 class HttpError extends Error {
-    #requestPayload;
-    #response;
+    #requestPayload: unknown;
+    #response: ErrorResponse;
 
 
-    constructor(response, requestPayload) {
+    constructor(response: ErrorResponse, requestPayload?: unknown) {
         super();
         this.#response       = response;
         this.#requestPayload = requestPayload;
@@ -18,7 +21,7 @@ class HttpError extends Error {
     get url()             { return this.#response.url; }
 
 
-    async data() {
+    async data(): Promise<unknown> {
         const body = await this.#response.text();
         try {
             return JSON.parse(body);

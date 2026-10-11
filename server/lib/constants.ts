@@ -7,4 +7,4 @@ module.exports = {
     DEV,
     ENV,
     LOG_LEVEL 
-};
+} as const;
