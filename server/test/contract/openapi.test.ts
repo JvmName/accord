@@ -60,8 +60,16 @@ describe('generateOpenApiDocument', () => {
         expect(document.security).toEqual([{ ApiToken: [] }]);
     });
 
-    it('defers paths to task 12', () => {
-        expect(generateOpenApiDocument().paths).toEqual({});
+    // Task 12 flipped this: it used to assert `paths: {}` ("defers paths to
+    // task 12"). Paths are now generated from the route registry; the full
+    // contract of that generation is pinned in test/http/openapiPaths.test.ts.
+    it('generates paths from the task-12 route registry (every non-DEV route)', () => {
+        const paths = generateOpenApiDocument().paths ?? {};
+        const operations = Object.entries(paths)
+            .flatMap(([p, item]) => Object.keys(item as object).map(method => `${method.toUpperCase()} ${p}`))
+            .sort();
+        expect(operations).toHaveLength(20);
+        expect(operations).not.toContain('GET /docs');
     });
 
     // --- Step-5 diff anchors: F-20 and F-24 (see 06-openapi-generation.md's
