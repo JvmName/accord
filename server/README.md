@@ -233,3 +233,7 @@ Listen to the event `match.update` to receive updates every second for a match. 
     }
 }
 ```
+
+# Request validation in development
+
+With `NODE_ENV=development` the server checks every request and response against the generated `openapi.json`, and also serves it at `/docs` and `/docs.json`. Set `ACCORD_OPENAPI_VALIDATION=0` to turn the check off, or `=1` to turn it on outside development (tests). It never runs in production.

@@ -9,7 +9,7 @@
  *      replayed with a stub handler returning that golden's payload, which
  *      proves the envelope/status machinery (e.g. the F-21 status-less 422).
  *   3. DIFFERENTIAL: the four `handleError` branches, driven through the legacy
- *      `ApplicationServer#requestHandler` (the same harness as
+ *      `LegacyControllerDispatch#requestHandler` (the same harness as
  *      `test/characterization/errorMapping.test.js`) and through the registry,
  *      must render identical status + body for every case, plus a REAL SQLite
  *      unique violation raised through Drizzle (F-14 shape).
@@ -37,7 +37,7 @@ import {
 } from './support/registryApp';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const { ApplicationServer } = require('../../lib/server/applicationServer');
+const { LegacyControllerDispatch } = require('../../lib/server/applicationServer');
 const legacy = require('../../lib/server/serverController');
 const { makeRequest, makeResponse } = require('../helpers/express');
 /* eslint-enable @typescript-eslint/no-require-imports */
@@ -204,12 +204,12 @@ describe('envelope: task-04 goldens replayed through the registry', () => {
 // 3. Differential: handleError, legacy vs registry
 // ---------------------------------------------------------------------------
 
-/** Legacy: one request through ApplicationServer#requestHandler (no DB access: no token/params). */
+/** Legacy: one request through LegacyControllerDispatch#requestHandler (no DB access: no token/params). */
 async function legacyRender(err: unknown): Promise<{ status: number; body: unknown }> {
     class ThrowingController extends legacy.ServerController {
         async getProbe() { throw err; }
     }
-    const server   = new ApplicationServer();
+    const server   = new LegacyControllerDispatch();
     const response = makeResponse();
     await server.requestHandler('getProbe', ThrowingController)(makeRequest(), response);
     return { status: response.statusCode, body: JSON.parse(JSON.stringify(response._body)) };

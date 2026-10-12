@@ -13,7 +13,7 @@ import { z } from 'zod';
 import { routeResponses } from '../../src/contract/responses';
 import type { matchSchema } from '../../src/contract/match';
 import type { Mat, MatCode, Match, Round, User } from '../../src/db/types';
-import { defineRoute, noInput } from '../../src/http/route';
+import { defineRoute, noInput, notImplemented } from '../../src/http/route';
 import { createUserBody, matchIdParams, startRidingTimeBody } from '../../src/http/routes/requests';
 import { buildLegacyInput, processedRequestDataValue } from '../../src/http/legacyInput';
 import { validateRequest } from '../../src/http/middleware/validate';
@@ -248,11 +248,13 @@ describe('registration', () => {
     });
 
     it('placeholder handlers fail LOUDLY (500), never silently succeed', async () => {
-        const placeholderApp = await startRegistryApp({ routes: [(await import('../../src/http/routes/system')).getHealthCheck] });
+        const { getHealthCheck } = await import('../../src/http/routes/system');
+        const placeholder = { ...getHealthCheck, handler: notImplemented('14') } as AnyRouteDefinition;
+        const placeholderApp = await startRegistryApp({ routes: [placeholder] });
         try {
             const res = await placeholderApp.request('GET', '/system/healthCheck');
             expect(res.status).toBe(500);
-            expect(res.body).toEqual({ data: { error: 'handler not implemented: ported in task 13c' }, status: 'server error' });
+            expect(res.body).toEqual({ data: { error: 'handler not implemented: ported in task 14' }, status: 'server error' });
         } finally {
             placeholderApp.close();
         }

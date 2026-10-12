@@ -9,11 +9,8 @@
  * sorted set) and that each route's authorization equals what its legacy
  * controller enforces.
  *
- * All 23 routes are declared here. The user, mat, mat membership, match,
- * round and riding-time routes have real handlers and are served by the
- * running app (`mountPorted.ts`); the system and docs routes still carry a
- * placeholder handler that throws `NotImplementedError` and are served by the
- * legacy controllers.
+ * All 23 routes are declared here, and the application (`../server.ts`)
+ * serves every one of them; the three docs routes only in development.
  */
 import { matRoutes } from './mats';
 import { matUserRoutes } from './matUsers';

@@ -1,129 +1,99 @@
 /**
- * The LIVE route table of the running application while the legacy
- * controllers and the typed route registry serve the API together.
+ * The LIVE route table of the running application.
  *
- * Reads the Express router stack of a real `ApplicationServer` after
- * `registerControllers()` and asserts that:
- *   - no (method, path) is registered twice, by either system;
- *   - the full live table equals the baseline (the non-DEV routes);
- *   - every route that replaces a controller in `PORTED_CONTROLLERS` is served by
- *     the registry and every other route by a legacy controller;
- *   - the registry-served table is exactly the baseline's rows for the ported
- *     controllers.
- * It also checks that the ported routes and the Sequelize models use the same
+ * Reads the Express router stack of a real `ApplicationServer` after its
+ * routes are mounted and asserts that:
+ *   - no (method, path) is registered twice;
+ *   - the full live table equals the baseline (the non-DEV routes outside
+ *     development, all of them in development);
+ *   - every route is served by the route registry's chain, ending in its own
+ *     error handler.
+ * It also checks that the routes and the Sequelize models use the same
  * database file.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import fs from 'fs';
 import path from 'path';
 import { createDb, migrateDb, type Db } from '../../src/db';
-import { portedRoutes, ROUTES_BY_LEGACY_CONTROLLER } from '../../src/http/mountPorted';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const Http = require('../helpers/httpServer');
 // Before anything opens a database connection.
 const databaseFile: string = Http.useTemporaryDatabase('accord-live-routes');
-const { ApplicationServer } = require('../../lib/server/applicationServer');
+const { ApplicationServer } = require('../../src/http/server');
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 const FIXTURE = path.join(__dirname, '..', 'characterization', 'fixtures', 'routeTable.txt');
 
-interface LiveRoute { key: string; servedBy: 'registry' | 'legacy'; owner: string }
+interface LiveRoute { key: string; handlers: string[] }
 
-/** Every (method, path) the Express app answers, in stack order, with who serves it. */
+/** Every (method, path) the Express app answers, in stack order, with its handler names. */
 function liveRoutes(app: { router: { stack: any[] } }): LiveRoute[] {
     const rows: LiveRoute[] = [];
     for (const layer of app.router.stack) {
         if (!layer.route) continue;
         const handlers = layer.route.stack.map((l: { handle: { name: string } }) => l.handle.name);
-        // The registry's chain always starts with its request-state resolver.
-        const servedBy = handlers[0] === 'resolveState' ? 'registry' : 'legacy';
         for (const method of Object.keys(layer.route.methods)) {
-            rows.push({ key: `${method.toUpperCase()} ${layer.route.path}`, servedBy, owner: handlers.join(',') });
+            rows.push({ key: `${method.toUpperCase()} ${layer.route.path}`, handlers });
         }
     }
     return rows;
 }
 
-function baseline(): Array<{ key: string; owner: string; dev: boolean }> {
+function baseline(): Array<{ key: string; dev: boolean }> {
     return fs.readFileSync(FIXTURE, 'utf8')
         .split('\n')
         .map(l => l.trimEnd())
         .filter(l => l && !l.startsWith('#'))
         .map(l => {
-            const [key, owner, flag] = l.split('\t');
-            return { key, owner, dev: flag === 'DEV' };
+            const [key, , flag] = l.split('\t');
+            return { key, dev: flag === 'DEV' };
         });
 }
 
-/** `MatsController#getMat` -> the PORTED_CONTROLLERS key of the class that owned the row. */
-function controllerKeyOf(owner: string, routeKey: string): string {
-    const cls = owner.split('#')[0];
-    // The two UsersControllers are told apart by their paths.
-    if (cls === 'UsersController') return routeKey.startsWith('POST /users') ? 'UsersController' : 'mat/UsersController';
-    // The round and riding-time controllers live in controllers/match/.
-    if (cls === 'RoundsController' || cls === 'RidingTimeVoteController') return `match/${cls}`;
-    return cls;
-}
-
-describe('live route table (legacy controllers + typed registry)', () => {
+describe('live route table', () => {
     let db: Db;
-    let server: any;
     let live: LiveRoute[];
+    let liveDev: LiveRoute[];
 
     beforeAll(() => {
         db = createDb({ path: ':memory:' });
         migrateDb(db);
-        server = new ApplicationServer({ db });
-        server.registerControllers();
+        const server = new ApplicationServer({ db, dev: false });
+        server.mountRoutes();
         live = liveRoutes(server.expressApp);
+        const devServer = new ApplicationServer({ db, dev: true, openApiValidation: false });
+        devServer.mountRoutes();
+        liveDev = liveRoutes(devServer.expressApp);
     });
 
     afterAll(() => db.$client.close());
 
-    it('lists at least one ported controller, each with a route group', () => {
-        expect(server.portedControllers.length).toBeGreaterThan(0);
-        for (const key of server.portedControllers) expect(Object.keys(ROUTES_BY_LEGACY_CONTROLLER)).toContain(key);
-    });
-
-    it('serves no (method, path) from two places', () => {
-        const keys = live.map(r => r.key);
-        const duplicates = keys.filter((k, i) => keys.indexOf(k) !== i);
-        expect(duplicates).toEqual([]);
-    });
-
-    it('serves exactly the baseline routes (the non-DEV ones outside development)', () => {
-        const expected = baseline().filter(r => !r.dev).map(r => r.key).sort();
-        expect(live.map(r => r.key).sort()).toEqual(expected);
-    });
-
-    it('serves each ported controller\'s routes from the registry and every other route from a legacy controller', () => {
-        const ported = new Set<string>(server.portedControllers);
-        const expected = baseline()
-            .filter(r => !r.dev)
-            .map(r => ({ key: r.key, servedBy: ported.has(controllerKeyOf(r.owner, r.key)) ? 'registry' as const : 'legacy' as const }))
-            .sort((a, b) => a.key.localeCompare(b.key));
-        const actual = live.map(r => ({ key: r.key, servedBy: r.servedBy })).sort((a, b) => a.key.localeCompare(b.key));
-        expect(actual).toEqual(expected);
-    });
-
-    it('registry-served routes are exactly the baseline rows of the ported controllers', () => {
-        const ported = new Set<string>(server.portedControllers);
-        const expected = baseline()
-            .filter(r => ported.has(controllerKeyOf(r.owner, r.key)))
-            .map(r => r.key)
-            .sort();
-        expect(live.filter(r => r.servedBy === 'registry').map(r => r.key).sort()).toEqual(expected);
-        expect(portedRoutes(server.portedControllers).map(r => `${r.method.toUpperCase()} ${r.path}`).sort()).toEqual(expected);
-    });
-
-    it('gives every registry route its own error handler as the last handler', () => {
-        for (const layer of server.expressApp.router.stack) {
-            if (!layer.route || layer.route.stack[0].handle.name !== 'resolveState') continue;
-            const last = layer.route.stack[layer.route.stack.length - 1].handle;
-            expect({ path: layer.route.path, name: last.name, arity: last.length })
-                .toEqual({ path: layer.route.path, name: 'routeErrorHandler', arity: 4 });
+    it('serves no (method, path) twice', () => {
+        for (const table of [live, liveDev]) {
+            const keys = table.map(r => r.key);
+            const duplicates = keys.filter((k, i) => keys.indexOf(k) !== i);
+            expect(duplicates).toEqual([]);
         }
+    });
+
+    it('serves exactly the baseline routes: the non-DEV ones outside development, all in development', () => {
+        expect(live.map(r => r.key).sort()).toEqual(baseline().filter(r => !r.dev).map(r => r.key).sort());
+        expect(liveDev.map(r => r.key).sort()).toEqual(baseline().map(r => r.key).sort());
+    });
+
+    it('serves every route through the registry chain, which ends in its own error handler', () => {
+        for (const route of liveDev) {
+            expect({ route: route.key, first: route.handlers[0], last: route.handlers[route.handlers.length - 1] })
+                .toEqual({ route: route.key, first: 'resolveState', last: 'routeErrorHandler' });
+        }
+    });
+
+    it('mounts the routes only once, however often it is asked', () => {
+        const server = new ApplicationServer({ db, dev: false });
+        server.mountRoutes();
+        server.mountRoutes();
+        expect(liveRoutes(server.expressApp)).toHaveLength(live.length);
     });
 });
 

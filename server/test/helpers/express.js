@@ -6,7 +6,7 @@ const { jest } = require('bun:test');
  *
  * Extracted from test/controllers/mat/usersController.test.js (where it was
  * described as "mirrors jest-express shape") so that
- * test/server/applicationServer.test.js can drop the `jest-express` dependency
+ * test/server/legacyControllerDispatch.test.js can drop the `jest-express` dependency
  * and use the same doubles.
  *
  * Surface used by lib/server/serverController.js:

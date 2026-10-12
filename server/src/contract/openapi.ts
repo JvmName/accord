@@ -291,7 +291,9 @@ export function generateOpenApiDocument(): OpenAPIObject {
             title: 'Accord API',
             version: '1.0.0',
         },
-        servers: [{ url: '/api', description: 'API server' }],
+        // Routes are mounted at the root. The DEV request validator matches
+        // `<server url><path>`, so any other prefix would match nothing.
+        servers: [{ url: '/', description: 'API server' }],
         security: [{ ApiToken: [] }],
         paths,
         components,

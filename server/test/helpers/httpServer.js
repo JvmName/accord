@@ -86,11 +86,11 @@ function freePort() {
  * server nor a ready promise, so readiness is established by polling the
  * always-registered health check.
  */
-async function startServer({ timeoutMs = 10000 } = {}) {
-    const { ApplicationServer } = require('../../lib/server/applicationServer');
+async function startServer({ timeoutMs = 10000, serverOptions = {} } = {}) {
+    const { ApplicationServer } = require('../../src/http/server');
 
     const port   = await freePort();
-    const server = new ApplicationServer({ port });
+    const server = new ApplicationServer({ ...serverOptions, port });
     const origin = `http://127.0.0.1:${port}`;
 
     await server.listen();
@@ -137,6 +137,7 @@ function makeClient(origin) {
 
 
 module.exports = {
+    freePort,
     makeClient,
     migrate,
     startServer,

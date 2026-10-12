@@ -7,18 +7,15 @@
   // job, not tsc's. (server-ts task 03)
   "compilerOptions": {
     "target": "ES2022",
-    // CommonJS is deliberate — do NOT "modernize" to ESM. Four synchronous
+    // CommonJS is deliberate — do NOT "modernize" to ESM. Three synchronous
     // dynamic `require(variablePath)` sites are load-bearing architecture
     // with no ESM equivalent (ESM only offers async `await import()`, which
     // would force async propagation into synchronous getters like
-    // `BaseRecord.connection`/`BaseRecord.initialize()` and into server
-    // boot). Confirmed still present at:
-    //   - lib/server/applicationServer.js:334 (controller autoloading)
+    // `BaseRecord.connection`/`BaseRecord.initialize()`). Still present at:
     //   - lib/activeRecord/db/migrator.js:63 (migration loading)
     //   - lib/activeRecord/db/importSchema.js:3 (DB schema loading)
     //   - lib/activeRecord/db/connectionConfiguration.js:79 (DB config loading)
-    // Three of these four disappear in task 11 and one in task 14, but all
-    // exist for most of this project — CommonJS stays until then.
+    // All three go away with the legacy ORM; CommonJS stays until then.
     "module": "commonjs",
     "moduleResolution": "node",
     "lib": ["ES2022"],

@@ -40,9 +40,10 @@ export class ValidationError extends Error {
 }
 
 /**
- * Thrown by every placeholder handler in `routes/` (the system and docs routes,
- * still served by the legacy controllers). Deliberately an ordinary `Error` subclass, so if a placeholder
- * were ever reached it would surface as a loud 500, never as a silent success.
+ * Thrown by a `notImplemented()` placeholder handler. The server refuses to
+ * start while any route has one; it is an ordinary `Error` subclass, so if a
+ * placeholder were ever reached it would surface as a loud 500, never as a
+ * silent success.
  */
 export class NotImplementedError extends Error {}
 

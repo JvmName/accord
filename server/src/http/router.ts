@@ -13,11 +13,10 @@
  * a declaration, which also resolves F-04 (bun's unsorted `readdirSync` made
  * legacy registration order, and so route precedence, filesystem-dependent).
  *
- * The running app mounts only the routes whose legacy controllers are listed
- * as ported (`mountPorted.ts`); the legacy autoloader serves the rest. Global
+ * The application (`server.ts`) registers every route in the table. Global
  * middleware (CORS, body parsers, logging, static files) stays the
  * application's job; `legacyBodyParsers()` exists so tests can mount the
- * registry with the same body parsing legacy has.
+ * registry with the same body parsing the application has.
  */
 import express, {
     type ErrorRequestHandler,
@@ -34,6 +33,7 @@ import { errorMiddleware, type ErrorLogger } from './middleware/errors';
 import { getRequestState, requestStateMiddleware } from './middleware/requestState';
 import { getParsedRequest, validateMiddleware } from './middleware/validate';
 import { repositoryLoaders, type Subject } from './permissions';
+import { isPlaceholder } from './route';
 import type { AnyRouteDefinition, ContextHelpers } from './types';
 
 export interface HttpDeps {
@@ -119,6 +119,18 @@ export function routeChain(route: AnyRouteDefinition, deps: HttpDeps): Array<Req
         handlerMiddleware(route, deps),
         errorMiddleware({ dev: deps.dev, logger: deps.logger }),
     ];
+}
+
+/**
+ * Throws if any route still carries a `notImplemented()` placeholder, so a
+ * half-written route can never be served.
+ */
+export function assertImplemented(routes: readonly AnyRouteDefinition[]): void {
+    for (const route of routes) {
+        if (isPlaceholder(route.handler)) {
+            throw new Error(`${route.method.toUpperCase()} ${route.path} has no handler`);
+        }
+    }
 }
 
 /**

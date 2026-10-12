@@ -79,9 +79,15 @@ export function formatJSONBody(body: unknown): unknown {
  * The envelope object `ServerController#formatJSONBody` returns for a body at
  * a given status. `status` is computed from the status code exactly when the
  * body is rendered, as legacy did.
+ *
+ * A status with no text (422) leaves the key out of the object rather than
+ * holding `undefined`. The JSON is the same either way, but the DEV response
+ * validator inspects the object and would reject an extra `status` key.
  */
-export function envelopeFor(statusCode: number, body: unknown): { data: unknown; status: string | undefined } {
-    return { data: formatJSONBody(body), status: statusText(statusCode) };
+export function envelopeFor(statusCode: number, body: unknown): { data: unknown; status?: string } {
+    const data   = formatJSONBody(body);
+    const status = statusText(statusCode);
+    return status === undefined ? { data } : { data, status };
 }
 
 /**

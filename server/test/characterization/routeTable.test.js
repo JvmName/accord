@@ -1,29 +1,31 @@
 /**
  * CHARACTERIZATION — the complete route table.
  *
- * Pins the exact SET of (method, path) pairs the server registers, plus the
- * count, against a committed fixture. Asserting the full set (rather than a
- * subset) is the point: a subset check would not notice a route disappearing.
+ * Pins the exact SET of (method, path) pairs the running server answers, plus
+ * the count, against a committed fixture. Asserting the full set (rather than
+ * a subset) is the point: a subset check would not notice a route
+ * disappearing.
  *
- * Registration ORDER is deliberately not asserted. `#importControllers` walks
- * `fs.readdirSync`, which Node sorts and bun does not (FINDINGS.md F-04), so
- * order is filesystem-dependent under bun. Both sides are sorted before
- * comparison.
+ * The live table is read from the Express router stack of a booted
+ * `ApplicationServer`. The fixture's third column names the controller action
+ * that originally served each route; those controllers are no longer loaded,
+ * so only method and path are compared.
  *
- * Consumed by tasks 13a / 13b / 13c / 15.
+ * Registration ORDER is deliberately not asserted (the original table came
+ * from an unsorted directory walk). Both sides are sorted before comparison.
  */
-const { describe, expect, it } = require('bun:test');
+const { afterAll, beforeAll, describe, expect, it } = require('bun:test');
 const   fs                     = require('fs');
 const   path                   = require('path');
 
-const { ApplicationServer } = require('../../lib/server/applicationServer');
-const { SystemController }  = require('../../lib/server/systemController');
-const { DocsController }    = require('../../lib/server/docsController');
+const { ApplicationServer } = require('../../src/http/server');
+const { freePort }          = require('../helpers/httpServer');
 
 
-const FIXTURE_PATH  = path.join(__dirname, 'fixtures', 'routeTable.txt');
-const ARTIFACT_PATH = path.join(__dirname, '..', '..', '..',
-                                '.ai', 'plans', 'server-ts', 'artifacts', 'route-table.txt');
+const FIXTURE_PATH    = path.join(__dirname, 'fixtures', 'routeTable.txt');
+const ARTIFACT_PATH   = path.join(__dirname, '..', '..', '..',
+                                  '.ai', 'plans', 'server-ts', 'artifacts', 'route-table.txt');
+const CONTROLLERS_DIR = path.join(__dirname, '..', '..', 'controllers') + path.sep;
 
 
 function parseFixture() {
@@ -39,34 +41,28 @@ function parseFixture() {
             path:   methodAndPath.slice(spaceIdx + 1),
             owner,
             dev:    flag === 'DEV',
-            line:   `${methodAndPath}\t${owner}`,
+            key:    methodAndPath,
         });
     }
     return entries;
 }
 
 
-/**
- * Reproduces exactly what `ApplicationServer#registerControllers` registers:
- * the default controllers first (SystemController always, DocsController only
- * when CONSTANTS.DEV), then every autoloaded controller class.
- *
- * `includeDev` makes the DEV-only half explicit instead of leaving the result
- * dependent on NODE_ENV, so this test asserts the same 23 routes regardless of
- * the environment it runs in.
- */
-function collectRoutes({ includeDev }) {
-    const server  = new ApplicationServer();
-    const classes = [
-        SystemController,
-        ...(includeDev ? [DocsController] : []),
-        ...server.controllerClasses,
-    ];
+/** Boots a server (DEV routes on or off) and returns it once its routes are mounted. */
+async function bootServer({ dev }) {
+    const server = new ApplicationServer({ port: await freePort(), dev });
+    await server.listen();
+    return server;
+}
 
+
+/** Every `METHOD /path` the server's Express app answers, sorted. Duplicates are kept. */
+function liveRoutes(server) {
     const rows = [];
-    for (const controllerCls of classes) {
-        for (const action of controllerCls.actions) {
-            rows.push(`${action.method} ${action.path}\t${controllerCls.name}#${action.action}`);
+    for (const layer of server.expressApp.router.stack) {
+        if (!layer.route) continue;
+        for (const method of Object.keys(layer.route.methods)) {
+            rows.push(`${method.toUpperCase()} ${layer.route.path}`);
         }
     }
     return rows.sort();
@@ -75,55 +71,63 @@ function collectRoutes({ includeDev }) {
 
 describe('CHARACTERIZATION: route table', () => {
     const fixture = parseFixture();
+    let devServer;
+    let prodServer;
 
-    it('registers exactly the routes in the committed fixture (development: all 23)', () => {
-        const expected = fixture.map(e => e.line).sort();
-        expect(collectRoutes({ includeDev: true })).toEqual(expected);
+    beforeAll(async () => {
+        devServer  = await bootServer({ dev: true });
+        prodServer = await bootServer({ dev: false });
+    });
+
+    afterAll(() => {
+        devServer?.close();
+        prodServer?.close();
     });
 
 
-    it('registers exactly the non-DEV routes when CONSTANTS.DEV is false (20)', () => {
-        const expected = fixture.filter(e => !e.dev).map(e => e.line).sort();
-        expect(collectRoutes({ includeDev: false })).toEqual(expected);
+    it('registers exactly the routes in the committed fixture (development: all 23)', () => {
+        const expected = fixture.map(e => e.key).sort();
+        expect(liveRoutes(devServer)).toEqual(expected);
+    });
+
+
+    it('registers exactly the non-DEV routes outside development (20)', () => {
+        const expected = fixture.filter(e => !e.dev).map(e => e.key).sort();
+        expect(liveRoutes(prodServer)).toEqual(expected);
     });
 
 
     it('registers exactly 23 routes in development and 20 outside it', () => {
-        expect(collectRoutes({ includeDev: true  })).toHaveLength(23);
-        expect(collectRoutes({ includeDev: false })).toHaveLength(20);
+        expect(liveRoutes(devServer)).toHaveLength(23);
+        expect(liveRoutes(prodServer)).toHaveLength(20);
         expect(fixture).toHaveLength(23);
         expect(fixture.filter(e => e.dev)).toHaveLength(3);
     });
 
 
     it('exposes no duplicate (method, path) pairs', () => {
-        const pairs = collectRoutes({ includeDev: true }).map(row => row.split('\t')[0]);
-        expect(new Set(pairs).size).toBe(pairs.length);
+        for (const server of [devServer, prodServer]) {
+            const pairs = liveRoutes(server);
+            expect(new Set(pairs).size).toBe(pairs.length);
+        }
     });
 
 
-    it('autoloads exactly the six controller classes under controllers/', () => {
-        const names = new ApplicationServer().controllerClasses.map(c => c.name).sort();
-        // NOTE: `UsersController` appears twice — controllers/usersController.js
-        // and controllers/mat/usersController.js are distinct classes that share
-        // a name and are disambiguated only by `directoryPrefix`.
-        expect(names).toEqual([
-            'MatchesController',
-            'MatsController',
-            'RidingTimeVoteController',
-            'RoundsController',
-            'UsersController',
-            'UsersController',
-        ]);
+    it('loads no controller class from controllers/ to serve them', () => {
+        const loaded = Object.keys(require.cache);
+        // The check can see the server's own CommonJS dependencies...
+        expect(loaded).toContain(require.resolve('../../lib/server/webSocketServer'));
+        // ...and none of the old controllers is among them.
+        expect(loaded.filter(file => file.startsWith(CONTROLLERS_DIR))).toEqual([]);
     });
 
 
-    it('matches the task-01 route-table artifact once paths are OpenAPI-normalised', () => {
-        // The artifact that tasks 13a/13b/13c/15 diff against writes `{param}`
-        // where Express registers `:param`. Asserting the two agree makes the
-        // artifact itself a gate rather than a stale text file.
-        const normalised = collectRoutes({ includeDev: true })
-            .map(row => row.split('\t')[0].replace(/:(\w+)/g, '{$1}'))
+    it('matches the route-table artifact once paths are OpenAPI-normalised', () => {
+        // The artifact writes `{param}` where Express registers `:param`.
+        // Asserting the two agree makes the artifact itself a gate rather
+        // than a stale text file.
+        const normalised = liveRoutes(devServer)
+            .map(row => row.replace(/:(\w+)/g, '{$1}'))
             .sort();
 
         const artifact = fs.readFileSync(ARTIFACT_PATH, 'utf8')

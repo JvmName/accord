@@ -12,8 +12,8 @@
  *   1. `.ai/plans/server-ts/artifacts/route-table.txt` (task 01, `{param}` form);
  *   2. `test/characterization/fixtures/routeTable.txt` (task 02b, raw `:param`
  *      paths plus the DEV flag), read-only;
- *   3. the LIVE legacy table, computed the way `ApplicationServer` registers it
- *      (System + Docs + autoloaded controllers' reflected actions).
+ *   3. the table the legacy reflection router registered (System + Docs +
+ *      the six controllers' reflected actions), computed from those files.
  *
  * Order is not compared (F-04): legacy order is filesystem-dependent under bun.
  * The registry's order is the explicit array in `src/http/routes/index.ts`.
@@ -23,8 +23,8 @@ import fs from 'fs';
 import path from 'path';
 import { routeResponses } from '../../src/contract/responses';
 import { NotImplementedError } from '../../src/http/errors';
-import { portedRoutes } from '../../src/http/mountPorted';
-import { isPlaceholder } from '../../src/http/route';
+import { isPlaceholder, notImplemented } from '../../src/http/route';
+import { assertImplemented } from '../../src/http/router';
 import { routes } from '../../src/http/routes';
 import type { AuthorizeSpec } from '../../src/http/types';
 
@@ -53,14 +53,32 @@ function fixtureEntries(): Array<{ key: string; owner: string; dev: boolean }> {
         });
 }
 
-/** The legacy table exactly as `ApplicationServer#registerControllers` builds it. */
+/**
+ * The table the legacy reflection router used to register: the System and
+ * Docs controllers plus the six controllers under `controllers/`, with the
+ * directory prefix the autoloader gave each one. No longer served; kept as an
+ * independent reference until those files are deleted.
+ */
 function legacyLiveTable(): Array<{ key: string; owner: string }> {
     /* eslint-disable @typescript-eslint/no-require-imports */
-    const { ApplicationServer } = require('../../lib/server/applicationServer');
-    const { SystemController }  = require('../../lib/server/systemController');
-    const { DocsController }    = require('../../lib/server/docsController');
+    const { SystemController } = require('../../lib/server/systemController');
+    const { DocsController }   = require('../../lib/server/docsController');
+    const controllers: Array<[string, string]> = [
+        ['usersController', ''],
+        ['matsController', ''],
+        ['matchesController', ''],
+        ['mat/usersController', '/mat'],
+        ['match/roundsController', '/match'],
+        ['match/ridingTimeVoteController', '/match'],
+    ];
+    const classes = [SystemController, DocsController];
+    for (const [file, directoryPrefix] of controllers) {
+        for (const exported of Object.values(require(`../../controllers/${file}`)) as Array<{ directoryPrefix?: string }>) {
+            exported.directoryPrefix = directoryPrefix;
+            classes.push(exported);
+        }
+    }
     /* eslint-enable @typescript-eslint/no-require-imports */
-    const classes = [SystemController, DocsController, ...new ApplicationServer().controllerClasses];
     const rows: Array<{ key: string; owner: string }> = [];
     for (const cls of classes) {
         for (const action of cls.actions) rows.push({ key: `${action.method} ${action.path}`, owner: `${cls.name}#${action.action}` });
@@ -115,7 +133,7 @@ describe('route registry: route-table parity', () => {
             .toEqual(fixture.filter(e => e.dev).map(e => e.key).sort());
     });
 
-    it('declares exactly what the LIVE legacy router registers, method and path', () => {
+    it('declares exactly what the legacy reflection router registered, method and path', () => {
         expect(declared).toEqual(legacyLiveTable().map(r => r.key).sort());
     });
 
@@ -188,25 +206,21 @@ describe('route registry: response schemas and placeholders', () => {
         });
     });
 
-    it('carries a NOT-IMPLEMENTED placeholder handler on every route that is not served live yet', async () => {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { ApplicationServer } = require('../../lib/server/applicationServer');
-        const live = new Set(portedRoutes(new ApplicationServer().portedControllers).map(key));
-        expect(live.size).toBeGreaterThan(0);
-
-        for (const route of routes.filter(r => !live.has(key(r)))) {
-            expect({ route: key(route), placeholder: isPlaceholder(route.handler) }).toEqual({ route: key(route), placeholder: true });
-            let thrown: unknown;
-            try {
-                await route.handler({} as never);
-            } catch (err) {
-                thrown = err;
-            }
-            expect(thrown).toBeInstanceOf(NotImplementedError);
-        }
-        for (const route of routes.filter(r => live.has(key(r)))) {
+    it('has a real handler on every route, and refuses to mount a placeholder', async () => {
+        for (const route of routes) {
             expect({ route: key(route), placeholder: isPlaceholder(route.handler) }).toEqual({ route: key(route), placeholder: false });
         }
+        expect(() => assertImplemented(routes)).not.toThrow();
+
+        const halfWritten = { ...routes[0], handler: notImplemented('14') };
+        expect(() => assertImplemented([...routes, halfWritten])).toThrow('GET / has no handler');
+        let thrown: unknown;
+        try {
+            await halfWritten.handler();
+        } catch (err) {
+            thrown = err;
+        }
+        expect(thrown).toBeInstanceOf(NotImplementedError);
     });
 });
 
