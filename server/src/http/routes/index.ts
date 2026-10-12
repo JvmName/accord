@@ -9,10 +9,11 @@
  * sorted set) and that each route's authorization equals what its legacy
  * controller enforces.
  *
- * Task 12 state: all 23 routes are DECLARED, none is registered in the running
- * app, and every handler is a placeholder that throws `NotImplementedError`.
- * 13a (mats, matUsers, users), 13b (matches, rounds, ridingTimeVotes) and 13c
- * (system, docs) replace the placeholders and register the routes.
+ * All 23 routes are declared here. The users, mats and mat membership routes
+ * have real handlers and are served by the running app (`mountPorted.ts`);
+ * the match, round, riding-time, system and docs routes still carry a
+ * placeholder handler that throws `NotImplementedError` and are served by the
+ * legacy controllers.
  */
 import { matRoutes } from './mats';
 import { matUserRoutes } from './matUsers';

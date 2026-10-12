@@ -115,13 +115,22 @@ export function defineRoute<
     });
 }
 
+const placeholders = new WeakSet<object>();
+
 /**
  * The placeholder every route carries until its handler is ported. It THROWS
  * (never resolves to a success), so a route that is somehow registered before
  * its port answers a loud 500 rather than a silent 200.
  */
 export function notImplemented(task: '13a' | '13b' | '13c' | '14'): () => Promise<never> {
-    return async () => {
+    const placeholder = async () => {
         throw new NotImplementedError(`handler not implemented: ported in task ${task}`);
     };
+    placeholders.add(placeholder);
+    return placeholder;
+}
+
+/** Whether `handler` is a `notImplemented()` placeholder, so it can be refused before it is mounted. */
+export function isPlaceholder(handler: unknown): boolean {
+    return typeof handler === 'function' && placeholders.has(handler);
 }

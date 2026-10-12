@@ -1,241 +1,130 @@
-const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
+const { afterEach, beforeEach, describe, expect, it, jest } = require('bun:test');
 /**
- * Tests for mat/UsersController — judge join/leave mid-match behaviour.
- *
- * All DB/ORM interactions are mocked so no live database is needed.
+ * Mat membership: judge join/leave mid-match behaviour of the handlers behind
+ * `POST /mat/:matCode/join` and `DELETE /mat/:matCode/join`
+ * (`src/http/routes/matUsers.ts`), on a scratch in-memory database.
  *
  * Scenarios:
  *   A — judge joins a running consensus match (≥2 existing judges)
  *   B — judge blocked from joining a solo (1-judge) match in progress
  *   C — judge leaves a running match (open vote is auto-ended, removed from judges_matches)
  */
-
-// ---------------------------------------------------------------------------
-// Silence logger noise in test output
-// ---------------------------------------------------------------------------
-mock.module('../../../lib/logger', () => ({
-    logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() }
-}));
-
-
-// ---------------------------------------------------------------------------
-// Mock BaseRecord so model constructors work without a real DB
-// ---------------------------------------------------------------------------
-mock.module('../../../lib/activeRecord', () => {
-    class BaseRecord {
-        #cachedAssociations = {};
-
-        constructor(attrs = {}) {
-            Object.assign(this, attrs);
-        }
-
-        static initialize() {}
-        static belongsTo()  {}
-        static hasMany()    {}
-        static belongsToMany() {}
-        static hasOne()     {}
-        static addHook()    {}
-        static transaction(fn) { return fn(); }
-        static get fn()    { return null; }
-        static get col()   { return null; }
-
-        async save() { return this; }
-
-        async getCachedAssociation(name, Cls, where) {
-            if (!this.#cachedAssociations[name]) {
-                const record = await Cls.findAll({ where });
-                this._cacheRecord(name, record);
-            }
-            return Array.from(this.#cachedAssociations[name]);
-        }
-
-        clearCachedAssociation(name) {
-            delete this.#cachedAssociations[name];
-        }
-
-        _cacheRecord(name, val) {
-            this.#cachedAssociations[name] = val;
-        }
-    }
-    return { BaseRecord };
-});
-
-
-// ---------------------------------------------------------------------------
-// Pull in real modules under test (they'll use the mocked BaseRecord above)
-// ---------------------------------------------------------------------------
-const { UsersController } = require('../../../controllers/mat/usersController');
-const { MatCode }         = require('../../../models/matCode');
+const { drizzle } = require('drizzle-orm/bun-sqlite');
+const { Database } = require('bun:sqlite');
+const { schema, migrateDb } = require('../../../src/db');
+const Mats    = require('../../../src/db/repositories/mats');
+const Matches = require('../../../src/db/repositories/matches');
+const Rounds  = require('../../../src/db/repositories/rounds');
+const Users   = require('../../../src/db/repositories/users');
+const Votes   = require('../../../src/db/repositories/votes');
+const MatCodes = require('../../../src/domain/matCode');
+const { addAsJudge, removeUser } = require('../../../src/http/routes/matUsers');
+const { renderErrors } = require('../../../src/http/envelope');
 const { calculateRidingTime } = require('../../../src/domain/ridingTime');
 
 
 // ---------------------------------------------------------------------------
-// Minimal request / response factory, shared with
-// test/server/applicationServer.test.js
+// Scratch database. Every statement is recorded so ordering can be asserted.
 // ---------------------------------------------------------------------------
-const { makeRequest, makeResponse } = require('../../helpers/express');
+let db;
+let statements;
+
+beforeEach(() => {
+    statements = [];
+    db = drizzle({
+        client: new Database(':memory:'),
+        schema,
+        logger: { logQuery: (query) => statements.push(query) },
+    });
+    migrateDb(db);
+    statements = [];
+});
+
+afterEach(() => db.$client.close());
 
 
 // ---------------------------------------------------------------------------
-// Helper: build a UsersController with pre-set state bypassing HTTP callbacks
+// Builders
 // ---------------------------------------------------------------------------
-function makeController({ user, mat, matCode, match } = {}) {
-    const req = makeRequest();
-    const res = makeResponse();
-    const ctrl = new UsersController(req, res);
+let counter = 0;
+const makeUser = (label) => Users.insertUser(db, { name: `${label}-${++counter}` });
 
-    // Inject state directly (mirrors how setupRequestState would populate them)
-    if (user)    ctrl.currentUser    = user;
-    if (mat)     ctrl['_ServerController__currentMat']     = mat;
-    if (matCode) ctrl['_ServerController__currentMatCode'] = matCode;
-    if (match)   ctrl['_ServerController__currentMatch']   = match;
-
-    return { ctrl, res };
+async function makeMat(creator, judges) {
+    const mat = await Mats.insertMat(db, { name: `Mat ${++counter}`, creator_id: creator.id });
+    for (const judge of judges) await Mats.addMatJudge(db, mat.id, judge.id);
+    return mat;
 }
 
-
-// ---------------------------------------------------------------------------
-// Object builders
-// ---------------------------------------------------------------------------
-let _id = 0;
-const uid = () => `id-${++_id}`;
-
-function makeUser(attrs = {}) {
-    return { id: uid(), api_token: uid(), ...attrs };
+/** A started match on `mat` whose judges are `judges`, with round 1 open. */
+async function makeRunningMatch(mat, creator, judges) {
+    const red  = await makeUser('red');
+    const blue = await makeUser('blue');
+    const match = await Matches.insertMatch(db, {
+        mat_id: mat.id, creator_id: creator.id, red_competitor_id: red.id, blue_competitor_id: blue.id,
+    });
+    await Matches.updateMatch(db, match.id, { started_at: new Date() });
+    await Matches.setMatchJudges(db, match.id, judges.map(j => j.id));
+    const round = await Rounds.insertRound(db, { match_id: match.id });
+    return { match, round, red, blue };
 }
 
-function makeMat(attrs = {}) {
+/** The handler context the membership commands read. Permissions are not under test here. */
+function makeContext(mat, role = MatCodes.ROLES.ADMIN) {
     return {
-        id: uid(),
-        _judges:  [],
-        _viewers: [],
-        _matches: [],
-        getJudges:          jest.fn(async function() { return [...this._judges]; }),
-        addJudge:           jest.fn(async function(u) { this._judges.push(u); }),
-        removeJudge:        jest.fn(async function(u) { this._judges = this._judges.filter(j => j.id !== u.id); }),
-        addViewer:          jest.fn(),
-        removeViewer:       jest.fn(),
-        getViewers:         jest.fn(async () => []),
-        getIncompleteMatches: jest.fn(async function() { return [...this._matches]; }),
-        ...attrs,
+        db,
+        currentMat:     mat,
+        currentMatCode: { id: 'code', mat_id: mat.id, code: 'a.b.c', role },
+        authorize:      jest.fn(async () => {}),
+        renderErrors,
     };
 }
 
-function makeMatch(attrs = {}) {
-    return {
-        id:      uid(),
-        started: true,
-        started_at: new Date(),
-        ended_at:   null,
-        ended:   false,
-        _judges: [],
-        getJudges:   jest.fn(async function() { return [...this._judges]; }),
-        addJudge:    jest.fn(async function(u) { this._judges.push(u); }),
-        removeJudge: jest.fn(async function(u) { this._judges = this._judges.filter(j => j.id !== u.id); }),
-        getRounds:   jest.fn(async () => []),
-        ...attrs,
-    };
-}
-
-function makeMatCode(role = MatCode.ROLES.ADMIN, attrs = {}) {
-    return { id: uid(), role, getMat: jest.fn(), ...attrs };
-}
-
-function makeActiveVote(attrs = {}) {
-    return {
-        id:       uid(),
-        ended_at: null,
-        end:      jest.fn(async function() { this.ended_at = new Date(); }),
-        get ended() { return Boolean(this.ended_at); },
-        ...attrs,
-    };
-}
-
-function makeOpenRound(attrs = {}) {
-    return {
-        id:      uid(),
-        ended:   false,
-        started: true,
-        currentRidingTimeVoteForJudge: jest.fn(async () => null),
-        ...attrs,
-    };
-}
-
-
-// ---------------------------------------------------------------------------
-// Inject private fields via the public setter pattern the controller exposes
-// (currentUser has a setter; mat/matCode/match we patch via prototype chain)
-// ---------------------------------------------------------------------------
-function injectMat(ctrl, mat) {
-    // ServerController stores mat in a private field; expose it via the getter
-    // by overriding the getter on the instance using Object.defineProperty.
-    Object.defineProperty(ctrl, 'currentMat', { get: () => mat, configurable: true });
-}
-
-function injectMatCode(ctrl, matCode) {
-    Object.defineProperty(ctrl, 'currentMatCode', { get: () => matCode, configurable: true });
-}
-
-function injectMatch(ctrl, match) {
-    Object.defineProperty(ctrl, 'currentMatch', { get: () => match, configurable: true });
-}
-
-function injectAuthorizer(ctrl) {
-    // Stub authorize so it always resolves (permissions are not under test here)
-    ctrl.authorize = jest.fn().mockResolvedValue(undefined);
-}
+const ids = (users) => users.map(u => u.id).sort();
 
 
 // ---------------------------------------------------------------------------
 // Scenario A — judge joins a running consensus match (≥2 existing judges)
 // ---------------------------------------------------------------------------
 describe('Scenario A: judge joins a running consensus match', () => {
-    let judge1, judge2, judge3, mat, match, matCode, ctrl, res;
+    let judge1, judge2, judge3, mat, match, ctx;
 
-    beforeEach(() => {
-        judge1 = makeUser();
-        judge2 = makeUser();
-        judge3 = makeUser();  // the newcomer
+    beforeEach(async () => {
+        const creator = await makeUser('creator');
+        judge1 = await makeUser('judge1');
+        judge2 = await makeUser('judge2');
+        judge3 = await makeUser('judge3');   // the newcomer
 
-        match = makeMatch();
-        match._judges = [judge1, judge2];
-
-        mat = makeMat();
-        mat._judges  = [judge1, judge2];
-        mat._matches = [match];
-
-        matCode = makeMatCode(MatCode.ROLES.ADMIN);
-
-        const req = makeRequest();
-        res       = makeResponse();
-        ctrl      = new UsersController(req, res);
-
-        ctrl.currentUser = judge3;
-        injectMat(ctrl, mat);
-        injectMatCode(ctrl, matCode);
-        injectAuthorizer(ctrl);
+        mat = await makeMat(creator, [judge1, judge2]);
+        ({ match } = await makeRunningMatch(mat, creator, [judge1, judge2]));
+        ctx = makeContext(mat);
     });
 
     it('adds the new judge to the mat', async () => {
-        await ctrl.addAsJudge();
-        expect(mat.addJudge).toHaveBeenCalledWith(judge3);
+        await addAsJudge(ctx, judge3);
+        expect(ids(await Mats.findMatJudges(db, mat.id))).toEqual(ids([judge1, judge2, judge3]));
     });
 
     it('adds the new judge to the active match judges_matches', async () => {
-        await ctrl.addAsJudge();
-        expect(match.addJudge).toHaveBeenCalledWith(judge3);
+        await addAsJudge(ctx, judge3);
+        expect(ids(await Matches.findMatchJudges(db, match.id))).toContain(judge3.id);
     });
 
     it('does not render an error', async () => {
-        await ctrl.addAsJudge();
-        // rendered flag stays false because addAsJudge only renders on errors
-        expect(ctrl.rendered).toBe(false);
+        expect(await addAsJudge(ctx, judge3)).toBeNull();
     });
 
     it('the match now has 3 judges', async () => {
-        await ctrl.addAsJudge();
-        const judges = await match.getJudges();
-        expect(judges).toHaveLength(3);
+        await addAsJudge(ctx, judge3);
+        expect(await Matches.findMatchJudges(db, match.id)).toHaveLength(3);
+    });
+
+    it('checks `assign` and `be assigned judge` on the mat, for the joining user', async () => {
+        await addAsJudge(ctx, judge3);
+        const calls = ctx.authorize.mock.calls.map(([action, scope, subject]) => [action, scope.kind, scope.mat.id, subject.user.id]);
+        expect(calls).toEqual([
+            ['assign',            'mat', mat.id, judge3.id],
+            ['be assigned judge', 'mat', mat.id, judge3.id],
+        ]);
     });
 
     it('threshold is still 2 for a 3-judge panel (calculateRidingTime)', () => {
@@ -267,58 +156,43 @@ describe('Scenario A: judge joins a running consensus match', () => {
 // Scenario B — judge blocked from joining a solo (1-judge) match in progress
 // ---------------------------------------------------------------------------
 describe('Scenario B: judge blocked from joining a solo match in progress', () => {
-    let judge1, judge2, mat, match, matCode, ctrl, res;
+    let judge1, judge2, mat, match, ctx;
 
-    beforeEach(() => {
-        judge1 = makeUser();
-        judge2 = makeUser();  // the blocked newcomer
+    beforeEach(async () => {
+        const creator = await makeUser('creator');
+        judge1 = await makeUser('judge1');
+        judge2 = await makeUser('judge2');   // the blocked newcomer
 
-        match = makeMatch();
-        match._judges = [judge1];  // only 1 judge → solo match
-
-        mat = makeMat();
-        mat._judges  = [judge1];
-        mat._matches = [match];
-
-        matCode = makeMatCode(MatCode.ROLES.ADMIN);
-
-        const req = makeRequest();
-        res       = makeResponse();
-        ctrl      = new UsersController(req, res);
-
-        ctrl.currentUser = judge2;
-        injectMat(ctrl, mat);
-        injectMatCode(ctrl, matCode);
-        injectAuthorizer(ctrl);
+        mat = await makeMat(creator, [judge1]);
+        ({ match } = await makeRunningMatch(mat, creator, [judge1]));   // only 1 judge → solo match
+        ctx = makeContext(mat);
     });
 
     it('renders an error containing "cannot join a solo match in progress"', async () => {
-        await ctrl.addAsJudge();
-        expect(ctrl.rendered).toBe(true);
-        const body = res.json.mock.calls[0][0];
-        expect(JSON.stringify(body)).toContain('cannot join a solo match in progress');
+        const rendered = await addAsJudge(ctx, judge2);
+        expect(rendered).not.toBeNull();
+        expect(rendered.body).toEqual({ errors: { matCode: ['cannot join a solo match in progress'] } });
     });
 
-    it('does NOT call addJudge on the active match', async () => {
-        await ctrl.addAsJudge();
-        expect(match.addJudge).not.toHaveBeenCalled();
+    it('does NOT add the judge to the active match', async () => {
+        await addAsJudge(ctx, judge2);
+        expect(ids(await Matches.findMatchJudges(db, match.id))).not.toContain(judge2.id);
     });
 
     it('the match still has exactly 1 judge in judges_matches', async () => {
-        await ctrl.addAsJudge();
-        const judges = await match.getJudges();
-        expect(judges).toHaveLength(1);
+        await addAsJudge(ctx, judge2);
+        expect(await Matches.findMatchJudges(db, match.id)).toHaveLength(1);
     });
 
     it('adds the judge to the mat even when blocked from the match', async () => {
-        // The mat.addJudge is called before the match check
-        await ctrl.addAsJudge();
-        expect(mat.addJudge).toHaveBeenCalledWith(judge2);
+        // The mat judge is added before the match check, and is not rolled back.
+        await addAsJudge(ctx, judge2);
+        expect(ids(await Mats.findMatJudges(db, mat.id))).toContain(judge2.id);
     });
 
     it('sets status code to 400 for the error response', async () => {
-        await ctrl.addAsJudge();
-        expect(res.statusCode).toBe(400);
+        const rendered = await addAsJudge(ctx, judge2);
+        expect(rendered.statusCode).toBe(400);
     });
 });
 
@@ -327,73 +201,65 @@ describe('Scenario B: judge blocked from joining a solo match in progress', () =
 // Scenario C — judge leaves a running match
 // ---------------------------------------------------------------------------
 describe('Scenario C: judge leaves a running match', () => {
-    let judgeA, judgeB, judgeC, activeVote, openRound, match, mat, matCode, ctrl, res;
+    let judgeA, judgeB, judgeC, mat, match, round, red, ctx;
 
-    beforeEach(() => {
-        judgeA = makeUser();
-        judgeB = makeUser();
-        judgeC = makeUser();
+    beforeEach(async () => {
+        const creator = await makeUser('creator');
+        judgeA = await makeUser('judgeA');
+        judgeB = await makeUser('judgeB');
+        judgeC = await makeUser('judgeC');
 
-        activeVote = makeActiveVote();
-
-        openRound = makeOpenRound({
-            currentRidingTimeVoteForJudge: jest.fn(async (u) => {
-                if (u.id === judgeA.id) return activeVote;
-                return null;
-            })
-        });
-
-        match = makeMatch();
-        match._judges = [judgeA, judgeB, judgeC];
-        match.getRounds = jest.fn(async () => [openRound]);
-
-        mat = makeMat();
-        mat._judges  = [judgeA, judgeB, judgeC];
-        mat._matches = [match];
-
-        matCode = makeMatCode(MatCode.ROLES.ADMIN);
-
-        const req = makeRequest();
-        res       = makeResponse();
-        ctrl      = new UsersController(req, res);
-
-        ctrl.currentUser = judgeA;
-        injectMat(ctrl, mat);
-        injectMatCode(ctrl, matCode);
-        injectAuthorizer(ctrl);
+        mat = await makeMat(creator, [judgeA, judgeB, judgeC]);
+        ({ match, round, red } = await makeRunningMatch(mat, creator, [judgeA, judgeB, judgeC]));
+        await Votes.insertRidingTimeVote(db, { round_id: round.id, judge_id: judgeA.id, competitor_id: red.id });
+        await Votes.insertRidingTimeVote(db, { round_id: round.id, judge_id: judgeB.id, competitor_id: red.id });
+        ctx = makeContext(mat);
+        statements = [];
     });
 
     it('removes the judge from judges_matches', async () => {
-        await ctrl.removeUser(MatCode.ROLES.ADMIN);
-        expect(match.removeJudge).toHaveBeenCalledWith(judgeA);
+        await removeUser(ctx, judgeA, MatCodes.ROLES.ADMIN);
+        expect(ids(await Matches.findMatchJudges(db, match.id))).toEqual(ids([judgeB, judgeC]));
     });
 
     it('removes the judge from the mat', async () => {
-        await ctrl.removeUser(MatCode.ROLES.ADMIN);
-        expect(mat.removeJudge).toHaveBeenCalledWith(judgeA);
+        await removeUser(ctx, judgeA, MatCodes.ROLES.ADMIN);
+        expect(ids(await Mats.findMatJudges(db, mat.id))).toEqual(ids([judgeB, judgeC]));
     });
 
     it("auto-ends judge A's open riding time vote", async () => {
-        await ctrl.removeUser(MatCode.ROLES.ADMIN);
-        expect(activeVote.end).toHaveBeenCalledTimes(1);
-        expect(activeVote.ended_at).not.toBeNull();
+        await removeUser(ctx, judgeA, MatCodes.ROLES.ADMIN);
+        expect(await Votes.findOpenVoteForJudge(db, round.id, judgeA.id)).toBeUndefined();
+        const [voteA] = (await Votes.findRoundVotes(db, round.id)).filter(v => v.judge_id === judgeA.id);
+        expect(voteA.ended_at).not.toBeNull();
     });
 
     it('does not end the vote of a judge who is not leaving', async () => {
-        // judgeB has no open vote; the mock returns null for non-judgeA
-        await ctrl.removeUser(MatCode.ROLES.ADMIN);
-        // activeVote.end should only have been called once (for judgeA)
-        expect(activeVote.end).toHaveBeenCalledTimes(1);
+        await removeUser(ctx, judgeA, MatCodes.ROLES.ADMIN);
+        const voteB = await Votes.findOpenVoteForJudge(db, round.id, judgeB.id);
+        expect(voteB).toBeDefined();
+        expect(voteB.ended_at).toBeNull();
     });
 
     it('ends the vote before removing the judge from the match', async () => {
-        const callOrder = [];
-        activeVote.end = jest.fn(async () => { callOrder.push('vote.end'); });
-        match.removeJudge = jest.fn(async () => { callOrder.push('match.removeJudge'); });
+        await removeUser(ctx, judgeA, MatCodes.ROLES.ADMIN);
 
-        await ctrl.removeUser(MatCode.ROLES.ADMIN);
+        const voteEnd    = statements.findIndex(q => /^update "riding_time_votes"/.test(q));
+        const matchLeave = statements.findIndex(q => /^delete from "judges_matches"/.test(q));
+        expect(voteEnd).toBeGreaterThanOrEqual(0);
+        expect(matchLeave).toBeGreaterThanOrEqual(0);
+        expect(voteEnd).toBeLessThan(matchLeave);
+    });
 
-        expect(callOrder.indexOf('vote.end')).toBeLessThan(callOrder.indexOf('match.removeJudge'));
+    it('a viewer leaving touches only the viewer roster', async () => {
+        const viewer = await makeUser('viewer');
+        await Mats.addMatViewer(db, mat.id, viewer.id);
+
+        await removeUser(makeContext(mat, MatCodes.ROLES.VIEWER), viewer, MatCodes.ROLES.VIEWER);
+
+        expect(await Mats.findMatViewers(db, mat.id)).toEqual([]);
+        expect(ids(await Mats.findMatJudges(db, mat.id))).toEqual(ids([judgeA, judgeB, judgeC]));
+        expect(await Votes.findOpenVoteForJudge(db, round.id, judgeA.id)).toBeDefined();
     });
 });
 

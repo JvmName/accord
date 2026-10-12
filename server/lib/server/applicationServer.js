@@ -16,10 +16,25 @@ const { AuthorizationError,
 const { WebSocketServer }  = require('./webSocketServer');
 const { generateDocs,
         getOpenApiSpec }   = require('../openapi/index.js');
+const { createLazyDb }     = require('../../src/db');
+const { mountPortedRoutes } = require('../../src/http/mountPorted');
+
+
+// Controllers whose routes are served by the typed route registry (src/http)
+// instead. The autoloader still discovers them, but `registerControllers` skips
+// them and mounts their replacement routes, so no path is served twice. Entries
+// are `<directory under controllers/>/<class name>`, because two different
+// controllers are both called UsersController.
+const PORTED_CONTROLLERS = Object.freeze([
+    'UsersController',
+    'MatsController',
+    'mat/UsersController',
+]);
 
 
 class ApplicationServer {
     #controllerClasses;
+    #db;
     #_expressServer;
     #_httpServer;
     #port;
@@ -27,8 +42,9 @@ class ApplicationServer {
     #workerToken;
 
 
-    constructor({ port }={}) {
+    constructor({ port, db }={}) {
         this.#port = port || process.env.PORT || 3000;
+        this.#db   = db;
         this.setupMiddleware();
     }
 
@@ -204,9 +220,45 @@ class ApplicationServer {
     registerControllers() {
         this.#registerDefaultControllers();
         this.controllerClasses.forEach((controllerCls => {
+            if (this.portedControllers.includes(ApplicationServer.controllerKey(controllerCls))) {
+                logger.warn(`${ApplicationServer.controllerKey(controllerCls)} is not registered: its routes are served by src/http`);
+                return;
+            }
             this.#registerController(controllerCls);
         }).bind(this));
+        this.#mountPortedRoutes();
     }
+
+
+    // Mounted after the global middleware (CORS, body parsers, logging and, in
+    // DEV, the OpenAPI validator) and after the remaining controllers, so those
+    // keep their place in the Express stack. No ported path is also served by
+    // a controller, so the position decides nothing else. Each ported route
+    // has its own error handler; errors never cross between the two systems.
+    #mountPortedRoutes() {
+        mountPortedRoutes(this.#expressServer, this.portedControllers, { db: this.db, dev: CONSTANTS.DEV, logger });
+    }
+
+
+    get portedControllers() { return PORTED_CONTROLLERS; }
+
+
+    static controllerKey(controllerCls) {
+        const directory = (controllerCls.directoryPrefix || '').replace(/^\//, '');
+        return directory ? `${directory}/${controllerCls.name}` : controllerCls.name;
+    }
+
+
+    // The Drizzle database behind the ported routes. It resolves the same file
+    // as the Sequelize connection (DATABASE_PATH, else the config directory) and
+    // opens it on the first query.
+    get db() {
+        if (!this.#db) this.#db = createLazyDb();
+        return this.#db;
+    }
+
+
+    get expressApp() { return this.#expressServer; }
 
 
     #registerDefaultControllers() {

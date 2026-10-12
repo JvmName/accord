@@ -23,6 +23,8 @@ import fs from 'fs';
 import path from 'path';
 import { routeResponses } from '../../src/contract/responses';
 import { NotImplementedError } from '../../src/http/errors';
+import { portedRoutes } from '../../src/http/mountPorted';
+import { isPlaceholder } from '../../src/http/route';
 import { routes } from '../../src/http/routes';
 import type { AuthorizeSpec } from '../../src/http/types';
 
@@ -186,8 +188,14 @@ describe('route registry: response schemas and placeholders', () => {
         });
     });
 
-    it('carries a NOT-IMPLEMENTED placeholder handler on every route (ported in 13a/13b/13c)', async () => {
-        for (const route of routes) {
+    it('carries a NOT-IMPLEMENTED placeholder handler on every route that is not served live yet', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { ApplicationServer } = require('../../lib/server/applicationServer');
+        const live = new Set(portedRoutes(new ApplicationServer().portedControllers).map(key));
+        expect(live.size).toBeGreaterThan(0);
+
+        for (const route of routes.filter(r => !live.has(key(r)))) {
+            expect({ route: key(route), placeholder: isPlaceholder(route.handler) }).toEqual({ route: key(route), placeholder: true });
             let thrown: unknown;
             try {
                 await route.handler({} as never);
@@ -195,6 +203,9 @@ describe('route registry: response schemas and placeholders', () => {
                 thrown = err;
             }
             expect(thrown).toBeInstanceOf(NotImplementedError);
+        }
+        for (const route of routes.filter(r => live.has(key(r)))) {
+            expect({ route: key(route), placeholder: isPlaceholder(route.handler) }).toEqual({ route: key(route), placeholder: false });
         }
     });
 });

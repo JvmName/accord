@@ -13,11 +13,11 @@
  * a declaration, which also resolves F-04 (bun's unsorted `readdirSync` made
  * legacy registration order, and so route precedence, filesystem-dependent).
  *
- * NOT wired into the running app in task 12. `lib/server/applicationServer.js`
- * keeps serving every route until 13a/13b register ported routes and 13c
- * removes the autoloader. Global middleware (CORS, body parsers, logging,
- * static files) stays the application's job; `legacyBodyParsers()` exists so
- * tests can mount the registry with the same body parsing legacy has.
+ * The running app mounts only the routes whose legacy controllers are listed
+ * as ported (`mountPorted.ts`); the legacy autoloader serves the rest. Global
+ * middleware (CORS, body parsers, logging, static files) stays the
+ * application's job; `legacyBodyParsers()` exists so tests can mount the
+ * registry with the same body parsing legacy has.
  */
 import express, {
     type ErrorRequestHandler,
