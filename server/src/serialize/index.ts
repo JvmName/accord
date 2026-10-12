@@ -8,8 +8,8 @@
  * injectable (`{ now }`). Nothing here touches the database, the legacy
  * models, or Sequelize; nothing in `src/db` knows about wire shapes.
  *
- * Nothing is wired into the running server yet: routes adopt these in
- * 13a/13b, workers in 14. The spec and evidence are in
+ * The HTTP routes render with these; the workers still render through the
+ * legacy models. The spec and evidence are in
  * `.ai/plans/server-ts/artifacts/serialize-inventory.md`.
  */
 import type { z } from 'zod';

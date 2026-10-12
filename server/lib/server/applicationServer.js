@@ -29,6 +29,9 @@ const PORTED_CONTROLLERS = Object.freeze([
     'UsersController',
     'MatsController',
     'mat/UsersController',
+    'match/RidingTimeVoteController',
+    'match/RoundsController',
+    'MatchesController',
 ]);
 
 

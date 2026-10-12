@@ -12,7 +12,10 @@ import type { IRouter } from 'express';
 import { isPlaceholder } from './route';
 import { registerRoutes, type HttpDeps } from './router';
 import { matRoutes } from './routes/mats';
+import { matchRoutes } from './routes/matches';
 import { matUserRoutes } from './routes/matUsers';
+import { ridingTimeVoteRoutes } from './routes/ridingTimeVotes';
+import { roundRoutes } from './routes/rounds';
 import { userRoutes } from './routes/users';
 import type { AnyRouteDefinition } from './types';
 
@@ -26,6 +29,9 @@ export const ROUTES_BY_LEGACY_CONTROLLER: Readonly<Record<string, readonly AnyRo
     'UsersController':     userRoutes,
     'MatsController':      matRoutes,
     'mat/UsersController': matUserRoutes,
+    'match/RidingTimeVoteController': ridingTimeVoteRoutes,
+    'match/RoundsController':         roundRoutes,
+    'MatchesController':              matchRoutes,
 });
 
 /**

@@ -61,6 +61,8 @@ function controllerKeyOf(owner: string, routeKey: string): string {
     const cls = owner.split('#')[0];
     // The two UsersControllers are told apart by their paths.
     if (cls === 'UsersController') return routeKey.startsWith('POST /users') ? 'UsersController' : 'mat/UsersController';
+    // The round and riding-time controllers live in controllers/match/.
+    if (cls === 'RoundsController' || cls === 'RidingTimeVoteController') return `match/${cls}`;
     return cls;
 }
 
