@@ -121,7 +121,10 @@ function, or -> task 10b) is
   on bun-sqlite commits at the callback's first `await`. Caveat: other
   non-transactional queries on the same connection that run while a
   transaction is open join it. The legacy `BaseRecord.transaction` was not
-  atomic at all and returned `undefined` (F-50); whether the ported call
-  sites use the atomic version is a 10b/13a decision.
+  atomic at all and returned `undefined` (F-50). Decided 2026-10-11: the
+  ported call sites (`src/services`, task 10b; `POST /mats`, 13a) run
+  UNWRAPPED, as legacy effectively did; adopting this helper is task 18.
+- **Lifecycle commands** composed from these primitives live in
+  `src/services/` (task 10b, see its README).
 - **`stoppage`** reads as `true/false/null` here; Sequelize returns `1/0/null`
   from a legacy `TINYINT(1)` column (F-51). Only truthiness is used.
