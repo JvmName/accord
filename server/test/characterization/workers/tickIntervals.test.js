@@ -33,11 +33,11 @@ mock.module('../../../models/match', () => ({
 mock.module(require.resolve('socket.io-client'), () => ({ io: jest.fn(() => ({ on: jest.fn(), emit: jest.fn(), close: jest.fn() })) }));
 mock.module('../../../lib/logger', () => ({ logger: { debug: jest.fn(), info: jest.fn(), error: jest.fn() } }));
 
-const { Worker }                = require('../../../lib/workerQueue/worker');
-const { MatchUpdateWorker }     = require('../../../lib/workerQueue/matchUpdateWorker');
-const { TechFallTrackerWorker } = require('../../../lib/workerQueue/techFallTrackerWorker');
-const { BreakTransitionWorker } = require('../../../lib/workerQueue/breakTransitionWorker');
-const { RoundTimerWorker }      = require('../../../lib/workerQueue/roundTimerWorker');
+const { Worker }                = require('../../../src/workers/worker');
+const { MatchUpdateWorker }     = require('../../../src/workers/matchUpdateWorker');
+const { TechFallTrackerWorker } = require('../../../src/workers/techFallTrackerWorker');
+const { BreakTransitionWorker } = require('../../../src/workers/breakTransitionWorker');
+const { RoundTimerWorker }      = require('../../../src/workers/roundTimerWorker');
 const   TestHelpers             = require('../../helpers');
 
 

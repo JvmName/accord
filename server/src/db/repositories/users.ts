@@ -4,7 +4,7 @@
  * the row and stripping it is the serialisation layer's job, task 11).
  */
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { asc, eq, inArray } from 'drizzle-orm';
 import { users } from '../schema';
 import type { User } from '../types';
 import { assertDefined, insertStamps, orNull, type DbOrTx } from './internal';
@@ -29,6 +29,20 @@ export async function findUserByApiToken(db: DbOrTx, token: string | null | unde
     assertDefined(token, 'api_token');
     if (token === null) return null; // `api_token IS NULL` — the column is NOT NULL, so never a match
     return orNull(await db.query.users.findFirst({ where: eq(users.api_token, token) }));
+}
+
+/**
+ * `User.findByApiToken([a, b, ...])`: Sequelize turns an array value into
+ * `api_token IN (...)` and `findOne` takes the first row, which SQLite reads
+ * through the unique `api_token` index, i.e. the smallest matching token.
+ * An empty list matches nothing.
+ */
+export async function findFirstUserWithApiTokenIn(db: DbOrTx, tokens: ReadonlyArray<string | number | boolean>): Promise<User | null> {
+    if (!tokens.length) return null;
+    return orNull(await db.query.users.findFirst({
+        where:   inArray(users.api_token, tokens as string[]),
+        orderBy: [asc(users.api_token)],
+    }));
 }
 
 export interface InsertUserValues {

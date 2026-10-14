@@ -5,7 +5,7 @@ const { logger }            = require('../../lib/logger');
 const { ApplicationServer,
         OPENAPI_VALIDATION_ENV,
         openApiValidationEnabled } = require('../../src/http/server');
-const { WebSocketServer }   = require('../../lib/server/webSocketServer');
+const { WebSocketServer }   = require('../../src/ws/webSocketServer');
 
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;

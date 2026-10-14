@@ -12,11 +12,11 @@ import { createLazyDb, type Db } from '../db';
 import { assertImplemented, registerRoutes } from './router';
 import { routes } from './routes';
 import { generatedOpenApiDocument } from './routes/system';
+import { WebSocketServer } from '../ws/webSocketServer';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const CONSTANTS           = require('../../lib/constants');
 const { logger }          = require('../../lib/logger');
-const { WebSocketServer } = require('../../lib/server/webSocketServer');
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 /** Set to `0` to turn the DEV OpenAPI validator off, or `1` to turn it on outside development (tests). */
@@ -54,7 +54,7 @@ export class ApplicationServer {
     readonly #openApiValidation: boolean;
     #db: Db | undefined;
     #workerToken: string | undefined;
-    #webSocketServer: { listen(): void } | undefined;
+    #webSocketServer: WebSocketServer | undefined;
     #routesMounted = false;
 
     constructor({ port, db, workerToken, dev, openApiValidation }: ApplicationServerOptions = {}) {
@@ -132,8 +132,8 @@ export class ApplicationServer {
 
     startWebSocketServer(): void {
         if (this.#webSocketServer) return;
-        this.#webSocketServer = new WebSocketServer(this.#httpServer, this.corsOrigin);
-        this.#webSocketServer!.listen();
+        this.#webSocketServer = new WebSocketServer(this.#httpServer, this.corsOrigin, this.db);
+        this.#webSocketServer.listen();
     }
 
     /**

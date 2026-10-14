@@ -4,7 +4,7 @@ The state-transition commands that used to live on the Sequelize models,
 ported to plain async functions over the Drizzle handle (`createDb()`), built
 from the task-10 repositories and the task-08 domain functions. One
 implementation for both callers: the match, round and riding-time route
-handlers call them; the workers still run the Sequelize model methods.
+handlers and the worker jobs in `src/workers` call them.
 
 | Function | Legacy | Callers (legacy today) |
 |---|---|---|

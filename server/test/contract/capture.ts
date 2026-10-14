@@ -750,9 +750,9 @@ async function captureWebSocketEvents(ctx: {
     ids: Record<string, string>;
 }) {
     const { io } = require('socket.io-client');
-    const { MatchUpdateWorker }      = require('../../lib/workerQueue/matchUpdateWorker');
-    const { TechFallTrackerWorker }  = require('../../lib/workerQueue/techFallTrackerWorker');
-    const { BreakTransitionWorker }  = require('../../lib/workerQueue/breakTransitionWorker');
+    const { MatchUpdateWorker }      = require('../../src/workers/matchUpdateWorker');
+    const { TechFallTrackerWorker }  = require('../../src/workers/techFallTrackerWorker');
+    const { BreakTransitionWorker }  = require('../../src/workers/breakTransitionWorker');
 
     const { origin, port, statics, push, apiToken, ids } = ctx;
 

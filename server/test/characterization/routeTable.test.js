@@ -116,7 +116,7 @@ describe('CHARACTERIZATION: route table', () => {
     it('loads no controller class from controllers/ to serve them', () => {
         const loaded = Object.keys(require.cache);
         // The check can see the server's own CommonJS dependencies...
-        expect(loaded).toContain(require.resolve('../../lib/server/webSocketServer'));
+        expect(loaded).toContain(require.resolve('../../src/ws/webSocketServer'));
         // ...and none of the old controllers is among them.
         expect(loaded.filter(file => file.startsWith(CONTROLLERS_DIR))).toEqual([]);
     });
