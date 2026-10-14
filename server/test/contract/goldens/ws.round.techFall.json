@@ -1,0 +1,59 @@
+{
+  "name": "ws.round.techFall",
+  "route": null,
+  "why": "TechFallTrackerWorker renders with {includeRounds:true} ONLY — no includeMat and no includeMatchJudges — so `mat` and `judges` are ABSENT (not null) from this payload. That asymmetry is exactly what Match.merge() in models_ext.kt exists to absorb; a capture that normalized absent-to-null would erase it.",
+  "event": "round.tech-fall",
+  "room": "match:<match:wsTechFall>",
+  "payload": {
+    "blue_competitor": {
+      "api_token": "<token:blue2>",
+      "created_at": "2026-01-01T12:00:09.000Z",
+      "id": "<user:blue2>",
+      "name": "Bailey Blue",
+      "updated_at": "2026-01-01T12:00:09.000Z"
+    },
+    "break_duration": 60,
+    "break_remaining": 60,
+    "break_started_at": "2026-01-01T12:10:00.000Z",
+    "creator_id": "<user:creator>",
+    "ended_at": null,
+    "id": "<match:wsTechFall>",
+    "mat_id": "<mat:flow>",
+    "red_competitor": {
+      "api_token": "<token:red2>",
+      "created_at": "2026-01-01T12:00:08.000Z",
+      "id": "<user:red2>",
+      "name": "Robin Red",
+      "updated_at": "2026-01-01T12:00:08.000Z"
+    },
+    "rounds": [
+      {
+        "ended_at": "2026-01-01T12:10:00.000Z",
+        "id": "<round:wsTechFall>",
+        "max_duration": 180,
+        "paused": false,
+        "result": {
+          "method": {
+            "type": "tech-fall",
+            "value": "30"
+          },
+          "winner": {
+            "api_token": "<token:red2>",
+            "created_at": "2026-01-01T12:00:08.000Z",
+            "id": "<user:red2>",
+            "name": "Robin Red",
+            "updated_at": "2026-01-01T12:00:08.000Z"
+          }
+        },
+        "score": {
+          "<user:blue2>": 0,
+          "<user:red2>": 30
+        },
+        "started_at": "2026-01-01T12:05:50.000Z",
+        "time_remaining": null
+      }
+    ],
+    "started_at": "2026-01-01T12:05:50.000Z",
+    "winner": null
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "http.mat.get.unknownId.401",
+  "route": "GET /mat/{matId}",
+  "why": "FINDINGS F-16: an unknown mat is reported as 401, not 404, because Authorizer#can returns false for a null scope. Sibling \"not found\" routes return 404. Pinned as-is.",
+  "request": {
+    "method": "GET",
+    "path": "/mat/<uuid:1>",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 401,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": null,
+      "status": "unauthorized"
+    }
+  }
+}

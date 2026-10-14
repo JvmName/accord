@@ -13,21 +13,25 @@ Accord is a distributed application for tracking "riding time" (controlled grapp
 
 ### Server (Node.js)
 
+**Use `bun` exclusively — never `npm`, `yarn`, or `pnpm`, for any command.** The server has a single lockfile (`bun.lock`).
+
 ```bash
 cd server
 
 # Development
-npm start                    # Start dev server with nodemon
+bun run start                # Start dev server with nodemon
 
 # Testing
-npm test                     # Run all tests with coverage
-npm test -- <file>          # Run specific test file
+bun run test                 # Run all tests with coverage
+bun run test -- <file>       # Run specific test file
 
 # Database migrations
-npm run db:create_migration  # Create new migration
-npm run db:migrate          # Run pending migrations
-npm run db:rollback         # Rollback last migration
+bun run db:create_migration  # Create new migration
+bun run db:migrate           # Run pending migrations
+bun run db:rollback          # Rollback last migration
 ```
+
+**Never run a bare `bun test`.** It skips the `--isolate` flag that the `test` script supplies. bun shares one module registry across all test files without it, and the suite's `mock.module()` doubles for `sequelize` / `lib/activeRecord` then contaminate each other — a bare `bun test` gives 187 pass / 61 fail while every file passes alone. Worse, the same contamination can make an assertion pass while testing nothing.
 
 ### Android App (Kotlin/Gradle)
 
@@ -101,7 +105,7 @@ RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
 
 ### Server Architecture
 
-**Custom ORM**: `BaseRecord` class (`/server/lib/active_record/baseRecord.js`) wraps Sequelize
+**Custom ORM**: `BaseRecord` class (`/server/lib/activeRecord/baseRecord.js`) wraps Sequelize
 - Models extend BaseRecord: `User`, `Mat`, `Match`, `Round`, `RidingTimeVote`
 - Database schemas in `/server/config/db/schemas/`
 - Migrations in `/server/config/db/migrations/`
@@ -196,19 +200,34 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 
 ### Server Tests
 
-Tests use Jest with `jest-express` and `jest-extended`:
+Tests run on **`bun test`** (Jest, `jest-express` and `jest-extended` were removed). 18 files, 281 tests.
+
 ```bash
 cd server
-npm test                          # Run all tests with coverage
-npm test -- ridingTime.test.js   # Run specific test
+bun run test                        # Run all tests with coverage
+bun run test -- ridingTime.test.js  # Run specific test
 ```
 
-Coverage excludes `/helpers/` and `/models/` directories (configured in `package.json`).
+**Always `bun run test`, never a bare `bun test`** — see the Commands section above for why.
+
+Config lives in `server/bunfig.toml`: it preloads `test/setup.js` and excludes `**/helpers/**` and `**/models/**` from coverage. Those patterns are **globs**, not Jest's substring patterns — `/helpers/` would match nothing.
+
+`test/setup.js` supplies two things the runner doesn't:
+- a `toHaveBeenCalledBefore` matcher (used by `applicationServer.test.js`; `bun:test` doesn't ship it)
+- a `require.cache` patch stripping pino's `pino-pretty` worker transport, which `--isolate` would otherwise kill mid-run
+
+**Writing tests under bun — the non-obvious parts:**
+- `mock.module()` **does not hoist** like `jest.mock()`. It must appear above the `require()` of the module under test, or the real implementation is used and the test passes while asserting nothing.
+- `mock.module('somepkg', …)` with a **bare package specifier silently does nothing.** Use `mock.module(require.resolve('somepkg'), …)`.
+- A module whose CJS export is a bare function can't be mocked at all — prime `require.cache` instead (see `baseRecord.test.js`). Export named bindings from new mockable seams.
+- `spyOn(target, prop, 'get')` is unimplemented — use `TestHelpers.spyOnGetter()` from `test/helpers/spy.js`.
+- `expect(asyncFn).rejects` needs a promise: `expect((async () => { … })()).rejects`.
+- `new mockFn()` returns the mock's return value, not a fresh instance.
 
 Key test areas:
 - `/server/test/ridingTime.test.js` - Consensus algorithm tests
 - `/server/test/server/` - Server framework, WebSocket, authorization
-- `/server/test/active_record/` - ORM layer tests
+- `/server/test/activeRecord/` - ORM layer tests
 - `/server/test/http/` - HTTP client tests
 
 ## Database
@@ -229,9 +248,9 @@ WebSocket authentication uses `socket.handshake.auth.apiToken`.
 
 ### Adding a New Model (Server)
 
-1. Create migration: `npm run db:create_migration`
+1. Create migration: `bun run db:create_migration`
 2. Define schema in migration file (`/server/config/db/migrations/`)
-3. Run migration: `npm run db:migrate`
+3. Run migration: `bun run db:migrate`
 4. Create model class extending `BaseRecord` in `/server/models/`
 5. Add schema definition in `/server/config/db/schemas/default.js`
 
@@ -322,7 +341,7 @@ For expensive operations, ALWAYS use the `run_task` MCP tool instead of Bash.
 **Commands that MUST use run_task:**
 - gradle, bazel, make, cmake, mvn, cargo build, go build
 - docker build, docker-compose, kubectl, helm
-- npm/yarn/pnpm build, pytest, jest, mocha
+- bun/npm/yarn/pnpm build, pytest, jest, mocha
 
 **Usage:**
 - command: The full shell command

@@ -1,0 +1,32 @@
+{
+  "name": "http.mat.leave.judgeMidMatch",
+  "route": "DELETE /mat/{matCode}/join",
+  "why": "Leaving as a judge while a round is live: the judge's OPEN riding-time vote is closed and they are dropped from the match judges as well as the mat.",
+  "request": {
+    "method": "DELETE",
+    "path": "/mat/<code:solo-admin>/join",
+    "as": "judgeA",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "mat": {
+          "creator_id": "<user:creator>",
+          "id": "<mat:solo>",
+          "judge_count": 1,
+          "judges": [
+            {
+              "id": "<user:outsider>",
+              "name": "Ollie Outsider"
+            }
+          ],
+          "name": "Solo Mat"
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

@@ -1,4 +1,5 @@
-const { calculateRidingTime } = require('../lib/ridingTime');
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
+const { calculateRidingTime } = require('../src/domain/ridingTime');
 const   TestHelpers           = require('./helpers');
 
 const score = (periods) => periods.reduce((sum, d) => sum + Math.floor(d / 3), 0);

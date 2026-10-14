@@ -1,0 +1,19 @@
+{
+  "name": "http.match.get.unauthenticated.401",
+  "route": "GET /match/{matchId}",
+  "why": "Match routes authenticate; contrast GET /mat/{matId} (F-15).",
+  "request": {
+    "method": "GET",
+    "path": "/match/<match:done>",
+    "as": null,
+    "body": null
+  },
+  "response": {
+    "status": 401,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": null,
+      "status": "unauthorized"
+    }
+  }
+}

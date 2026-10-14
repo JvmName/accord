@@ -6,7 +6,12 @@
 *.log
 .idea/
 *.iml
-.ai/
+.ai/*
+!.ai/plans/
+.ai/plans/*
+!.ai/plans/server-ts/
+.ai/plans/server-ts/*
+!.ai/plans/server-ts/artifacts/
 
 # ============================================================================
 # Android / Gradle
@@ -47,7 +52,6 @@ xcuserdata/
 # ============================================================================
 node_modules/
 server/logs/
-server/bun.lock
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -216,9 +220,6 @@ vite.config.ts.timestamp-*
 
 # Vim swap files
 *.sw?
-
-.ai/*
-../.ai/*
 
 # local dev test scripts
 devTest

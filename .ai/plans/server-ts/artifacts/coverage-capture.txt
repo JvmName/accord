@@ -1,0 +1,288 @@
+CONTRACT CAPTURE — COMPLETENESS ORACLE (task 04, plan step 7a/7d)
+=================================================================
+
+Command:
+    cd server
+    bun test --isolate --coverage test/contract/capture.test.js
+
+Two independent instruments are recorded here.
+
+1. ROUTE ORACLE — the harness's own summary. Checks every `METHOD /path` in
+   artifacts/route-table.txt against the goldens it actually wrote, and FAILS
+   the test on any uncovered route. A route-table checklist alone; see (2) for
+   what it cannot see.
+
+2. COVERAGE ORACLE — bun's line/function coverage over controllers/. This is
+   what catches an endpoint that WAS hit but only on one branch (the success
+   path but never the 404). Any controller action at zero coverage was never
+   captured.
+
+READING THE CONTROLLER NUMBERS
+------------------------------
+Every controller ACTION is exercised: all 23 routes have >= 1 golden, and each
+route maps to exactly one action, so no action sits at zero coverage.
+
+The uncovered LINE ranges below are, in every case, one of:
+
+  a) `static get openapi()` — pure OpenAPI metadata, evaluated only when
+     CONSTANTS.DEV triggers doc generation. Never part of a response.
+       controllers/matsController.js:32-62
+       controllers/matchesController.js:82-145
+       controllers/match/roundsController.js:111-176
+       controllers/match/ridingTimeVoteController.js:52-87
+       controllers/mat/usersController.js:54-112
+       controllers/usersController.js:11-27
+
+  b) controllers/match/roundsController.js:58 — the `catch` in
+     patchRoundResult. `Round#setResult` throws only when the round has not
+     ended, and the guard immediately above already returns 422 in that case.
+     Unreachable by construction, not a capture gap.
+
+  c) controllers/mat/usersController.js:185-188 — adding a joining judge to an
+     already-running match that has >= 2 judges. Reachable, but produces a 200
+     byte-identical to the ordinary join, so it adds no wire shape. Left
+     uncaptured deliberately.
+
+Note: bun attributes controllers/usersController.js:7 (inside setupCallbacks)
+as uncovered even though the method demonstrably runs on every POST /users.
+Treated as a bun line-attribution artifact, not a gap — the action itself has
+three goldens (200, 400, 500).
+
+GAPS CLOSED BY THIS ORACLE
+--------------------------
+The first coverage run surfaced six reachable branches the route checklist had
+already reported as "covered". All six now have goldens:
+
+  http.mat.join.soloMatchInProgress.400    "cannot join a solo match in progress"
+  http.mat.leave.judgeMidMatch             judge removal that closes a live vote
+  http.rounds.result.noEndedRound.422      result window open, no ended round
+  http.rounds.resume.notPaused.400         Round#resume throw -> 400
+  http.rounds.pause.alreadyPaused.400      Round#pause throw  -> 400
+  http.ridingTime.start/end.unknownMatch.404   the ridingTime 404 branch
+
+That is precisely the class of miss a route-table checklist cannot detect, and
+the reason this oracle is mandatory rather than advisory.
+
+
+================================================================================
+RAW OUTPUT
+================================================================================
+
+bun test v1.4.2 (744846f84)
+
+test/contract/capture.test.js:
+
+CONTRACT CAPTURE — COMPLETENESS REPORT
+========================================================================
+
+routes in artifacts/route-table.txt : 23
+routes with >= 1 golden             : 23
+routes intentionally uncovered      : 0
+routes UNCOVERED (must be zero)     : 0
+goldens written (HTTP)              : 81
+goldens written (WebSocket)         : 4
+goldens written (total)             : 85
+
+PER-ROUTE COVERAGE
+------------------------------------------------------------------------
+  [ 3] DELETE /mat/{matCode}/join
+        - http.mat.leave.judgeMidMatch
+        - http.mat.leave.judge
+        - http.mat.leave.viewer
+  [ 4] DELETE /match/{matchId}/ridingTime
+        - http.ridingTime.end.success
+        - http.ridingTime.end.notActive.400
+        - http.ridingTime.end.noOpenRound.400
+        - http.ridingTime.end.unknownMatch.404
+  [ 1] GET /
+        - http.root
+  [ 1] GET /async-docs.json
+        - http.asyncDocsJson.notFound
+  [ 1] GET /docs
+        - http.docs.notFound
+  [ 1] GET /docs.json
+        - http.docsJson.notFound
+  [ 3] GET /mat/{matCode}/judges
+        - http.mat.judges.success
+        - http.mat.judges.unknownCode.404
+        - http.mat.judges.unauthenticated.401
+  [ 2] GET /mat/{matCode}/viewers
+        - http.mat.viewers.success
+        - http.mat.viewers.unknownCode.404
+  [ 5] GET /mat/{matId}
+        - http.mat.get.byId
+        - http.mat.get.byId.anonymous
+        - http.mat.get.byCode
+        - http.mat.get.empty
+        - http.mat.get.unknownId.401
+  [11] GET /match/{matchId}
+        - http.match.get.ended
+        - http.match.get.techFall
+        - http.match.get.tie
+        - http.match.get.openRound
+        - http.match.get.pausedRound
+        - http.match.get.inBreak
+        - http.match.get.notStarted
+        - http.match.get.asViewer
+        - http.match.get.asOutsider
+        - http.match.get.unknownId.404
+        - http.match.get.unauthenticated.401
+  [ 1] GET /system/healthCheck
+        - http.healthCheck
+  [ 7] PATCH /match/{matchId}/rounds/result
+        - http.rounds.result.submission
+        - http.rounds.result.stoppage
+        - http.rounds.result.explicitNull.400
+        - http.rounds.result.clear
+        - http.rounds.result.invalidWinner.400
+        - http.rounds.result.windowClosed.422
+        - http.rounds.result.noEndedRound.422
+  [ 6] POST /mat/{matCode}/join
+        - http.mat.join.viewerCode.anonymous
+        - http.mat.join.viewerCode.noName.anonymous
+        - http.mat.join.adminCode.existingUser
+        - http.mat.join.alreadyViewer.400
+        - http.mat.join.unknownCode.404
+        - http.mat.join.soloMatchInProgress.400
+  [ 4] POST /mat/{matCode}/matches
+        - http.matches.create.byName
+        - http.matches.create.byId
+        - http.matches.create.missingCompetitors.400
+        - http.matches.create.viewerCode.401
+  [ 3] POST /match/{matchId}/end
+        - http.match.end.notStarted.400
+        - http.match.end.success
+        - http.match.end.alreadyEnded.400
+  [ 6] POST /match/{matchId}/ridingTime
+        - http.ridingTime.start.success
+        - http.ridingTime.start.secondJudge
+        - http.ridingTime.start.alreadyActive.400
+        - http.ridingTime.start.invalidRider.400
+        - http.ridingTime.start.asNonJudge.401
+        - http.ridingTime.start.unknownMatch.404
+  [ 4] POST /match/{matchId}/rounds
+        - http.rounds.start.success
+        - http.rounds.start.activeRound.400
+        - http.rounds.start.asJudge.401
+        - http.rounds.start.unknownMatch.404
+  [ 2] POST /match/{matchId}/rounds/end
+        - http.rounds.end.success
+        - http.rounds.end.noOpenRound.400
+  [ 4] POST /match/{matchId}/rounds/pause
+        - http.rounds.pause.success
+        - http.rounds.pause.alreadyPaused.400
+        - http.rounds.pause.asJudge.401
+        - http.rounds.pause.noActiveRound.422
+  [ 3] POST /match/{matchId}/rounds/resume
+        - http.rounds.resume.notPaused.400
+        - http.rounds.resume.success
+        - http.rounds.resume.noActiveRound.422
+  [ 3] POST /match/{matchId}/start
+        - http.match.start.success
+        - http.match.start.alreadyStarted.400
+        - http.match.start.asJudge.401
+  [ 3] POST /mats
+        - http.mats.create.success
+        - http.mats.create.unauthenticated.401
+        - http.mats.create.missingName.400
+  [ 3] POST /users
+        - http.users.create.success
+        - http.users.create.missingName.400
+        - http.users.create.objectName.500
+
+DOCUMENTED PARTIAL COVERAGE
+------------------------------------------------------------------------
+  Routes below HAVE goldens for what production serves, but a mode-specific
+  behaviour is deliberately NOT captured. Each entry is a decision, not a gap.
+  GET /docs
+      DEV-only (ApplicationServer#registerDefaultControllers gates DocsController on CONSTANTS.DEV). Serves a static Swagger/AsyncAPI HTML shell, is not part of the Kotlin client contract (absent from AccordClient.kt), and does not exist in production. Its production behaviour (404) IS captured.
+  GET /docs.json
+      DEV-only, same gate. The body is the GENERATED OpenAPI spec, which task 06 replaces on purpose; byte-locking it here would create a gate that a later task is required to break. Its production behaviour (404) IS captured.
+  GET /async-docs.json
+      DEV-only, same gate and same reasoning as /docs.json for the AsyncAPI spec.
+
+WEBSOCKET EVENTS
+------------------------------------------------------------------------
+  match.update     ws.match.update.openRound
+  match.update     ws.match.update.inBreak
+  round.tech-fall  ws.round.techFall
+  break.ended      ws.break.ended
+
+goldens NOT rewritten (set CAPTURE_GOLDENS=1 to regenerate)
+---------------------------------------------------------------------------|---------|---------|-------------------
+File                                                                       | % Funcs | % Lines | Uncovered Line #s
+---------------------------------------------------------------------------|---------|---------|-------------------
+All files                                                                  |   81.14 |   78.79 |
+ config/db/config.js                                                       |  100.00 |  100.00 | 
+ config/db/migrations/addBreakFieldsToMatches_1775578624000.js             |   75.00 |   85.71 | 15-16
+ config/db/migrations/addJudgesToMatches_1767111689547.js                  |   75.00 |   94.12 | 20
+ config/db/migrations/addMatchIndexes_1767034042869.js                     |   75.00 |   77.78 | 9-10
+ config/db/migrations/addUsersToMats_1766718563974.js                      |   75.00 |   90.62 | 35-37
+ config/db/migrations/createMatCodesTable_1766949894226.js                 |   75.00 |   75.00 | 23-29
+ config/db/migrations/createMatches_1767019639499.js                       |   75.00 |   97.14 | 36
+ config/db/migrations/createMats_1766397784219.js                          |   75.00 |   95.24 | 21
+ config/db/migrations/createRidingTimeVotes_1767040774910.js               |   75.00 |   95.24 | 23
+ config/db/migrations/createRoundPauses_1773158637908.js                   |   75.00 |   95.45 | 24
+ config/db/migrations/createRounds_1767056639590.js                        |   75.00 |   93.33 | 17
+ config/db/migrations/createUsers_1766680449894.js                         |   75.00 |   95.24 | 22
+ config/db/migrations/dropUserEmails_1768867694123.js                      |   75.00 |   50.00 | 7-11
+ config/db/migrations/enforceMatCreatorId_1776981360571.js                 |   75.00 |   66.67 | 15-19
+ config/db/migrations/replaceSubmissionWithWinnerOnRounds_1775779200000.js |   75.00 |   66.67 | 10-13
+ config/db/schemas/default.js                                              |  100.00 |  100.00 | 
+ controllers/mat/usersController.js                                        |   92.59 |   62.28 | 54-112,185-188
+ controllers/match/ridingTimeVoteController.js                             |   93.75 |   61.70 | 52-87
+ controllers/match/roundsController.js                                     |   93.75 |   56.77 | 58,111-176
+ controllers/matchesController.js                                          |   94.12 |   57.89 | 82-145
+ controllers/matsController.js                                             |   92.86 |   53.03 | 32-62
+ controllers/usersController.js                                            |   83.33 |   44.12 | 7-25
+ lib/activeRecord/baseRecord.js                                            |   81.48 |   85.25 | 16-17,60,90,95,123-125,170-179
+ lib/activeRecord/db/connection.js                                         |   66.67 |   59.09 | 23,28-30,35-36,73-101,115
+ lib/activeRecord/db/connectionConfiguration.js                            |   50.00 |   56.76 | 11-14,17-22,24-29,37,45,47-51,80,96,101-107
+ lib/activeRecord/db/importSchema.js                                       |  100.00 |  100.00 | 
+ lib/activeRecord/db/migrationVersion.js                                   |   83.33 |   95.12 | 21-22
+ lib/activeRecord/db/migrator.js                                           |   83.33 |   69.72 | 28-37,43-47,135-152
+ lib/activeRecord/db/queryInterface.js                                     |   75.00 |   41.18 | 9-22,28-33
+ lib/activeRecord/db/schema.js                                             |   75.00 |   59.04 | 9-14,19-33,63-65,78,83,85-92
+ lib/activeRecord/index.js                                                 |  100.00 |  100.00 | 
+ lib/activeRecord/utils.js                                                 |   20.00 |   62.96 | 9,14,19,24-30
+ lib/constants.js                                                          |  100.00 |  100.00 | 
+ lib/controllers/roundsControllerHelpers.js                                |  100.00 |  100.00 | 
+ lib/external_api/word_generator.js                                        |  100.00 |  100.00 | 
+ lib/logger.js                                                             |  100.00 |  100.00 | 
+ lib/openapi/asyncApiGenerator.js                                          |   33.33 |    6.85 | 15-22,29-88
+ lib/openapi/index.js                                                      |   25.00 |   64.29 | 18-20,29,38
+ lib/openapi/schemas/index.js                                              |  100.00 |  100.00 | 
+ lib/openapi/schemas/mat.js                                                |  100.00 |  100.00 | 
+ lib/openapi/schemas/matCode.js                                            |  100.00 |  100.00 | 
+ lib/openapi/schemas/match.js                                              |  100.00 |  100.00 | 
+ lib/openapi/schemas/round.js                                              |  100.00 |  100.00 | 
+ lib/openapi/schemas/user.js                                               |  100.00 |  100.00 | 
+ lib/openapi/specGenerator.js                                              |   12.50 |    6.91 | 9-23,33-61,70-89,99-117,138-186,195,205-273
+ lib/openapi/validator.js                                                  |   33.33 |   18.46 | 22-32,44-85
+ lib/openapi/webSocketEvents.js                                            |  100.00 |  100.00 | 
+ lib/ridingTime.js                                                         |   94.74 |   86.55 | 79,87-88,99-101,127-128,135-142
+ lib/rules/index.js                                                        |  100.00 |  100.00 | 
+ lib/rules/rDojoKombat.js                                                  |  100.00 |  100.00 | 
+ lib/server/abstractWebSocket.js                                           |   73.68 |   95.92 | 29,68
+ lib/server/applicationServer.js                                           |   87.27 |   78.39 | 42-43,60-63,68-83,95-103,158-161,170-175,186,242-243,270-276
+ lib/server/authorizer.js                                                  |   91.67 |   85.48 | 19,32-39
+ lib/server/docsController.js                                              |   16.67 |    6.90 | 7-87
+ lib/server/index.js                                                       |  100.00 |  100.00 | 
+ lib/server/serverController.js                                            |   88.61 |   91.30 | 28,47-49,106-112,176,208-209,259-260,272,277-278,283-287
+ lib/server/systemController.js                                            |  100.00 |  100.00 | 
+ lib/server/webSocket.js                                                   |   91.67 |   85.00 | 18-19,33-34,42-43
+ lib/server/webSocketServer.js                                             |   84.62 |   85.96 | 24,68-70,79-80,86-87
+ lib/server/workerWebSocket.js                                             |  100.00 |  100.00 | 
+ lib/workerQueue/breakTransitionWorker.js                                  |  100.00 |  100.00 | 
+ lib/workerQueue/matchUpdateWorker.js                                      |   76.47 |   81.25 | 11-12,52-58
+ lib/workerQueue/techFallTrackerWorker.js                                  |  100.00 |   91.80 | 83-87
+ lib/workerQueue/worker.js                                                 |   61.54 |   10.00 | 5-67
+ test/contract/capture.ts                                                  |   90.24 |   95.05 | 927,932-936,941-958,963-965
+ test/contract/seed.ts                                                     |  100.00 |  100.00 | 
+ test/setup.js                                                             |   40.00 |   45.45 | 43-46,52-54,60-70
+---------------------------------------------------------------------------|---------|---------|-------------------
+
+ 1 pass
+ 0 fail
+ 8 expect() calls
+Ran 1 test across 1 file. [4.26s]

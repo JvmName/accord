@@ -4,7 +4,7 @@ const { logger }                = require('../lib/logger');
 const { BreakTransitionWorker,
         TechFallTrackerWorker,
         MatchUpdateWorker,
-        RoundTimerWorker }      = require('../lib/workerQueue');
+        RoundTimerWorker }      = require('../src/workers');
 
 
 

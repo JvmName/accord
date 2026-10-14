@@ -1,0 +1,26 @@
+{
+  "name": "http.matches.create.viewerCode.401",
+  "route": "POST /mat/{matCode}/matches",
+  "why": "A viewer code is not an admin code: \"create a match\" is denied -> 401.",
+  "request": {
+    "method": "POST",
+    "path": "/mat/<code:main-viewer>/matches",
+    "as": "creator",
+    "body": {
+      "blue": {
+        "name": "b"
+      },
+      "red": {
+        "name": "a"
+      }
+    }
+  },
+  "response": {
+    "status": 401,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": null,
+      "status": "unauthorized"
+    }
+  }
+}

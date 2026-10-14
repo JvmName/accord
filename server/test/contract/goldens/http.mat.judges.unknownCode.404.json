@@ -1,0 +1,19 @@
+{
+  "name": "http.mat.judges.unknownCode.404",
+  "route": "GET /mat/{matCode}/judges",
+  "why": "Mat-scoped UsersController#authenticateRequest renders 404 when the code resolves to no mat — contrast the 401 on GET /mat/{matId} (F-16).",
+  "request": {
+    "method": "GET",
+    "path": "/mat/<code:1>/judges",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": null,
+      "status": "not found"
+    }
+  }
+}

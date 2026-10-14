@@ -1,0 +1,69 @@
+{
+  "name": "ws.match.update.openRound",
+  "route": null,
+  "why": "MatchUpdateWorker broadcasts the full Match (mat + judges + rounds) for every open round. No {data,status} envelope — this is the bare object, which is why SocketClient decodes Match directly.",
+  "event": "match.update",
+  "room": "match:<match:open>",
+  "payload": {
+    "blue_competitor": {
+      "api_token": "<token:blue>",
+      "created_at": "2026-01-01T12:00:07.000Z",
+      "id": "<user:blue>",
+      "name": "Blair Blue",
+      "updated_at": "2026-01-01T12:00:07.000Z"
+    },
+    "break_duration": null,
+    "break_remaining": null,
+    "break_started_at": null,
+    "creator_id": "<user:creator>",
+    "ended_at": null,
+    "id": "<match:open>",
+    "judges": [
+      {
+        "id": "<user:judgeA>",
+        "name": "Jordan Judge"
+      },
+      {
+        "id": "<user:judgeB>",
+        "name": "Jamie Judge"
+      }
+    ],
+    "mat": {
+      "creator_id": "<user:creator>",
+      "id": "<mat:main>",
+      "judge_count": 2,
+      "name": "Main Mat"
+    },
+    "mat_id": "<mat:main>",
+    "red_competitor": {
+      "api_token": "<token:red>",
+      "created_at": "2026-01-01T12:00:06.000Z",
+      "id": "<user:red>",
+      "name": "Rory Red",
+      "updated_at": "2026-01-01T12:00:06.000Z"
+    },
+    "rounds": [
+      {
+        "ended_at": null,
+        "id": "<round:open>",
+        "max_duration": 180,
+        "paused": false,
+        "result": {
+          "method": {
+            "type": null,
+            "value": null
+          },
+          "winner": null
+        },
+        "score": {
+          "<user:blue>": 33,
+          "<user:red>": 0
+        },
+        "started_at": "2026-01-01T12:07:50.000Z",
+        "time_remaining": 60
+      }
+    ],
+    "started_at": "2026-01-01T12:07:50.000Z",
+    "winner": null
+  }
+}

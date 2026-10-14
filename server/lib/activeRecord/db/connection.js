@@ -2,6 +2,9 @@ const { ConnectionConfiguration } = require('./connectionConfiguration');
 const { logger }                  = require('../../logger');
 const { QueryInterface }          = require('./queryInterface');
 const { Sequelize }               = require('sequelize');
+// Side effect: Sequelize DATE stores ISO 8601 text. Must load before the first
+// `new Sequelize` (FINDINGS F-39). Delete with the Sequelize layer (task 15).
+require('./isoDateTime');
 
 
 let   sequelizeConnectionsCache = {};
@@ -68,38 +71,7 @@ class Connection {
 
 
     get dialectOptions() {
-        if (this.dialect == 'sqlite') {
-            return this.sqliteSequelizeOptions;
-        } else {
-            return this.postgresSequelizeOptions;
-        }
-    }
-
-
-    get postgresSequelizeOptions() {
-        const options = {
-            pool: this.#configuration.pool,
-        };
-
-        const primaryConfig = {
-            database: this.#configuration.database,
-            host:     this.#configuration.host,
-            password: this.#configuration.password,
-            port:     this.#configuration.port,
-            username: this.#configuration.username
-        };
-
-        if (this.#configuration.readers.length) {
-            options.replication = {
-                write: primaryConfig,
-                read: this.#configuration.readers
-            }
-        } else {
-            Object.assign(options, primaryConfig);
-        }
-
-        if (this.#configuration.ssl) options.dialectOptions = {ssl: {require: true}};
-        return options;
+        return this.sqliteSequelizeOptions;
     }
 
 

@@ -1,0 +1,25 @@
+{
+  "name": "http.users.create.objectName.500",
+  "route": "POST /users",
+  "why": "The generic 500 branch of ApplicationServer#handleError: NOT an `errors` map but {data:{error:\"<raw message>\"},status:\"server error\"}. ApiResultSerializer.kt has a separate `error` branch for exactly this shape. Note it leaks the raw driver message.",
+  "request": {
+    "method": "POST",
+    "path": "/users",
+    "as": null,
+    "body": {
+      "name": {
+        "nested": true
+      }
+    }
+  },
+  "response": {
+    "status": 500,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "error": "string violation: name cannot be an array or an object"
+      },
+      "status": "server error"
+    }
+  }
+}

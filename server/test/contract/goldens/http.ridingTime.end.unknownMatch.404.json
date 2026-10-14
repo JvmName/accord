@@ -1,0 +1,19 @@
+{
+  "name": "http.ridingTime.end.unknownMatch.404",
+  "route": "DELETE /match/{matchId}/ridingTime",
+  "why": "Same 404 branch on the DELETE route.",
+  "request": {
+    "method": "DELETE",
+    "path": "/match/<uuid:1>/ridingTime?rider=red",
+    "as": "judgeA",
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": null,
+      "status": "not found"
+    }
+  }
+}

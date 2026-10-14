@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const { ApplicationServer } = require('../lib/server');
+const { ApplicationServer } = require('../src/http/server');
 const { spawn }             = require('node:child_process');
 
 

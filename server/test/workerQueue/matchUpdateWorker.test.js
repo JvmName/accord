@@ -1,22 +1,26 @@
-const { MatchUpdateWorker } = require('../../lib/workerQueue/matchUpdateWorker');
-const { Round }             = require('../../models/round');
-const { Match }             = require('../../models/match');
-const { EVENTS }            = require('../../lib/server/workerWebSocket');
-
-
-jest.mock('../../models/round', () => ({
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
+// NOTE: bun's `mock.module()` does NOT hoist above requires the way Jest's
+// `jest.mock()` does, so every mock must be declared before the module under
+// test is required.
+mock.module('../../models/round', () => ({
     Round: { getOpenRounds: jest.fn() }
 }));
 
-jest.mock('../../models/match', () => ({
+mock.module('../../models/match', () => ({
     Match: { where: jest.fn().mockResolvedValue([]), find: jest.fn(), get Operators() { return { ne: Symbol('ne') }; } }
 }));
 
 // Prevent Worker constructor from touching socket.io-client
-jest.mock('socket.io-client', () => ({ io: jest.fn(() => ({ on: jest.fn(), emit: jest.fn() })) }));
+mock.module(require.resolve('socket.io-client'), () => ({ io: jest.fn(() => ({ on: jest.fn(), emit: jest.fn() })) }));
 
 // Silence logger output during tests
-jest.mock('../../lib/logger', () => ({ logger: { debug: jest.fn(), info: jest.fn(), error: jest.fn() } }));
+mock.module('../../lib/logger', () => ({ logger: { debug: jest.fn(), info: jest.fn(), error: jest.fn() } }));
+
+
+const { MatchUpdateWorker } = require('../../lib/workerQueue/matchUpdateWorker');
+const { Round }             = require('../../models/round');
+const { Match }             = require('../../models/match');
+const { EVENTS }            = require('../../lib/server/workerWebSocket');
 
 
 describe('MatchUpdateWorker', () => {

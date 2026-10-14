@@ -1,0 +1,19 @@
+{
+  "name": "http.root",
+  "route": "GET /",
+  "why": "Version banner. Confirms the {data,status} envelope wraps bare strings too.",
+  "request": {
+    "method": "GET",
+    "path": "/",
+    "as": null,
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": "Hello World v1.0.0-rc08",
+      "status": "ok"
+    }
+  }
+}

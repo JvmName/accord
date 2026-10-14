@@ -1,3 +1,4 @@
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
 const { HttpClient } = require('../../lib/http/client');
 const   TestHelpers  = require('../helpers');
 const { logger }     = require('../../lib/logger');

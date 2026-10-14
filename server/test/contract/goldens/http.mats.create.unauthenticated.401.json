@@ -1,0 +1,21 @@
+{
+  "name": "http.mats.create.unauthenticated.401",
+  "route": "POST /mats",
+  "why": "No x-api-token: AuthorizationError -> 401 {data:null,status:\"unauthorized\"}. Note `data` is null, not an errors object.",
+  "request": {
+    "method": "POST",
+    "path": "/mats",
+    "as": null,
+    "body": {
+      "name": "Nope"
+    }
+  },
+  "response": {
+    "status": 401,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": null,
+      "status": "unauthorized"
+    }
+  }
+}

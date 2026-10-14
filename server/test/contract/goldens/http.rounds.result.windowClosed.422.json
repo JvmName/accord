@@ -1,0 +1,27 @@
+{
+  "name": "http.rounds.result.windowClosed.422",
+  "route": "PATCH /match/{matchId}/rounds/result",
+  "why": "FINDINGS F-21: renderErrors(…, 422) produces an envelope with NO `status` key at all, because ServerController#statusText has no 422 case. ApiResultSerializer.kt throws SerializationException on a missing status. Pinned as-is.",
+  "request": {
+    "method": "PATCH",
+    "path": "/match/<match:open>/rounds/result",
+    "as": "creator",
+    "body": {
+      "stoppage": false,
+      "winner": "red"
+    }
+  },
+  "response": {
+    "status": 422,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matchId": [
+            "Round result can only be set during the break or at match end"
+          ]
+        }
+      }
+    }
+  }
+}

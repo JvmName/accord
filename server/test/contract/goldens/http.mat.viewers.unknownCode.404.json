@@ -1,0 +1,19 @@
+{
+  "name": "http.mat.viewers.unknownCode.404",
+  "route": "GET /mat/{matCode}/viewers",
+  "why": "404 path for the viewers route.",
+  "request": {
+    "method": "GET",
+    "path": "/mat/<code:1>/viewers",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": null,
+      "status": "not found"
+    }
+  }
+}

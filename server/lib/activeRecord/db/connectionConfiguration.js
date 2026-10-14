@@ -14,11 +14,11 @@ class ConnectionConfiguration {
 
     get databaseId()     { return this.#databaseId };
 
-    get dialect()        { return this.#config.dialect || 'postgres' };
+    get dialect()        { return this.#config.dialect || 'sqlite' };
     get database()       { return this.#config.database };
     get host()           { return this.#config.host };
     get password()       { return this.#config.password };
-    get port()           { return this.#config.port || 5432 };
+    get port()           { return this.#config.port };
     get username()       { return this.#config.username };
     get ssl()            { return Boolean(this.#config.ssl) };
     get storage()        { return process.env.DATABASE_PATH ?? `${utils.configDirectory}/database.${this.env}.sqlite` };
@@ -33,21 +33,11 @@ class ConnectionConfiguration {
 
 
     #validateConfiguration() {
-        const config = this.#config;
-        this.#keysToValidate.forEach(key => {
-            if (!config[key]) throw new Error(`Missing ${key} for database configuration ${this.#configId}`);
-        });
+        // Resolves the config eagerly so a missing database id / environment throws on construction.
+        this.#config;
     }
 
 
-    get #keysToValidate() {
-        if (this.dialect == 'postgres') {
-            return ['database', 'host', 'password', 'username'];
-        }
-        return [];
-    }
-
- 
     get #configId() {
         return `${this.#databaseId}.${this.env}`;
     }

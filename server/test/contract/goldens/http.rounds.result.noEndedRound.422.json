@@ -1,0 +1,27 @@
+{
+  "name": "http.rounds.result.noEndedRound.422",
+  "route": "PATCH /match/{matchId}/rounds/result",
+  "why": "The other 422 branch: the result window is open (a break is running) but the match has no ended round to attach a result to.",
+  "request": {
+    "method": "PATCH",
+    "path": "/match/<match:breakNoRounds>/rounds/result",
+    "as": "creator",
+    "body": {
+      "stoppage": false,
+      "winner": "red"
+    }
+  },
+  "response": {
+    "status": 422,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matchId": [
+            "No ended round to update"
+          ]
+        }
+      }
+    }
+  }
+}

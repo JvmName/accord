@@ -1,213 +1,223 @@
-const { BarController }     = require('./helpers/controllers/barController');
-const { BazController }     = require('./helpers/controllers/sub/bazController');
-const { FooController }     = require('./helpers/controllers/fooController');
-const   IoServer            = require("socket.io")
-const { Request }           = require('jest-express/lib/request');
-const { Response }          = require('jest-express/lib/response');
+const { afterEach, describe, expect, it, jest } = require('bun:test');
 const { Server }            = require('http');
-const   TestHelpers         = require('../helpers');
-const { TestServer }        = require('./helpers/server');
-const { ApplicationServer } = require('../../lib/server');
-const { WebSocketServer }   = require('../../lib/server/webSocketServer');
+const   CONSTANTS           = require('../../lib/constants');
+const { logger }            = require('../../lib/logger');
+const { ApplicationServer,
+        OPENAPI_VALIDATION_ENV,
+        openApiValidationEnabled } = require('../../src/http/server');
+const { WebSocketServer }   = require('../../src/ws/webSocketServer');
 
 
-jest.mock('express', () => {
-    const { Response } = require('jest-express/lib/response');
-
-    // missing functions in mock Response
-    Response.prototype.on   = jest.fn();
-
-    return require('jest-express');
-});
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 
 afterEach(() => {
-    jest.clearAllMocks();
+    jest.restoreAllMocks();
 });
 
 
+/** `METHOD /path` of every route on the server's Express app. */
+function routeKeys(server) {
+    return server.expressApp.router.stack
+        .filter(layer => layer.route)
+        .flatMap(layer => Object.keys(layer.route.methods).map(method => `${method.toUpperCase()} ${layer.route.path}`));
+}
+
+
 describe('ApplicationServer', () => {
-    describe('ApplicationServer#controllers', () => {
-        it ('searches directories and subdirectories', () => {
-            const server      = new TestServer();
-            const controllers = server.controllerClasses;
-            expect(controllers.length).toEqual(3);
-            expect(controllers[0]).toBe(BarController);
-            expect(controllers[1]).toBe(FooController);
-            expect(controllers[2]).toBe(BazController);
-        });
+    describe('ApplicationServer#mountRoutes', () => {
+        it('registers the route table on the underlying express app', () => {
+            const server = new ApplicationServer({ dev: false });
+            server.mountRoutes();
 
-        it ('initializes controllers with the correct path', () => {
-            const server      = new TestServer();
-            const controllers = server.controllerClasses;
-            expect(controllers[0].routePrefix).toEqual('/bar');
-            expect(controllers[1].routePrefix).toEqual('/foo');
-            expect(controllers[2].routePrefix).toEqual('/sub/baz');
-        });
-    });
-
-
-    describe('ApplicationServer#registerControllers', () => {
-        it ('it configures routes on underlying express server', () => {
-            const server = new TestServer();
-            const getSpy    = jest.spyOn(server, '_get').mockImplementation(() => null);
-            const postSpy   = jest.spyOn(server, '_post').mockImplementation(() => null);
-            const deleteSpy = jest.spyOn(server, '_delete').mockImplementation(() => null);
-            const putSpy    = jest.spyOn(server, '_put').mockImplementation(() => null);
-            const patchSpy  = jest.spyOn(server, '_patch').mockImplementation(() => null);
-            server.registerControllers();
-
-            expect(getSpy).toHaveBeenCalledTimes(4);
-            expect(getSpy).toHaveBeenCalledWith('/foo/fooBar',         expect.any(Function));
-            expect(getSpy).toHaveBeenCalledWith('/baz/:id/ban',        expect.any(Function));
+            const methods = routeKeys(server).map(key => key.split(' ')[0]);
+            const count   = method => methods.filter(m => m === method).length;
+            expect(count('GET')).toBe(6);
+            expect(count('POST')).toBe(11);
+            expect(count('PATCH')).toBe(1);
+            expect(count('DELETE')).toBe(2);
+            expect(count('PUT')).toBe(0);
             // Built in system routes
-            expect(getSpy).toHaveBeenCalledWith('/',                   expect.any(Function));
-            expect(getSpy).toHaveBeenCalledWith('/system/healthCheck', expect.any(Function));
-
-            expect(postSpy).toHaveBeenCalledTimes(2);
-            expect(postSpy).toHaveBeenCalledWith('/foo',        expect.any(Function));
-            expect(postSpy).toHaveBeenCalledWith('/foo/fooBar', expect.any(Function));
-
-            expect(putSpy).toHaveBeenCalledTimes(1);
-            expect(putSpy).toHaveBeenCalledWith('/foo/fooBar', expect.any(Function));
-
-            expect(deleteSpy).toHaveBeenCalledTimes(1);
-            expect(deleteSpy).toHaveBeenCalledWith('/foo/fooBar', expect.any(Function));
-
-            expect(patchSpy).toHaveBeenCalledTimes(1);
-            expect(patchSpy).toHaveBeenCalledWith('/foo/fooBar', expect.any(Function));
-        });
-    });
-
-
-    describe('ApplicationServer#requestHandler', () => {
-        const server         = new TestServer();
-        const request        = new Request();
-        const response       = new Response();
-
-        const beforeSpy1 = jest.spyOn(FooController.prototype, 'beforeCallback1');
-        const beforeSpy2 = jest.spyOn(FooController.prototype, 'beforeCallback2');
-        const beforeSpy3 = jest.spyOn(FooController.prototype, 'beforeCallback3');
-        const beforeSpy4 = jest.spyOn(FooController.prototype, 'beforeCallback4');
-        const beforeSpy5 = jest.spyOn(FooController.prototype, 'beforeCallback5');
-
-        const afterSpy1  = jest.spyOn(FooController.prototype, 'afterCallback1');
-        const afterSpy2  = jest.spyOn(FooController.prototype, 'afterCallback2');
-        const afterSpy3  = jest.spyOn(FooController.prototype, 'afterCallback3');
-        const afterSpy4  = jest.spyOn(FooController.prototype, 'afterCallback4');
-        const afterSpy5  = jest.spyOn(FooController.prototype, 'afterCallback5');
-
-        it ('calls callbacks in the right order', async () => {
-            const postIndexSpy   = jest.spyOn(FooController.prototype, 'postIndex');
-            const requestHandler = server.requestHandler('postIndex', FooController);
-            await requestHandler(request, response);
-
-            expect(beforeSpy1).toHaveBeenCalledTimes(1);
-            expect(beforeSpy1).toHaveBeenCalledBefore(beforeSpy2);
-            expect(beforeSpy2).toHaveBeenCalledTimes(1);
-            expect(beforeSpy2).toHaveBeenCalledBefore(beforeSpy3);
-            expect(beforeSpy3).toHaveBeenCalledTimes(1);
-            expect(beforeSpy3).toHaveBeenCalledBefore(beforeSpy5);
-            expect(beforeSpy5).toHaveBeenCalledTimes(1);
-            expect(beforeSpy5).toHaveBeenCalledBefore(postIndexSpy);
-
-            expect(postIndexSpy).toHaveBeenCalledTimes(1);
-            expect(postIndexSpy).toHaveBeenCalledBefore(afterSpy1);
-
-            expect(afterSpy1).toHaveBeenCalledTimes(1);
-            expect(afterSpy1).toHaveBeenCalledBefore(afterSpy2);
-            expect(afterSpy2).toHaveBeenCalledTimes(1);
-            expect(afterSpy2).toHaveBeenCalledBefore(afterSpy3);
-            expect(afterSpy3).toHaveBeenCalledTimes(1);
-            expect(afterSpy3).toHaveBeenCalledBefore(afterSpy5);
-            expect(afterSpy5).toHaveBeenCalledTimes(1);
+            expect(routeKeys(server)).toContain('GET /');
+            expect(routeKeys(server)).toContain('GET /system/healthCheck');
         });
 
-        it ('calls does not call callbacks that should only be called for some actions', async () => {
-            const postFooBarSpy  = jest.spyOn(FooController.prototype, 'postFooBar');
-            const requestHandler = server.requestHandler('postFooBar', FooController);
-            await requestHandler(request, response);
+        it('registers the docs routes only in DEV', () => {
+            const prod = new ApplicationServer({ dev: false });
+            prod.mountRoutes();
+            const dev = new ApplicationServer({ dev: true, openApiValidation: false });
+            dev.mountRoutes();
 
-            expect(beforeSpy1).toHaveBeenCalledTimes(0);
-            expect(beforeSpy2).toHaveBeenCalledTimes(1);
-            expect(beforeSpy3).toHaveBeenCalledTimes(1);
-            expect(beforeSpy5).toHaveBeenCalledTimes(1);
-
-            expect(postFooBarSpy).toHaveBeenCalledTimes(1);
-
-            expect(afterSpy1).toHaveBeenCalledTimes(1);
-            expect(afterSpy2).toHaveBeenCalledTimes(1);
-            expect(afterSpy3).toHaveBeenCalledTimes(0);
-            expect(afterSpy5).toHaveBeenCalledTimes(1);
+            const docs = ['GET /docs', 'GET /docs.json', 'GET /async-docs.json'];
+            for (const route of docs) {
+                expect(routeKeys(prod)).not.toContain(route);
+                expect(routeKeys(dev)).toContain(route);
+            }
         });
 
-        it ('calls does not call callbacks that should not be called for some actions', async () => {
-            const getFooBarSpy   = jest.spyOn(FooController.prototype, 'getFooBar');
-            const requestHandler = server.requestHandler('getFooBar', FooController);
-            await requestHandler(request, response);
+        it('mounts the global middleware first, then the validator when enabled, then the routes', () => {
+            const server = new ApplicationServer({ dev: false, openApiValidation: true });
+            server.mountRoutes();
 
-            expect(beforeSpy1).toHaveBeenCalledTimes(0);
-            expect(beforeSpy2).toHaveBeenCalledTimes(1);
-            expect(beforeSpy3).toHaveBeenCalledTimes(0);
-            expect(beforeSpy5).toHaveBeenCalledTimes(1);
-
-            expect(getFooBarSpy).toHaveBeenCalledTimes(1);
-
-            expect(afterSpy1).toHaveBeenCalledTimes(1);
-            expect(afterSpy2).toHaveBeenCalledTimes(0);
-            expect(afterSpy3).toHaveBeenCalledTimes(0);
-            expect(afterSpy5).toHaveBeenCalledTimes(1);
+            const names = server.expressApp.router.stack.map(layer => layer.route ? 'route' : layer.name);
+            expect(names.slice(0, 8)).toEqual([
+                'corsMiddleware', 'jsonParser', 'urlencodedParser', 'responseTime',
+                'serveStatic', 'result', 'serveStatic', 'connectionAbortedMiddleware',
+            ]);
+            const validator  = names.indexOf('pathParamsMiddleware');
+            const firstRoute = names.indexOf('route');
+            expect(validator).toBeGreaterThan(7);
+            expect(firstRoute).toBeGreaterThan(validator);
         });
 
-        it ('does not call the action when a callback return false', async () => {
-            const putFooBarSpy   = jest.spyOn(FooController.prototype, 'putFooBar');
-            const requestHandler = server.requestHandler('putFooBar', FooController);
-            await requestHandler(request, response);
-
-            expect(beforeSpy4).toHaveBeenCalledTimes(1);
-            expect(beforeSpy5).toHaveBeenCalledTimes(0);
-
-            expect(putFooBarSpy).toHaveBeenCalledTimes(0);
-
-            expect(afterSpy1).toHaveBeenCalledTimes(0);
-            expect(afterSpy2).toHaveBeenCalledTimes(0);
-            expect(afterSpy3).toHaveBeenCalledTimes(0);
-            expect(afterSpy5).toHaveBeenCalledTimes(0);
-        });
-
-        it ('does not call the subsequent callbacks  when a callback return false', async () => {
-            const deleteFooBarSpy   = jest.spyOn(FooController.prototype, 'deleteFooBar');
-            const requestHandler = server.requestHandler('deleteFooBar', FooController);
-            await requestHandler(request, response);
-
-            expect(deleteFooBarSpy).toHaveBeenCalledTimes(1);
-
-            expect(afterSpy1).toHaveBeenCalledTimes(1);
-            expect(afterSpy2).toHaveBeenCalledTimes(1);
-            expect(afterSpy3).toHaveBeenCalledTimes(0);
-            expect(afterSpy4).toHaveBeenCalledTimes(1);
-            expect(afterSpy5).toHaveBeenCalledTimes(0);
+        it('installs no validator when it is off', () => {
+            const server = new ApplicationServer({ dev: false, openApiValidation: false });
+            server.mountRoutes();
+            expect(server.expressApp.router.stack.map(layer => layer.name)).not.toContain('pathParamsMiddleware');
         });
     });
 
 
     describe('ApplicationServer#listen', () => {
-        const httpListenSpy = jest.spyOn(Server.prototype, 'listen');
-        httpListenSpy.mockImplementation(() => {});
-
-        it ('starts the web socket server', async () => {
+        it('starts the web socket server', async () => {
+            jest.spyOn(Server.prototype, 'listen').mockImplementation(() => {});
             const webSocketListenSpy = jest.spyOn(WebSocketServer.prototype, 'listen');
-            const server = new TestServer();
+            const server = new ApplicationServer();
 
             await server.listen();
             expect(webSocketListenSpy).toHaveBeenCalledTimes(1);
         });
 
-        it ('starts the http server', async () => {
-            const server = new TestServer();
+        it('starts the http server', async () => {
+            const httpListenSpy = jest.spyOn(Server.prototype, 'listen').mockImplementation(() => {});
+            const server = new ApplicationServer({ port: 4321 });
 
             await server.listen();
             expect(httpListenSpy).toHaveBeenCalledTimes(1);
+            expect(httpListenSpy.mock.calls[0][0]).toBe(4321);
+        });
+
+        it('attaches Socket.IO to the same http server that serves the express app', async () => {
+            jest.spyOn(Server.prototype, 'listen').mockImplementation(() => {});
+            const server = new ApplicationServer();
+            expect(server.httpServer.listeners('upgrade')).toHaveLength(0);
+
+            await server.listen();
+            expect(server.httpServer.listeners('upgrade')).toHaveLength(1);
+
+            server.startWebSocketServer();
+            expect(server.httpServer.listeners('upgrade')).toHaveLength(1);
+        });
+    });
+
+
+    describe('ApplicationServer#close', () => {
+        it('closes the http server and drops open connections', () => {
+            const closeSpy    = jest.spyOn(Server.prototype, 'close').mockImplementation(() => {});
+            const closeAllSpy = jest.spyOn(Server.prototype, 'closeAllConnections').mockImplementation(() => {});
+            new ApplicationServer().close();
+
+            expect(closeSpy).toHaveBeenCalledTimes(1);
+            expect(closeAllSpy).toHaveBeenCalledTimes(1);
+        });
+    });
+
+
+    describe('ApplicationServer#onError', () => {
+        const listenError = code => Object.assign(new Error(code), { syscall: 'listen', code });
+
+        it('rethrows errors that are not about listening', () => {
+            const error = Object.assign(new Error('boom'), { syscall: 'read' });
+            expect(() => new ApplicationServer().onError(error)).toThrow('boom');
+        });
+
+        it.each([
+            ['EACCES',     'Port requires elevated privileges'],
+            ['EADDRINUSE', 'Port is already in use'],
+        ])('logs %s and exits with 1', (code, message) => {
+            const exitSpy  = jest.spyOn(process, 'exit').mockImplementation(() => {});
+            const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => {});
+
+            new ApplicationServer().onError(listenError(code));
+            expect(errorSpy).toHaveBeenCalledWith(message);
+            expect(exitSpy).toHaveBeenCalledWith(1);
+        });
+
+        it('rethrows any other listen error', () => {
+            expect(() => new ApplicationServer().onError(listenError('EOTHER'))).toThrow('EOTHER');
+        });
+    });
+
+
+    describe('ApplicationServer#workerToken', () => {
+        it('generates a random UUID once when none is given', () => {
+            const server = new ApplicationServer();
+            expect(server.workerToken).toMatch(UUID_RE);
+            expect(server.workerToken).toBe(server.workerToken);
+            expect(new ApplicationServer().workerToken).not.toBe(server.workerToken);
+        });
+
+        it('uses the token it is given', () => {
+            expect(new ApplicationServer({ workerToken: 'shared-secret' }).workerToken).toBe('shared-secret');
+        });
+    });
+
+
+    describe('settings', () => {
+        const savedEnv = { ...process.env };
+        afterEach(() => {
+            for (const key of ['PORT', 'WEB_ORIGIN', OPENAPI_VALIDATION_ENV]) {
+                if (savedEnv[key] === undefined) delete process.env[key];
+                else process.env[key] = savedEnv[key];
+            }
+        });
+
+        it('takes the port from the options, then PORT, then 3000', () => {
+            delete process.env.PORT;
+            expect(new ApplicationServer().port).toBe(3000);
+            process.env.PORT = '4000';
+            expect(new ApplicationServer().port).toBe('4000');
+            expect(new ApplicationServer({ port: 5000 }).port).toBe(5000);
+        });
+
+        it('allows the local web client, plus WEB_ORIGIN when set', () => {
+            delete process.env.WEB_ORIGIN;
+            expect(new ApplicationServer().corsOrigin).toEqual(['http://localhost:8080']);
+            process.env.WEB_ORIGIN = 'https://web.example';
+            expect(new ApplicationServer().corsOrigin).toEqual(['http://localhost:8080', 'https://web.example']);
+        });
+
+        it('runs in DEV mode exactly when NODE_ENV is development, unless told otherwise', () => {
+            expect(new ApplicationServer().dev).toBe(CONSTANTS.DEV);
+            expect(new ApplicationServer({ dev: true }).dev).toBe(true);
+        });
+    });
+
+
+    describe('openApiValidationEnabled', () => {
+        it('defaults to DEV mode', () => {
+            expect(openApiValidationEnabled(undefined, true, {})).toBe(true);
+            expect(openApiValidationEnabled(undefined, false, {})).toBe(false);
+        });
+
+        it('is switched off or on by the environment variable', () => {
+            expect(openApiValidationEnabled(undefined, true,  { [OPENAPI_VALIDATION_ENV]: '0' })).toBe(false);
+            expect(openApiValidationEnabled(undefined, false, { [OPENAPI_VALIDATION_ENV]: '1' })).toBe(true);
+        });
+
+        it('lets the constructor option win over the environment', () => {
+            expect(openApiValidationEnabled(false, true,  { [OPENAPI_VALIDATION_ENV]: '1' })).toBe(false);
+            expect(openApiValidationEnabled(true,  false, { [OPENAPI_VALIDATION_ENV]: '0' })).toBe(true);
+        });
+
+        it('is never on in production', () => {
+            const env = CONSTANTS.ENV;
+            CONSTANTS.ENV = 'production';
+            try {
+                expect(openApiValidationEnabled(true, true, { [OPENAPI_VALIDATION_ENV]: '1' })).toBe(false);
+            } finally {
+                CONSTANTS.ENV = env;
+            }
         });
     });
 });

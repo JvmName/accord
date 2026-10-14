@@ -1,3 +1,15 @@
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
+// bun's `mock.module()` does not hoist above requires the way `jest.mock()`
+// does, and a bare package specifier is not matched — it must be registered
+// under the resolved path, before anything requires it.
+mock.module(require.resolve('sequelize'), () => {
+    class MockSequelize {
+        static DataTypes = {INTEGER: 'INTEGER', DATE: 'DATE'};
+    }
+    return {Sequelize: MockSequelize};
+});
+
+
 const { ConnectionConfiguration } = require('../../../lib/activeRecord/db/connectionConfiguration');
 const { Migrator }                = require('../../../lib/activeRecord/db/migrator');
 const { QueryInterface }          = require('../../../lib/activeRecord/db/queryInterface');
@@ -24,13 +36,6 @@ const MockQueryInterface = {
     renameColumn: jest.fn(),
     changeColumn: jest.fn()
 }
-jest.mock('sequelize', () => {
-    class MockSequelize {
-        static DataTypes = {INTEGER: 'INTEGER', DATE: 'DATE'};
-    }
-    return {Sequelize: MockSequelize};
-});
-
 Sequelize.prototype.getQueryInterface = () => MockQueryInterface;
 
 
@@ -41,7 +46,7 @@ afterEach(() => {
 
 describe('Migrator', () => {
     const migrator = new Migrator();
-    const moduleSpy = jest.spyOn(migrator, 'migrationModule', 'get');
+    const moduleSpy = TestHelpers.spyOnGetter(migrator, 'migrationModule');
     moduleSpy.mockImplementation(() => migrationModule);
 
     describe('Migrator#run', () => {
@@ -55,7 +60,7 @@ describe('Migrator', () => {
             const origUp = migrationModule.up;
             delete migrationModule.up
 
-            expect(async () => {await migrator.run()}).rejects.toThrow();
+            expect((async () => {await migrator.run()})()).rejects.toThrow();
 
             migrationModule.up = origUp;
         });

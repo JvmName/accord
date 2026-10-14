@@ -1,14 +1,21 @@
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
+// bun's `mock.module()` does not hoist — declare before requiring the SUT.
+// bun's mock functions have no `.prototype` and `new mockFn()` evaluates to the
+// mock's return value (undefined) rather than a fresh instance — unlike Jest.
+// Assigning an explicit prototype and returning an object derived from it keeps
+// `new WebSocket(...)` and `WebSocket.prototype.init` behaving as they did.
+mock.module('../../lib/server/webSocket', () => {
+    const prototype = { init: jest.fn() };
+    const WebSocket = jest.fn(() => Object.create(prototype));
+    WebSocket.prototype = prototype;
+    return { WebSocket }
+});
+
+
 const   IoServer          = require("socket.io")
 const   TestHelpers       = require('../helpers');
 const { WebSocket }       = require('../../lib/server/webSocket');
 const { WebSocketServer } = require('../../lib/server/webSocketServer');
-
-
-jest.mock('../../lib/server/webSocket', () => {
-    const WebSocket          = jest.fn();
-    WebSocket.prototype.init = jest.fn();
-    return { WebSocket }
-});
 
 
 afterEach(() => {

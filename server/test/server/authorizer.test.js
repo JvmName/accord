@@ -1,3 +1,4 @@
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
 const { Authorizer } = require('../../lib/server/authorizer');
 const { MatCode }    = require('../../models/matCode');
 const { Mat }        = require('../../models/mat');

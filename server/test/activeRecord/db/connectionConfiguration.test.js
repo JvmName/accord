@@ -1,3 +1,4 @@
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn } = require('bun:test');
 const { ConnectionConfiguration } = require('../../../lib/activeRecord/db/connectionConfiguration');
 const   CONSTANTS                 = require('../../../lib/constants');
 const   TestHelpers               = require('../../helpers');
@@ -44,11 +45,6 @@ describe('ConnectionConfiguration', () => {
 
     it ('throws an error when there is no configuration for the environment', () => {
         spy.mockImplementation(() => ({[databaseId1]: { production }}));
-        expect(() => new ConnectionConfiguration(databaseId1)).toThrow();
-    });
-
-    it ('throws an error when there is missing information for postgres', () => {
-        spy.mockImplementation(() => ({[databaseId1]: {test: {port: Math.random()}}}));
         expect(() => new ConnectionConfiguration(databaseId1)).toThrow();
     });
 
@@ -156,10 +152,10 @@ describe('ConnectionConfiguration', () => {
 
 
     describe('ConnectionConfiguration#dialect', () => {
-        it ('defaults to postgres', () => {
+        it ('defaults to sqlite', () => {
             spy.mockImplementation(() => ({[databaseId1]: { test }}));
             const config = new ConnectionConfiguration(databaseId1);
-            expect(config.dialect).toEqual('postgres');
+            expect(config.dialect).toEqual('sqlite');
         });
 
         it ('returns sqlite when configured to do so', () => {

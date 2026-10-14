@@ -1,7 +1,8 @@
 const { BaseRecord }       = require('../lib/activeRecord');
 const { logger }           = require('../lib/logger');
 const { Mat }              = require('./mat');
-const { RDojoKombatRules } = require('../lib/rules');
+const { RDojoKombatRules } = require('../src/domain/rules');
+const { getMatchWinner }   = require('../src/domain/scoring');
 const { Round }            = require('./round');
 const { User }             = require('./user');
 
@@ -40,22 +41,30 @@ class Match extends BaseRecord {
 
 
     async getWinner(clear=false) {
+        // LOOSE `!=` is deliberate-as-found (FINDINGS.md F-34): a cached `null`
+        // counts as "not computed", so a null winner is recomputed on every
+        // call; only a non-null winner is ever memoized. `clear` is unused.
         if (this.#winner != undefined) return this.#winner;
 
         const rounds = (await this.getRounds()).filter(r => r.ended);
+        // getMatchWinner returns null here too; short-circuiting first keeps
+        // the original load pattern (no round.getWinner() calls, and so no
+        // Round#collectResultsData memoization, for an incomplete match).
         if (rounds.length < this.maxRounds) return this.#winner = null;
 
-        let redWins  = 0;
-        let blueWins = 0;
+        const roundWinners = [];
         for (const round of rounds) {
-            const winner = await round.getWinner();
-            if (!winner)                              continue;
-            if (winner.id == this.red_competitor_id)  redWins += 1;
-            if (winner.id == this.blue_competitor_id) blueWins += 1;
+            roundWinners.push(await round.getWinner());
         }
 
-        if (redWins > blueWins)  return this.#winner = await this.getRedCompetitor();
-        if (blueWins > redWins)  return this.#winner = await this.getBlueCompetitor();
+        // Id-only stand-ins: the competitors are loaded lazily below, only for
+        // the side that won, exactly as before.
+        const red    = { id: this.red_competitor_id };
+        const blue   = { id: this.blue_competitor_id };
+        const winner = getMatchWinner(roundWinners, this.maxRounds, red, blue);
+
+        if (winner === red)   return this.#winner = await this.getRedCompetitor();
+        if (winner === blue)  return this.#winner = await this.getBlueCompetitor();
         return this.#winner = null;
     }
 

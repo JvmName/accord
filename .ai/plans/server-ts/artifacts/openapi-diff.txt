@@ -1,0 +1,89 @@
+TASK 06 STEP 5 -- hand-written vs generated OpenAPI component schemas
+Hand-written: lib/openapi/schemas/*.js (User, Mat, MatCode, Match, Round) as emitted by getOpenApiSpec().components.schemas
+Generated:    server/openapi.json components.schemas (26 components)
+Method: throwaway diff script (scratchpad, not committed); $ref shorthand normalised to #/components/schemas/X.
+
+SUMMARY
+  (a) generated more accurate ........ 7 items
+  (b) generated wrong (task-05/06) ... 1 root cause, 4 occurrences (nullable winner emitted as allOf)
+      -> RESOLVED (F-30): nullableRef() helper (z.union([schema, z.null()])) now emits anyOf [{$ref}, {type:null}];
+         guarded by test/contract/openapiGoldens.test.ts (ajv over all goldens). Re-diff: no allOf in openapi.json.
+  (c) genuine contract change ........ 0
+  Unclassified ....................... 3 items (all non-semantic / documentation-level; see end)
+  Generated-only components .......... 21 (informational, no hand-written counterpart)
+  Hand-written-only schema components  0
+
+=====================================================================
+COMPONENT: User
+=====================================================================
+  U-1 properties.id.format "uuid" only in hand-written; description fields (id, name) only in hand-written -> Unclassified U1/U2
+  (a)-7 additionalProperties:false only in generated (see COMPONENT NOTE below)
+
+COMPONENT: Mat
+  (a)-1 judge_count: hand = "integer", not in required; gen = ["integer","null"], required.
+        Evidence: F-28 item 2 (column nullable, Mat#apiSafeKeys always renders the key; goldens). Kotlin Mat.judgeCount: Int? agrees.
+  (a)-2 creator_id: hand = ["string","null"]; gen = "string" (non-null, required both sides).
+        Evidence: F-28 item 1 (all 37 golden Mat objects non-null; mat.ts comment). Kotlin Mat.creatorId non-null agrees.
+  U-1   format "uuid" on id, creator_id (hand only)
+  U-2   description on id, name, judge_count, creator_id, judges, codes, current_match, upcoming_matches (hand only)
+  (a)-7 additionalProperties:false (gen only)
+  Identical: name, judges, codes, current_match (oneOf Match|null), upcoming_matches, required [id,name,creator_id] + judge_count (counted in (a)-1).
+
+COMPONENT: MatCode
+  U-3   role: hand = inline {type:string, enum:[admin,viewer], description}; gen = $ref Role (Role = {type:string, enum:[admin,viewer]}).
+        Same value set; semantically equivalent.
+  U-2   description on code, role (hand only)
+  (a)-7 additionalProperties:false (gen only)
+
+COMPONENT: Match
+  (a)-3 break_started_at (["string","null"], date-time): absent from hand-written; gen has it, required. Evidence: F-20, F-27 (present in all 33 captured match objects).
+  (a)-4 break_duration (["integer","null"]): same. Evidence: F-20, F-27.
+  (a)-5 break_remaining (["integer","null"]): same; nullable-but-present on HTTP too. Evidence: F-20 (http.match.get.inBreak.json break_remaining:40; rounds/end returns 60).
+  (b)-1 winner (Match.winner): hand = oneOf [User, null]; gen = allOf [User, {type:["object","null"]}].
+        allOf requires BOTH branches, and User is type "object", so null is rejected. Verified with ajv against the generated
+        Match: {winner:null} -> INVALID; {winner:<User>} -> valid. 30 golden match objects have winner:null.
+        Zod side (src/contract/match.ts:52 `competitorUser.nullable()`) is correct; the emitted OpenAPI nullability is wrong.
+        RESOLVED: now anyOf [User, {type:null}] via nullableRef(); ajv test added. (Originally not fixed in this step.) Same defect on Round.result.winner, LeakedMatch.winner, LeakedRound.result.winner.
+  U-1   format "uuid" on id, creator_id, mat_id (hand only)
+  U-2   descriptions on id, creator_id, mat_id, started_at, ended_at, red_competitor, blue_competitor, winner, mat, judges, rounds (hand only)
+  (a)-7 additionalProperties:false (gen only)
+  required: gen = hand + [break_started_at, break_duration, break_remaining] (covered by (a)-3..5).
+  Identical: started_at, ended_at, red_competitor, blue_competitor, mat, judges, rounds shape.
+
+COMPONENT: Round
+  (a)-6 result.method: hand = type ["object","null"] ("or null if still in progress"); gen = $ref RoundResultMethod, non-nullable.
+        Evidence: goldens -- 32 of 32 captured round.result.method values are objects, 0 are null (an in-progress round carries
+        {type:null, value:null}); RoundResultType already allows null for the in-progress case. Inner shape (type enum
+        [submission,stoppage,points,tie,tech-fall,null], value string|null, both required) is identical.
+  (b)-1 result.winner: same allOf defect as Match.winner (19 golden round.result.winner are null).
+  U-1   format "uuid" on id (hand only)
+  U-2   descriptions on id, started_at, ended_at, max_duration, paused, time_remaining, score, result, result.winner, result.method (hand only)
+  (a)-7 additionalProperties:false on Round and on Round.result (gen only)
+  Identical: id, started_at, ended_at, max_duration, paused, time_remaining, score, required list (same members, different order).
+
+COMPONENT NOTE (a)-7: every generated response object is z.strictObject -> additionalProperties:false. Hand-written specs set no
+  additionalProperties. Evidence: test/contract/schemas.test.ts parses every golden through the strict schemas (extra key would fail),
+  F-27. Applies to User, Mat, MatCode, Match, Round, Round.result.
+
+=====================================================================
+GENERATED-ONLY COMPONENTS (no hand-written counterpart; informational)
+=====================================================================
+  Enums / sub-shapes (from models.kt / task 05): Role, RoundResultMethod, RoundResultType, CompetitorColor, RoundResult
+  WebSocket-leak shapes (F-22): LeakedUser, LeakedMatch, LeakedRound   (LeakedMatch/LeakedRound inherit (b)-1)
+  Requests (F-24/F-26): CreateUserRequest, CreateMatRequest, JoinMatRequest, CompetitorRequest, CreateMatchRequest,
+                        EndRoundRequest, StartRidingTimeVoteRequest
+     - EndRoundRequest.winner optional, not nullable (F-24); CreateMatRequest.judge_count and JoinMatRequest.name optional (F-26).
+  Responses: CreateUserResponse, MatResponse, MatchResponse, JoinMatResponse, JudgesResponse, ViewersResponse
+Outside component schemas (not part of this diff): hand-written spec also has components.responses (BadRequest etc.) and populated
+  paths; generated spec is components-only by design (paths deferred to task 12). Security scheme ApiToken is identical (apiKey/header/X-Api-Token).
+
+=====================================================================
+UNCLASSIFIED (no evidence either way; not guessed into a bucket)
+=====================================================================
+  U1  format:"uuid" dropped on User.id, Mat.id, Mat.creator_id, Match.id/creator_id/mat_id, Round.id. Generated is deliberately looser
+      (scalars.ts: idSchema = z.string(), because goldens use placeholder ids and mat routes accept a code in id position). Goldens
+      cannot confirm real ids are UUIDs, so neither "more accurate" nor "wrong" is provable. Loss of a documented constraint only.
+  U2  All hand-written `description` strings are absent from the generated spec. Documentation-only; README says descriptions are the
+      one hand-authored input still to be layered on. No wire effect.
+  U3  Inline enum/object in hand-written replaced by named-component $ref (MatCode.role -> Role; Round.result.method -> RoundResultMethod).
+      Semantically equivalent; listed for completeness. (The method nullability change inside the latter is (a)-6.)

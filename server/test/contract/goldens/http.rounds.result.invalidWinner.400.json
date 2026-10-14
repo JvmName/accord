@@ -1,0 +1,27 @@
+{
+  "name": "http.rounds.result.invalidWinner.400",
+  "route": "PATCH /match/{matchId}/rounds/result",
+  "why": "isEnum validation. The message lists only the truthy enum members because validateIsEnum filters falsy values out of the message.",
+  "request": {
+    "method": "PATCH",
+    "path": "/match/<match:toSubmission>/rounds/result",
+    "as": "creator",
+    "body": {
+      "winner": "green"
+    }
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "winner": [
+            "must be one of [red, blue]"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}

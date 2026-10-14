@@ -1,3 +1,4 @@
+const { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } = require('bun:test');
 const { AuthorizationError,
         ValidationError } = require('../../lib/server/serverController');
 const { BarController }   = require('./helpers/controllers/barController');
@@ -96,18 +97,18 @@ describe('ServerController', () => {
 
         it ('throws a `ValidationError` when there\'s an error', async () => {
             validator1.mockImplementation(() => error1);
-            await expect(async () => {
+            await expect((async () => {
                 await controller.validateParameters(validations);
-            }).rejects.toThrow(ValidationError);
+            })()).rejects.toThrow(ValidationError);
         });
 
         it ('throws a `ValidationError` when there are multiple errors', async () => {
             validator1.mockImplementation(() => error1);
             validator2.mockImplementation(() => error2);
 
-            await expect(async () => {
+            await expect((async () => {
                 await controller.validateParameters(validations);
-            }).rejects.toThrow(ValidationError);
+            })()).rejects.toThrow(ValidationError);
         });
 
         it ('sets nothing when there is no error', () => {
@@ -274,14 +275,14 @@ describe('ServerController', () => {
     describe('ServerController.authorize', () => {
         const user               = {};
         const controllerWithUser = new FooController({}, {});
-        const currentUserSpy     = jest.spyOn(controllerWithUser, 'currentUser', 'get');
+        const currentUserSpy     = TestHelpers.spyOnGetter(controllerWithUser, 'currentUser');
         currentUserSpy.mockImplementation(() => user);
 
         it ('throws an error when there is no `currentUser`', async () => {
             const controller = new FooController({}, {});
-            await expect(async () => {
+            await expect((async () => {
                 await controller.authorize('view', 'authenticated')
-            }).rejects.toThrow(AuthorizationError);
+            })()).rejects.toThrow(AuthorizationError);
         });
 
         it ('does not throw an error when the `currentUser` is authorized', async () => {
@@ -295,9 +296,9 @@ describe('ServerController', () => {
 
         it ('throws an error when the `currentUser` is not authorized', async () => {
             const controller = new FooController({}, {});
-            await expect(async () => {
+            await expect((async () => {
                 await controller.authorize('view', 'foo')
-            }).rejects.toThrow(AuthorizationError);
+            })()).rejects.toThrow(AuthorizationError);
         });
     });
 });

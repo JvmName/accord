@@ -1,0 +1,19 @@
+{
+  "name": "http.healthCheck",
+  "route": "GET /system/healthCheck",
+  "why": "Liveness probe: an empty object inside the envelope, not a null.",
+  "request": {
+    "method": "GET",
+    "path": "/system/healthCheck",
+    "as": null,
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {},
+      "status": "ok"
+    }
+  }
+}

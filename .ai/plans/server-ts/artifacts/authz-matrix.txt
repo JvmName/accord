@@ -1,0 +1,108 @@
+# Authorization matrix — (actor role, action, resource state) -> allow | deny
+#
+# Written by task 02b. Consumed by tasks 12 and 15.
+# Executable form: server/test/characterization/authorization.test.js
+#   (46 assertions, driven over real HTTP against a booted ApplicationServer;
+#    it must pass UNCHANGED against the task-12 route middleware, which is the
+#    parity proof task 15 needs before deleting lib/server/authorizer.js).
+#
+# DENY  = HTTP 401 with the exact envelope { data: null, status: 'unauthorized' }
+# ALLOW = the request reached the action (asserted as a specific non-401 status)
+#
+# ACTORS
+#   creator   created the mat, so mat.creator_id == creator (the "master")
+#   judge     joined the mat with the ADMIN code -> mat judge, and match judge
+#             once the match starts (Match#start copies mat.getJudges())
+#   viewer    joined the mat with the VIEWER code
+#   outsider  authenticated, but unrelated to the mat
+#   anon      no x-api-token header at all
+#
+# This table is FIDELITY, not correctness. Rows marked [F-nn] pin behavior that
+# is arguably wrong; see .ai/plans/server-ts/FINDINGS.md.
+
+================================================================================
+MAT SCOPE
+================================================================================
+action            route                                actor      result
+--------------------------------------------------------------------------------
+create            POST   /mats                         any auth   ALLOW 200
+create            POST   /mats                         anon       DENY  401
+create            POST   /mats                         bad token  DENY  401
+
+view              GET    /mat/:matId       (by id)     creator    ALLOW 200
+view              GET    /mat/:matId       (by id)     outsider   ALLOW 200
+view              GET    /mat/:matId       (by id)     anon       ALLOW 200   [F-15] no auth on this route
+view              GET    /mat/:matId       (by code)   anon       ALLOW 200
+view              GET    /mat/:unknownUuid             creator    DENY  401   [F-16] 401, NOT 404
+
+assign +          POST   /mat/:adminCode/join          any auth   ALLOW 200
+be assigned judge POST   /mat/:adminCode/join          anon       ALLOW 200   creates an anonymous user
+                  POST   /mat/:viewerCode/join         any auth   ALLOW 200   viewer branch runs no authorize()
+                  DELETE /mat/:adminCode/join          anon       DENY  401
+                  GET    /mat/:code/judges             outsider   ALLOW 200
+                  GET    /mat/:code/viewers            outsider   ALLOW 200
+                  GET    /mat/:code/judges             anon       DENY  401
+                  GET    /mat/no.such.code/judges      creator    404         not 401 — opposite of Mat/view
+
+create a match    POST   /mat/:adminCode/matches       creator    ALLOW 200
+create a match    POST   /mat/:adminCode/matches       outsider   ALLOW 200   the ADMIN CODE grants it, not membership
+create a match    POST   /mat/:viewerCode/matches      creator    DENY  401
+create a match    POST   /mat/:viewerCode/matches      judge      DENY  401
+create a match    POST   /mat/:adminCode/matches       anon       DENY  401
+
+================================================================================
+USER SCOPE
+================================================================================
+assign            POST   /mat/:adminCode/matches       creator    ALLOW 200   arbitrary EXISTING user as competitor
+assign            POST   /mat/:adminCode/matches       creator    ALLOW 200   brand-new users by name
+                  (Authorizer#userPermission('assign') is unconditionally true)
+
+================================================================================
+MATCH SCOPE
+================================================================================
+action   route                                   actor      result
+--------------------------------------------------------------------------------
+view     GET    /match/:matchId                  creator    ALLOW 200
+view     GET    /match/:matchId                  judge      ALLOW 200
+view     GET    /match/:matchId                  viewer     ALLOW 200
+view     GET    /match/:matchId                  outsider   ALLOW 200   unconditional for any authenticated user
+view     GET    /match/:matchId                  anon       DENY  401   unlike Mat/view, this route authenticates
+view     GET    /match/:unknownUuid              creator    404
+
+manage   POST   /match/:id/start                 creator    ALLOW 200
+manage   POST   /match/:id/end                   creator    ALLOW 200
+manage   POST   /match/:id/start                 judge      DENY  401
+manage   POST   /match/:id/end                   judge      DENY  401
+manage   POST   /match/:id/start                 viewer     DENY  401
+manage   POST   /match/:id/start                 outsider   DENY  401
+manage   POST   /match/:id/start                 anon       DENY  401
+manage   POST   /match/:id/rounds                judge      DENY  401   RoundsController#authenticateMatch
+manage   POST   /match/:id/rounds/end            judge      DENY  401   requires 'manage' for EVERY action
+manage   PATCH  /match/:id/rounds/result         judge      DENY  401   on the controller
+manage   POST   /match/:id/rounds/end            creator    ALLOW 200
+
+pause    POST   /match/:id/rounds/pause          creator    ALLOW 200
+pause    POST   /match/:id/rounds/resume         creator    ALLOW 200
+pause    POST   /match/:id/rounds/pause          judge      DENY  401   [F-11] the judge branch of 'pause' is
+pause    POST   /match/:id/rounds/resume         judge      DENY  401   [F-11] DEAD over HTTP — authenticateMatch
+                                                                        requires 'manage' before authorize('pause')
+pause    POST   /match/:id/rounds/pause          outsider   DENY  401
+pause    POST   /match/:id/rounds/pause          anon       DENY  401
+
+judge    POST   /match/:id/ridingTime            judge      ALLOW 200   (match started, round open)
+judge    DELETE /match/:id/ridingTime?rider=red  judge      ALLOW 200
+judge    POST   /match/:id/ridingTime            creator    DENY  401   master is not automatically a judge
+judge    POST   /match/:id/ridingTime            viewer     DENY  401
+judge    POST   /match/:id/ridingTime            outsider   DENY  401
+judge    POST   /match/:id/ridingTime            anon       DENY  401
+judge    POST   /match/:id/ridingTime            outsider   400         no open round -> the round check in
+                                                                        authenticateMatch fires BEFORE authorize()
+
+================================================================================
+STRING SCOPE ('authenticated' / 'unauthenticated' / 'test')
+================================================================================
+Authorizer#simpleScopePermission handles these, but NO controller calls
+authorize() with a string scope (verified by grep over controllers/ and lib/).
+The 'test' cases in test/server/authorizer.test.js have no HTTP equivalent and
+are deliberately not restated. If task 12's middleware introduces string scopes,
+this row needs revisiting.
