@@ -44,7 +44,7 @@ export function generatedOpenApiDocument(): unknown {
 
 function asyncApiSpec(): unknown {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    asyncApiDocument ??= require('../../../lib/openapi/asyncApiGenerator').generate();
+    asyncApiDocument ??= require('../../contract/asyncapi').generateAsyncApiDocument();
     return asyncApiDocument;
 }
 

@@ -20,9 +20,8 @@
  *  - DATETIME columns are `text` holding ISO 8601 UTC
  *    (`YYYY-MM-DDTHH:mm:ss.SSSZ`, i.e. `Date#toISOString()`) and surface as
  *    JS `Date` via the `isoDateTime` custom type (`./columns`). Read
- *    with `new Date(text)`; ISO is the only supported format. The
- *    Sequelize stack writes the same ISO text (`lib/activeRecord/db/
- *    isoDateTime.js`). User decision 2026-10-11, FINDINGS.md F-39.
+ *    with `new Date(text)`; ISO is the only supported format. User decision
+ *    2026-10-11, FINDINGS.md F-39.
  *  - `created_at` / `updated_at` have no DB default (Sequelize sets them in
  *    the app); task 10 must set them on insert/update.
  *  - There are NO foreign keys: the legacy migrations never declared any, and

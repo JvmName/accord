@@ -9,9 +9,7 @@
         "test:update-fixtures": "bun test/support/updateFrozen.js",
         "typecheck": "tsc --noEmit",
         "generate:openapi": "bun run bin/generate-openapi.ts",
-        "db:create_migration": "./bin/migrate create_migration",
-        "db:migrate": "./bin/migrate migrate",
-        "db:rollback": "./bin/migrate rollback",
+        "db:migrate": "bun bin/migrate",
         "drizzle:generate": "bunx --bun drizzle-kit generate",
         "drizzle:migrate": "bunx --bun drizzle-kit migrate",
         "drizzle:studio": "bunx --bun drizzle-kit studio"
@@ -20,21 +18,16 @@
         "bun": ">=1.4.0"
     },
     "dependencies": {
-        "commander": "^14.0.0",
         "cors": "^2.8.5",
         "drizzle-orm": "^0.45.4",
         "express": "^5.0.0",
         "express-openapi-validator": "^5.0.0",
         "http-errors": "~1.6.3",
-        "inflection": "^1.13.4",
         "pino": "^10.0.0",
         "pino-http": "^11.0.0",
         "pino-pretty": "^13.0.0",
         "response-time": "^2.0.0",
-        "sequelize": "^6.0.0",
-        "sequelize-cli": "^6.0.0",
         "socket.io": "^4.0.0",
-        "sqlite3": "^5.0.0",
         "zod": "^4.6.5"
     },
     "devDependencies": {

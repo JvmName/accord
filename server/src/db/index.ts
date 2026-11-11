@@ -1,15 +1,10 @@
 /**
- * Drizzle connection factory (server-ts task 09).
- *
- * The web server serves the ported routes through this connection while the
- * Sequelize stack (web and worker processes) still opens the same SQLite file.
+ * Drizzle connection factory.
  *
  * Importing this module has NO side effects: no file is opened and no config
- * is read until `createDb()` is called.
- *
- * Unlike legacy `BaseRecord.connection` (FINDINGS F-01), there is no static
- * cache and no database-id lookup: every call opens exactly the database it is
- * given (or the one the legacy config resolves to), and the caller owns it.
+ * is read until `createDb()` is called. There is no static cache and no
+ * database-id lookup: every call opens exactly the database it is given (or
+ * the one `resolveDatabasePath()` names), and the caller owns it.
  */
 import { Database } from 'bun:sqlite';
 import { drizzle, type BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
@@ -26,15 +21,12 @@ export type Db = BunSQLiteDatabase<Schema> & { $client: Database };
 export const MIGRATIONS_FOLDER = path.resolve(__dirname, '../../drizzle');
 
 /**
- * The database file the legacy stack would open, resolved through the SAME
- * source (`lib/activeRecord/db/connectionConfiguration.js`):
- * `$DATABASE_PATH`, else `<cwd>/config/db/database.<NODE_ENV>.sqlite`.
- * Required lazily so that importing this module stays side-effect free.
+ * The database file to open: `$DATABASE_PATH`, else
+ * `<cwd>/config/db/database.<NODE_ENV>.sqlite` (`development` when unset).
  */
 export function resolveDatabasePath(): string {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { ConnectionConfiguration } = require('../../lib/activeRecord/db/connectionConfiguration');
-    return new ConnectionConfiguration('default').storage;
+    const env = process.env.NODE_ENV || 'development';
+    return process.env.DATABASE_PATH ?? path.join(process.cwd(), 'config', 'db', `database.${env}.sqlite`);
 }
 
 export interface CreateDbOptions {
@@ -44,11 +36,10 @@ export interface CreateDbOptions {
 
 /**
  * How long a statement waits for another connection's lock before failing
- * with SQLITE_BUSY. bun:sqlite defaults to 0 (fail at once). 1000 ms is what
- * the sqlite3 driver sets on every connection it opens, i.e. what the
- * Sequelize connections in the web and worker processes use, and those write
- * the same database file. Note that bun:sqlite waits synchronously, so a wait
- * blocks this process's event loop for up to this long.
+ * with SQLITE_BUSY. bun:sqlite defaults to 0 (fail at once). The web and worker
+ * processes write the same database file, so a short wait beats failing.
+ * Note that bun:sqlite waits synchronously, so a wait blocks this process's
+ * event loop for up to this long.
  */
 export const BUSY_TIMEOUT_MS = 1000;
 
@@ -63,7 +54,7 @@ export function createDb(options: CreateDbOptions = {}): Db {
 /**
  * A `Db` that opens its connection on first use, so building the web
  * server and registering its routes never touches the database file; only
- * the first query does (the Sequelize connections are lazy in the same way).
+ * the first query does .
  */
 export function createLazyDb(options: CreateDbOptions = {}): Db {
     let db: Db | undefined;

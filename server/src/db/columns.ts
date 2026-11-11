@@ -3,8 +3,7 @@
  *
  * `isoDateTime` stores a JS `Date` as ISO 8601 UTC text
  * (`YYYY-MM-DDTHH:mm:ss.SSSZ`, i.e. `Date#toISOString()`) in a TEXT column and
- * reads it back with `new Date(text)` (FINDINGS F-39). The legacy Sequelize
- * override (`lib/activeRecord/db/isoDateTime.js`) writes identical text.
+ * reads it back with `new Date(text)` (FINDINGS F-39).
  *
  * The declared SQL type is `text`, so the generated DDL is unchanged from the
  * plain `text()` columns this replaced. NULL is passed through by Drizzle

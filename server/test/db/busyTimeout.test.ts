@@ -1,7 +1,6 @@
 /**
- * Lock contention between the Drizzle connection (bun:sqlite) and a
- * connection opened the way the legacy stack opens it (the sqlite3 driver,
- * which Sequelize uses in the web and worker processes) on the same file.
+ * Lock contention between the Drizzle connection and a second connection to
+ * the same file.
  *
  * The other connection runs in a child process, as the worker does in
  * production: bun:sqlite waits for a lock synchronously, so a lock holder in
@@ -17,30 +16,32 @@ import { insertUser } from '../../src/db/repositories/users';
 
 const SERVER_ROOT = path.join(__dirname, '..', '..');
 
-/** Child: opens `file` with the sqlite3 driver, takes the write lock, holds it `holdMs`, commits. */
+/** Child: opens `file`, takes the write lock, holds it `holdMs`, commits. */
 const HOLD_LOCK = `
-const sqlite3 = require('sqlite3');
+const { Database } = require('bun:sqlite');
 const [file, holdMs] = [process.argv[1], Number(process.argv[2])];
-const db = new sqlite3.Database(file);
-db.exec("BEGIN IMMEDIATE; INSERT INTO users (id, name, api_token, created_at, updated_at) VALUES ('child-user', 'child', 'child-token', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');", err => {
-    if (err) { console.log('ERROR ' + err.code); process.exit(1); }
-    console.log('LOCKED');
-    setTimeout(() => db.exec('COMMIT', err2 => { console.log(err2 ? 'ERROR ' + err2.code : 'COMMITTED'); db.close(() => process.exit(0)); }), holdMs);
-});
+const db = new Database(file);
+try {
+    db.exec("BEGIN IMMEDIATE; INSERT INTO users (id, name, api_token, created_at, updated_at) VALUES ('child-user', 'child', 'child-token', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');");
+} catch (err) { console.log('ERROR ' + err.code); process.exit(1); }
+console.log('LOCKED');
+setTimeout(() => { db.exec('COMMIT'); console.log('COMMITTED'); db.close(); process.exit(0); }, holdMs);
 `;
 
-/** Child: inserts one row with the sqlite3 driver's default busy timeout and reports how it went. */
+/** Child: inserts one row with the same 1000 ms busy timeout the app sets and reports how it went. */
 const INSERT_ROW = `
-const sqlite3 = require('sqlite3');
+const { Database } = require('bun:sqlite');
 const file = process.argv[1];
-const db = new sqlite3.Database(file, () => {
-    console.log('READY');
-    const started = Date.now();
-    db.run("INSERT INTO users (id, name, api_token, created_at, updated_at) VALUES ('waiting-user', 'w', 'w-token', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')", err => {
-        console.log(JSON.stringify({ code: err ? err.code : null, waitedMs: Date.now() - started }));
-        db.close(() => process.exit(0));
-    });
-});
+const db = new Database(file);
+db.run('PRAGMA busy_timeout = 1000');
+console.log('READY');
+const started = Date.now();
+let code = null;
+try {
+    db.run("INSERT INTO users (id, name, api_token, created_at, updated_at) VALUES ('waiting-user', 'w', 'w-token', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')");
+} catch (err) { code = err.code; }
+console.log(JSON.stringify({ code, waitedMs: Date.now() - started }));
+db.close();
 `;
 
 function spawnChild(script: string, args: string[]) {
@@ -88,7 +89,7 @@ function busyCode(fn: () => unknown): { code: string | null; elapsedMs: number }
     }
 }
 
-describe('busy timeout shared with the legacy connections', () => {
+describe('busy timeout shared with other connections', () => {
     let file: string;
     let db: Db;
 
@@ -100,12 +101,12 @@ describe('busy timeout shared with the legacy connections', () => {
 
     afterEach(() => db.$client.close());
 
-    it('sets the same busy timeout the sqlite3 driver uses (1000 ms)', () => {
+    it('sets a 1000 ms busy timeout', () => {
         expect(BUSY_TIMEOUT_MS).toBe(1000);
         expect(db.$client.query('PRAGMA busy_timeout').get()).toEqual({ timeout: 1000 });
     });
 
-    it('a Drizzle write waits for a lock held by a legacy-style connection instead of failing', async () => {
+    it('a Drizzle write waits for a lock held by another connection instead of failing', async () => {
         const child = spawnChild(HOLD_LOCK, [file, '300']);
         await waitForLine(child, 'LOCKED');
 
@@ -158,7 +159,7 @@ describe('busy timeout shared with the legacy connections', () => {
         await child.exited;
     }, 10000);
 
-    it('a legacy-style write waits for a lock held by the Drizzle connection', async () => {
+    it('a write on another connection waits for a lock held by the Drizzle connection', async () => {
         db.$client.run('BEGIN IMMEDIATE');
         await insertUser(db, { name: 'holder' });
 

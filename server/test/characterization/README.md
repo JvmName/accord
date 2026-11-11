@@ -35,8 +35,8 @@ failure of the instrument.
 | `workers/breakTransition.test.js` | Expired break starts the next round and emits `break.ended`; unexpired break is a no-op; an ended match never gets a fourth round | `14` |
 | `workers/roundTimer.test.js` | Elapsed-minus-pauses ≥ `max_duration` ends the round; pause intervals are excluded from elapsed time; unexpired round untouched | `14` |
 | `workers/tickIntervals.test.js` | `requeueInterval` for all four workers (250ms / 1000ms) and the `queueJob` scheduling contract | `14` |
-| `errorMapping.test.js` | The four error-class → HTTP status/envelope mappings from `applicationServer.js#handleError` | `12` |
-| `matCode.test.js` | `MatCode.CODE_REGEXP` word-code vs. UUID discrimination, and its effect on mat lookup in `serverController.js#initCurrentMat` | `12` |
+| `errorMapping.test.js` | The four error-class → HTTP status/envelope mappings from `src/http/middleware/errors.ts` | `12` |
+| `matCode.test.js` | `MatCode.CODE_REGEXP` word-code vs. UUID discrimination, and its effect on mat lookup in `src/http/middleware/requestState.ts` | `12` |
 
 ## Deliberately out of scope
 
@@ -44,8 +44,8 @@ Already well covered elsewhere; duplicating them buys no protection and costs
 maintenance:
 
 - consensus riding-time algorithm — `test/ridingTime.test.js`
-- round scoring, `Round.end()` match transition, break creation — `test/models/round.test.js`
-- `MatchUpdateWorker` cadence/throttle/final-update — `test/workerQueue/matchUpdateWorker.test.js`
+- round scoring, round-end match transition, break creation — `test/services/` and `test/domain/`
+- `MatchUpdateWorker` cadence/throttle/final-update — `test/workers/emissionDifferential.test.js`
   (only its **tick interval**, which that file does not assert, is pinned here)
 - HTTP client — `test/http/`
 
@@ -53,8 +53,6 @@ maintenance:
 
 Run with `bun run test` (never a bare `bun test` — see `FINDINGS.md` **F-06**).
 
-`authorization.test.js` boots a real `ApplicationServer` against a throwaway
-SQLite file under `$TMPDIR` and drives it with `fetch`. It never touches
-`config/db/database.test.sqlite`, and it does not run the migration CLI (which
-would rewrite `config/db/schemas/default.js`); it applies the migration modules
-directly. See `test/helpers/httpServer.js`.
+`authorization.test.js` boots a real server against a throwaway SQLite file
+under `$TMPDIR` and drives it with `fetch`. It never touches
+`config/db/database.test.sqlite`; it applies the Drizzle migrations directly. See `test/helpers/httpServer.js`.
