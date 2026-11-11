@@ -73,7 +73,15 @@ describe('module boundaries of the web and worker processes', () => {
     });
 
     it('would notice if it did (control)', () => {
-        require('../../lib/workerQueue/worker');
-        expect(loaded().filter((f) => FORBIDDEN.some((re) => re.test(f)))).toEqual(['lib/workerQueue/worker.js']);
+        // the cache is observable: a module required now shows up
+        const probe = 'src/contract/openapi.ts';
+        expect(loaded()).not.toContain(probe);
+        require('../../src/contract/openapi');
+        expect(loaded()).toContain(probe);
+        // and the patterns catch every kind of forbidden path
+        const sample = ['models/match.js', 'controllers/matsController.js', 'lib/workerQueue/worker.js', 'lib/server/webSocket.js',
+            'lib/server/authorizer.js', 'src/ws/webSocket.ts', 'lib/logger.ts'];
+        expect(sample.filter((f) => FORBIDDEN.some((re) => re.test(f))))
+            .toEqual(['models/match.js', 'controllers/matsController.js', 'lib/workerQueue/worker.js', 'lib/server/webSocket.js', 'lib/server/authorizer.js']);
     });
 });

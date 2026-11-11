@@ -1,32 +1,16 @@
 /**
- * Legacy-vs-new PARITY HARNESS for the lifecycle services (server-ts task 10b).
- * Not a test file.
+ * Database-state helpers for the lifecycle and worker tests. Not a test file.
  *
- * Two SEPARATE scratch databases:
- *   - legacy: a temp FILE created by the legacy Sequelize migrations and seeded
- *     through the legacy models with the contract fixture graph
- *     (test/contract/seed.ts). Only the Sequelize stack runs commands on it.
- *   - modern: an in-memory DB created by the Drizzle baseline (./drizzle).
- *     Only the new services run commands on it.
- * Sequelize is never pointed at a Drizzle-baseline DB (FINDINGS F-47), and no
- * real sqlite file is touched (the legacy file lives under $TMPDIR).
- *
- * Identical seeding: after the legacy seed, every application row is
- * snapshotted (raw SQLite values, with rowid), and before each scenario BOTH
- * databases are reset to exactly that snapshot (same bytes, same rowids), plus
- * any scenario-specific rows written identically into both.
- *
- * What is compared after each command:
- *   1. every application table, all columns, raw stored values, rowid order;
- *   2. an AUDIT LOG of every row-level INSERT/UPDATE/DELETE, in execution
- *      order, captured by SQLite triggers installed in both DBs. This is what
- *      makes the ORDER of writes (e.g. votes closed -> pause resumed -> round
- *      ended -> match ended/break) and no-op saves (Sequelize skips an UPDATE
- *      when nothing changed) visible, even though the clock is frozen;
- *   3. the command's outcome: resolved value, or thrown error class + message.
- * Generated UUIDs (new rounds/votes/pauses) are replaced by labels in order of
- * first appearance; everything else, datetimes included, must match exactly
- * (the clock is frozen with bun:test's setSystemTime, F-10/F-18).
+ *   - audit triggers that log every row-level INSERT/UPDATE/DELETE in
+ *     execution order, so the ORDER of writes (e.g. votes closed -> pause
+ *     resumed -> round ended -> match ended/break) is visible even with a
+ *     frozen clock;
+ *   - snapshot / restore of every application table (same values, same
+ *     rowids), so each scenario starts from identical bytes;
+ *   - raw inserts (database representation: ISO text datetimes, 0/1
+ *     booleans) that bypass the code under test;
+ *   - `normalize`: generated UUIDs replaced by labels in order of first
+ *     appearance, everything else (datetimes included) left as stored.
  */
 const { Database } = require('bun:sqlite');
 const { getTableColumns } = require('drizzle-orm');
@@ -135,7 +119,7 @@ async function settle(fn) {
     }
 }
 
-/** The modern (Drizzle-baseline) DB, with the audit triggers installed. */
+/** An in-memory Drizzle-baseline database, with the audit triggers installed. */
 function modernDb() {
     const db = createDb({ path: ':memory:' });
     migrateDb(db);
@@ -143,8 +127,8 @@ function modernDb() {
     return db;
 }
 
-/** A raw bun:sqlite handle on the legacy file (for snapshot/restore/dump only). */
-function legacyClient(file) {
+/** A raw bun:sqlite handle on a database file, with the audit triggers installed. */
+function fileClient(file) {
     const client = new Database(file);
     installAudit(client);
     return client;
@@ -152,5 +136,5 @@ function legacyClient(file) {
 
 module.exports = {
     TABLES, COLUMNS, installAudit, snapshot, restore, insertRaw, dump, idsIn, normalize, settle,
-    modernDb, legacyClient,
+    modernDb, fileClient,
 };

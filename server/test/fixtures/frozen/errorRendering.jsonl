@@ -1,0 +1,14 @@
+{"format":1,"note":"Snapshot of the expected behavior, originally recorded from the pre-migration implementation (commit 6a55eaec2d87) on 2026-10-13. Updated only on purpose, never by hand: run `bun run test:update-fixtures` and review the diff.","records":13,"suite":"errorRendering"}
+{"body":{"data":null,"status":"unauthorized"},"key":"AuthorizationError","status":401}
+{"body":{"data":null,"status":"unauthorized"},"key":"AuthorizationError without a message","status":401}
+{"body":{"data":{"error":"nope"},"status":"server error"},"key":"a SUBCLASS of AuthorizationError (falls to 500)","status":500}
+{"body":{"data":{"errors":{"judge_count":["a","b"],"name":["required"]}},"status":"bad request"},"key":"ValidationError with errors","status":400}
+{"body":{"data":{"errors":{"name":["required"]}},"status":"bad request"},"key":"ValidationError with one error","status":400}
+{"body":{"data":{"errors":{}},"status":"bad request"},"key":"ValidationError({})","status":400}
+{"body":{"data":{"error":""},"status":"server error"},"key":"a SUBCLASS of ValidationError (falls to 500)","status":500}
+{"body":{"data":{"errors":{"code":["code must be unique","code is already taken"],"name":["name must be unique"],"null":"SQLITE_CONSTRAINT: UNIQUE constraint failed: mat_codes.code"}},"status":"bad request"},"key":"Sequelize-shaped unique error with parent","status":400}
+{"body":{"data":{"errors":{"code":["m"],"null":"p"}},"status":"bad request"},"key":"Sequelize-shaped unique error with short messages","status":400}
+{"body":{"data":{"errors":{"code":["code must be unique"]}},"status":"bad request"},"key":"Sequelize-shaped unique error without parent","status":400}
+{"body":{"data":{"error":"boom"},"status":"server error"},"key":"generic Error","status":500}
+{"body":{"data":{"error":null},"status":"server error"},"key":"thrown non-Error object","status":500}
+{"body":{"data":{"error":"unexpected"},"status":"server error"},"key":"Error subclass","status":500}

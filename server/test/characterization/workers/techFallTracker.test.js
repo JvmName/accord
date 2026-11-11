@@ -1,104 +1,103 @@
 /**
  * CHARACTERIZATION — TechFallTrackerWorker.
  *
- * Zero coverage before task 02b. Pins:
+ * Pins:
  *   - which rounds are considered (open rounds only)
  *   - threshold reached  → round ended in the DB + `round.tech-fall` emitted
  *   - threshold not met  → nothing happens at all
  *   - an already-ended round is never re-ended (no double emit)
  *   - the shape of the emitted payload
  *
- * Modelled on test/workerQueue/matchUpdateWorker.test.js: `performJob()` is
- * called directly rather than waiting on the scheduler, which is the pattern
- * already proven in this repo (test/helpers/time.js has no call sites —
- * FINDINGS.md F-10).
- *
- * Consumed by task 14.
+ * `performJob()` is called directly on a scratch database (./world.js) with
+ * the clock frozen; `notifyServer` is replaced to capture emissions.
+ * Thresholds (rDojoKombat): 24 points in round 1, 16 in round 2; one point per
+ * 3 s of two-judge consensus.
  */
-const { afterEach, beforeEach, describe, expect, it, jest, mock } = require('bun:test');
+const { afterEach, beforeEach, describe, expect, it, jest, mock, setSystemTime } = require('bun:test');
 
-// bun's mock.module() does NOT hoist (FINDINGS.md F-09.1), and a bare package
-// specifier silently no-ops (F-09.2) — hence require.resolve for socket.io-client.
-mock.module('../../../models/round', () => ({ Round: { getOpenRounds: jest.fn() } }));
-mock.module('../../../models/match', () => ({ Match: { where: jest.fn().mockResolvedValue([]), find: jest.fn() } }));
-mock.module(require.resolve('socket.io-client'), () => ({ io: jest.fn(() => ({ on: jest.fn(), emit: jest.fn() })) }));
-mock.module('../../../lib/logger', () => ({ logger: { debug: jest.fn(), info: jest.fn(), error: jest.fn() } }));
+// The lifecycle service the worker calls, with `endRound` wrapped in a spy.
+// `require` + `mock.module(require.resolve(...))` must precede the worker's require.
+const lifecyclePath = require.resolve('../../../src/services/matchLifecycle');
+const lifecycle     = require(lifecyclePath);
+const realEndRound  = lifecycle.endRound;
+const endRound      = jest.fn((...args) => realEndRound(...args));
+mock.module(lifecyclePath, () => ({ ...lifecycle, endRound }));
 
-const { TechFallTrackerWorker } = require('../../../lib/workerQueue/techFallTrackerWorker');
-const { Round }                 = require('../../../models/round');
-const { EVENTS }                = require('../../../lib/server/workerWebSocket');
+const { TechFallTrackerWorker } = require('../../../src/workers/techFallTrackerWorker');
+const { EVENTS }                = require('../../../src/ws/workerWebSocket');
+const { findMatchGraph }        = require('../../../src/db/repositories/matches');
+const { serializeLeakedMatch }  = require('../../../src/serialize');
+const W = require('./world');
 
-
-function fakeRound({ threshold = false, id = 'round-1', match } = {}) {
-    const round = {
-        id,
-        rules: { techFallThreshold: jest.fn(() => 24) },
-        hasReachedTechFallThreshold: jest.fn().mockResolvedValue(threshold),
-        toApiResponse:               jest.fn().mockResolvedValue({ id }),
-        getRedScore:                 jest.fn().mockResolvedValue(0),
-        getBlueScore:                jest.fn().mockResolvedValue(0),
-        getRoundNumber:              jest.fn().mockResolvedValue(1),
-    };
-    round.getMatch = jest.fn().mockResolvedValue(match || fakeMatch({ rounds: [round] }));
-    return round;
-}
-
-
-function fakeMatch({ id = 'match-1', rounds = [] } = {}) {
-    return {
-        id,
-        endRound:      jest.fn().mockResolvedValue(undefined),
-        getRounds:     jest.fn().mockResolvedValue(rounds),
-        toApiResponse: jest.fn().mockResolvedValue({ id, rounds: 'PLACEHOLDER' }),
-    };
-}
+const MATCH = W.X('100');
+const ROUND = W.X('101');
 
 
 describe('CHARACTERIZATION: TechFallTrackerWorker', () => {
+    let world;
     let worker;
+    let emitted;
+    let roundEndedWhenEmitted;
+
+    function newWorker(db = world.db) {
+        const w = new TechFallTrackerWorker('test-worker-token', { db });
+        w.notifyServer = jest.fn((event, payload) => {
+            emitted.push({ event, payload });
+            roundEndedWhenEmitted = world.row('rounds', ROUND)?.ended_at ?? null;
+        });
+        return w;
+    }
+
+    /** Round 1 open; both judges have given red control for `seconds`. */
+    function openRound(seconds, { match = MATCH, round = ROUND, voteBase = '10' } = {}) {
+        world.match(match).round(round, match, { startedSecondsAgo: seconds + 5 }).consensus(voteBase, round, W.U.red, { startedSecondsAgo: seconds });
+    }
 
     beforeEach(() => {
-        worker = new TechFallTrackerWorker('test-worker-token');
-        jest.spyOn(worker, 'notifyServer').mockImplementation(() => {});
+        setSystemTime(W.NOW);
+        world = W.createWorld();
+        emitted = [];
+        roundEndedWhenEmitted = undefined;
+        worker = newWorker();
     });
 
-    afterEach(() => { jest.clearAllMocks(); });
+    afterEach(() => {
+        setSystemTime();
+        world.close();
+        jest.clearAllMocks();
+    });
 
 
     describe('round selection', () => {
-        it('considers only open rounds, via Round.getOpenRounds()', async () => {
-            Round.getOpenRounds.mockResolvedValue([]);
+        it('considers only open rounds (an ENDED round over the threshold is ignored)', async () => {
+            world.match(MATCH).round(ROUND, MATCH, { startedSecondsAgo: 300, endedSecondsAgo: 100 })
+                .consensus('10', ROUND, W.U.red, { startedSecondsAgo: 290, endedSecondsAgo: 100 });
 
             await worker.performJob();
 
-            expect(Round.getOpenRounds).toHaveBeenCalledTimes(1);
-            expect(Round.getOpenRounds).toHaveBeenCalledWith();
+            expect(endRound).not.toHaveBeenCalled();
+            expect(world.writes()).toEqual([]);
         });
 
 
         it('does nothing when there are no open rounds', async () => {
-            Round.getOpenRounds.mockResolvedValue([]);
-
             await worker.performJob();
 
             expect(worker.notifyServer).not.toHaveBeenCalled();
         });
 
 
-        // Rounds that have already ended carry a non-null ended_at, so
-        // Round.getOpenRounds() ({ended_at: null}) never returns them. That is
-        // the ONLY thing preventing a second end/emit: the worker itself has no
-        // "already ended" guard, and `match.endRound()` is called with no
-        // options, so `safe` is undefined and it would throw on a second pass.
+        // An ended round has a non-null ended_at, so the open-rounds query
+        // never returns it. That is the ONLY thing preventing a second
+        // end/emit: the worker itself has no "already ended" guard, and
+        // `endRound()` is called without `safe`, so it would throw on a second pass.
         it('never re-ends a round that is no longer open (no double emit)', async () => {
-            const round = fakeRound({ threshold: true });
-            Round.getOpenRounds.mockResolvedValue([round]);
+            openRound(80);
             await worker.performJob();
 
             expect(worker.notifyServer).toHaveBeenCalledTimes(1);
 
             // Next tick: the round has ended, so it is no longer returned.
-            Round.getOpenRounds.mockResolvedValue([]);
             worker.notifyServer.mockClear();
             await worker.performJob();
 
@@ -107,52 +106,47 @@ describe('CHARACTERIZATION: TechFallTrackerWorker', () => {
 
 
         it('checks every open round independently', async () => {
-            const below = fakeRound({ threshold: false, id: 'round-below' });
-            const above = fakeRound({ threshold: true,  id: 'round-above' });
-            Round.getOpenRounds.mockResolvedValue([below, above]);
+            openRound(10, { match: W.X('200'), round: W.X('201'), voteBase: '20' }); // below
+            openRound(80);                                                        // above
 
             await worker.performJob();
 
-            expect(below.hasReachedTechFallThreshold).toHaveBeenCalledTimes(1);
-            expect(above.hasReachedTechFallThreshold).toHaveBeenCalledTimes(1);
             expect(worker.notifyServer).toHaveBeenCalledTimes(1);
+            expect(emitted[0].payload.id).toBe(MATCH);
+            expect(world.row('rounds', W.X('201')).ended_at).toBeNull();
         });
     });
 
 
     describe('below the tech fall threshold', () => {
         it('does not end the round and does not emit', async () => {
-            const match = fakeMatch();
-            const round = fakeRound({ threshold: false, match });
-            Round.getOpenRounds.mockResolvedValue([round]);
+            openRound(70); // 23 points, one short of 24
 
             await worker.performJob();
 
-            expect(round.hasReachedTechFallThreshold).toHaveBeenCalledTimes(1);
-            expect(match.endRound).not.toHaveBeenCalled();
+            expect(endRound).not.toHaveBeenCalled();
+            expect(world.row('rounds', ROUND).ended_at).toBeNull();
             expect(worker.notifyServer).not.toHaveBeenCalled();
         });
     });
 
 
     describe('at or above the tech fall threshold', () => {
-        it('ends the round through Match#endRound, with no options', async () => {
-            const match = fakeMatch();
-            const round = fakeRound({ threshold: true, match });
-            Round.getOpenRounds.mockResolvedValue([round]);
+        it('ends the round through endRound, with no options', async () => {
+            openRound(72); // exactly 24 points
 
             await worker.performJob();
 
-            expect(match.endRound).toHaveBeenCalledTimes(1);
-            // No `{ safe: true }` — the unsafe form, which throws if there is no
+            expect(endRound).toHaveBeenCalledTimes(1);
+            // No `{ safe: true }`: the unsafe form, which throws if there is no
             // open round to end.
-            expect(match.endRound).toHaveBeenCalledWith();
+            expect(endRound.mock.calls[0]).toEqual([worker.db, MATCH]);
+            expect(world.row('rounds', ROUND).ended_at).toBe(W.NOW.toISOString());
         });
 
 
         it('emits `round.tech-fall`', async () => {
-            const round = fakeRound({ threshold: true });
-            Round.getOpenRounds.mockResolvedValue([round]);
+            openRound(80);
 
             await worker.performJob();
 
@@ -163,59 +157,53 @@ describe('CHARACTERIZATION: TechFallTrackerWorker', () => {
 
 
         it('ends the round BEFORE emitting', async () => {
-            const match = fakeMatch();
-            const round = fakeRound({ threshold: true, match });
-            Round.getOpenRounds.mockResolvedValue([round]);
+            openRound(80);
 
             await worker.performJob();
 
-            expect(match.endRound).toHaveBeenCalledBefore(worker.notifyServer);
+            expect(endRound).toHaveBeenCalledBefore(worker.notifyServer);
+            expect(roundEndedWhenEmitted).toBe(W.NOW.toISOString());
         });
 
 
-        it('emits the match payload with rounds rendered individually, overwriting toApiResponse\'s rounds', async () => {
-            const roundA = { id: 'r1', toApiResponse: jest.fn().mockResolvedValue({ id: 'r1' }) };
-            const roundB = { id: 'r2', toApiResponse: jest.fn().mockResolvedValue({ id: 'r2' }) };
-            const match  = fakeMatch({ rounds: [roundA, roundB] });
-            const round  = fakeRound({ threshold: true, match });
-            Round.getOpenRounds.mockResolvedValue([round]);
+        it('emits the match payload with every round rendered individually', async () => {
+            const r2 = W.X('102');
+            world.match(MATCH)
+                .round(ROUND, MATCH, { startedSecondsAgo: 400, endedSecondsAgo: 300 })
+                .round(r2, MATCH, { startedSecondsAgo: 60 })
+                .consensus('10', r2, W.U.red, { startedSecondsAgo: 50 }); // 16 points: round 2's threshold
 
             await worker.performJob();
 
             const [, payload] = worker.notifyServer.mock.calls[0];
-            expect(payload).toEqual({ id: 'match-1', rounds: [{ id: 'r1' }, { id: 'r2' }] });
-            expect(match.toApiResponse).toHaveBeenCalledWith({ includeRounds: true });
+            expect(payload.id).toBe(MATCH);
+            expect(payload.rounds.map((r) => r.id)).toEqual([ROUND, r2]);
+            expect(payload).toEqual(serializeLeakedMatch(await findMatchGraph(world.db, MATCH), { includeRounds: true }));
         });
 
 
-        // NOTE: unlike MatchUpdateWorker/BreakTransitionWorker, the tech-fall
-        // payload is rendered WITHOUT includeMat / includeMatchJudges.
+        // Unlike the match-update and break-transition jobs, the tech-fall
+        // payload is rendered WITHOUT the mat and the judges.
         it('renders the payload without includeMat or includeMatchJudges', async () => {
-            const match = fakeMatch();
-            const round = fakeRound({ threshold: true, match });
-            Round.getOpenRounds.mockResolvedValue([round]);
+            openRound(80);
 
             await worker.performJob();
 
-            const [renderOptions] = match.toApiResponse.mock.calls[0];
-            expect(renderOptions).toEqual({ includeRounds: true });
-            expect(renderOptions).not.toHaveProperty('includeMat');
-            expect(renderOptions).not.toHaveProperty('includeMatchJudges');
+            const [, payload] = worker.notifyServer.mock.calls[0];
+            expect(payload).toHaveProperty('rounds');
+            expect(payload).not.toHaveProperty('mat');
+            expect(payload).not.toHaveProperty('judges');
         });
     });
 
 
     describe('failure behavior', () => {
-        // FINDINGS.md F-03: Worker#_performJob does not wrap performJob() in a
-        // try/catch, so a rejection propagates and the worker stops re-queuing.
-        // Pinned so task 14 cannot silently "fix" it as part of the rewrite.
-        it('lets a rejection from a round escape performJob() (unhandled)', async () => {
-            const round = fakeRound({ threshold: false });
-            round.hasReachedTechFallThreshold.mockRejectedValue(new Error('db down'));
-            Round.getOpenRounds.mockResolvedValue([round]);
+        // The base loop does not catch a rejected performJob(); the worker
+        // stops re-queuing. Pinned so a change is deliberate.
+        it('lets a rejection escape performJob() (unhandled)', async () => {
+            const failing = newWorker(W.failingDb('db down'));
 
-            // F-09.5: `.rejects` needs a promise, not a function.
-            await expect(worker.performJob()).rejects.toThrow('db down');
+            await expect(failing.performJob()).rejects.toThrow('db down');
         });
     });
 });

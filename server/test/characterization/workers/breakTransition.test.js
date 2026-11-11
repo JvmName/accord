@@ -1,7 +1,7 @@
 /**
  * CHARACTERIZATION — BreakTransitionWorker.
  *
- * Zero coverage before task 02b. Pins:
+ * Pins:
  *   - which matches are considered (break started AND not ended)
  *   - an elapsed break clears the break fields, starts the next round and
  *     emits `break.ended`
@@ -10,89 +10,83 @@
  *     is the only thing standing between this worker and a 4th round
  *   - the exact off-by-one boundary (elapsed < duration → wait; == → fire)
  *
- * `Date.now` is spied on rather than using fake timers — the pattern already
- * proven in test/workerQueue/matchUpdateWorker.test.js (FINDINGS.md F-10).
- *
- * Consumed by task 14.
+ * `performJob()` is called directly on a scratch database (./world.js) with
+ * the clock frozen; `notifyServer` is replaced to capture emissions.
  */
-const { afterEach, beforeEach, describe, expect, it, jest, mock } = require('bun:test');
+const { afterEach, beforeEach, describe, expect, it, jest, setSystemTime } = require('bun:test');
 
-// bun's mock.module() does NOT hoist (F-09.1); bare specifiers no-op (F-09.2).
-const NE = Symbol('ne');
-mock.module('../../../models/match', () => ({
-    Match: {
-        where: jest.fn().mockResolvedValue([]),
-        find:  jest.fn(),
-        get Operators() { return { ne: NE }; },
-    },
-}));
-mock.module('../../../models/round', () => ({ Round: { getOpenRounds: jest.fn().mockResolvedValue([]) } }));
-mock.module(require.resolve('socket.io-client'), () => ({ io: jest.fn(() => ({ on: jest.fn(), emit: jest.fn() })) }));
-mock.module('../../../lib/logger', () => ({ logger: { debug: jest.fn(), info: jest.fn(), error: jest.fn() } }));
+const { BreakTransitionWorker } = require('../../../src/workers/breakTransitionWorker');
+const { EVENTS }                = require('../../../src/ws/workerWebSocket');
+const { findMatchGraph }        = require('../../../src/db/repositories/matches');
+const { serializeLeakedMatch }  = require('../../../src/serialize');
+const W = require('./world');
 
-const { BreakTransitionWorker } = require('../../../lib/workerQueue/breakTransitionWorker');
-const { Match }                 = require('../../../models/match');
-const { EVENTS }                = require('../../../lib/server/workerWebSocket');
-
-
-const NOW = new Date('2026-01-01T12:00:00.000Z').getTime();
-
-
-function matchInBreak({ id = 'match-1', secondsIntoBreak = 0, breakDuration = 60 } = {}) {
-    return {
-        id,
-        break_started_at: new Date(NOW - secondsIntoBreak * 1000).toISOString(),
-        break_duration:   breakDuration,
-        save:             jest.fn().mockResolvedValue(undefined),
-        startRound:       jest.fn().mockResolvedValue(undefined),
-    };
-}
+const MATCH = W.X('100');
 
 
 describe('CHARACTERIZATION: BreakTransitionWorker', () => {
+    let world;
     let worker;
 
+    function newWorker(db = world.db) {
+        const w = new BreakTransitionWorker('test-worker-token', { db });
+        w.notifyServer = jest.fn();
+        return w;
+    }
+
+    /** A match whose round 1 ended when its break started `secondsIntoBreak` ago. */
+    function matchInBreak({ id = MATCH, secondsIntoBreak = 0, breakDuration = 60, ended = false } = {}) {
+        world.match(id, { ended, breakSecondsAgo: secondsIntoBreak, breakDuration })
+            .round(W.X(`${id.slice(-3)}1`), id, { startedSecondsAgo: secondsIntoBreak + 180, endedSecondsAgo: secondsIntoBreak });
+        return id;
+    }
+
+    const roundsOf = (id) => world.client.query('SELECT id, ended_at FROM rounds WHERE match_id = ? ORDER BY rowid').all(id);
+
     beforeEach(() => {
-        worker = new BreakTransitionWorker('test-worker-token');
-        jest.spyOn(worker, 'notifyServer').mockImplementation(() => {});
-        jest.spyOn(Date, 'now').mockReturnValue(NOW);
-        Match.where.mockResolvedValue([]);
-        Match.find.mockResolvedValue({ toApiResponse: jest.fn().mockResolvedValue({ id: 'match-1' }) });
+        setSystemTime(W.NOW);
+        world = W.createWorld();
+        worker = newWorker();
     });
 
-    afterEach(() => { jest.restoreAllMocks(); jest.clearAllMocks(); });
+    afterEach(() => {
+        setSystemTime();
+        world.close();
+    });
 
 
     describe('match selection', () => {
-        it('queries matches with a break started that have NOT ended', async () => {
+        it('considers matches with a break started that have NOT ended', async () => {
+            matchInBreak({ id: W.X('100'), secondsIntoBreak: 90 });                 // selected
+            matchInBreak({ id: W.X('200'), secondsIntoBreak: 90, ended: true });    // ended: excluded
+            world.match(W.X('300')).round(W.X('301'), W.X('300'), { startedSecondsAgo: 300, endedSecondsAgo: 200 }); // no break: excluded
+
             await worker.performJob();
 
-            expect(Match.where).toHaveBeenCalledTimes(1);
-            expect(Match.where).toHaveBeenCalledWith({
-                break_started_at: { [NE]: null },
-                ended_at:         null,
-            });
+            expect(worker.notifyServer.mock.calls.map(([, payload]) => payload.id)).toEqual([W.X('100')]);
+            expect(roundsOf(W.X('200'))).toHaveLength(1);
+            expect(roundsOf(W.X('300'))).toHaveLength(1);
         });
 
 
         // THE NO-FOURTH-ROUND RULE, worker half.
         //
         // A match always runs exactly maxRounds (3) rounds. When the final
-        // round ends, `Round.end()` calls `match.end()` — which sets ended_at
-        // and nulls break_started_at/break_duration — INSTEAD of starting a
-        // break (that half is covered by test/models/round.test.js). This
-        // worker's guarantee is narrower and lives entirely in the query: an
-        // ended match is excluded, so even a match that somehow still carries
-        // break_started_at can never be given a fourth round here.
-        it('never starts a round for a match that has ended, because ended_at: null is part of the query', async () => {
+        // round ends, the match is ended instead of a break being started (the
+        // lifecycle snapshot tests cover that half). This worker's guarantee
+        // is narrower and lives entirely in the query: an ended match is
+        // excluded, so even a match that somehow still carries a break can
+        // never be given a fourth round here.
+        it('never starts a round for a match that has ended, because "not ended" is part of the query', async () => {
+            const id = matchInBreak({ secondsIntoBreak: 600, ended: true });
+
             await worker.performJob();
 
-            const [appliedFilter] = Match.where.mock.calls[0];
-            expect(appliedFilter).toHaveProperty('ended_at', null);
-
-            // An ended match is therefore never returned, so nothing happens —
-            // there is no fourth round for it to start.
+            // An ended match is never returned, so nothing happens: there is
+            // no fourth round for it to start.
             expect(worker.notifyServer).not.toHaveBeenCalled();
+            expect(roundsOf(id)).toHaveLength(1);
+            expect(world.writes()).toEqual([]);
         });
 
 
@@ -100,73 +94,67 @@ describe('CHARACTERIZATION: BreakTransitionWorker', () => {
             await worker.performJob();
 
             expect(worker.notifyServer).not.toHaveBeenCalled();
-            expect(Match.find).not.toHaveBeenCalled();
+            expect(world.writes()).toEqual([]);
         });
     });
 
 
     describe('unexpired break', () => {
-        it('is a complete no-op: no save, no startRound, no emit', async () => {
-            const match = matchInBreak({ secondsIntoBreak: 10, breakDuration: 60 });
-            Match.where.mockResolvedValue([match]);
+        it('is a complete no-op: no write, no new round, no emit', async () => {
+            matchInBreak({ secondsIntoBreak: 10, breakDuration: 60 });
 
             await worker.performJob();
 
-            expect(match.save).not.toHaveBeenCalled();
-            expect(match.startRound).not.toHaveBeenCalled();
+            expect(world.writes()).toEqual([]);
             expect(worker.notifyServer).not.toHaveBeenCalled();
         });
 
 
         it('waits while elapsed is one second short of break_duration', async () => {
-            const match = matchInBreak({ secondsIntoBreak: 59, breakDuration: 60 });
-            Match.where.mockResolvedValue([match]);
+            const id = matchInBreak({ secondsIntoBreak: 59, breakDuration: 60 });
 
             await worker.performJob();
 
-            expect(match.startRound).not.toHaveBeenCalled();
+            expect(roundsOf(id)).toHaveLength(1);
         });
     });
 
 
     describe('expired break', () => {
         it('fires exactly at elapsed == break_duration (the comparison is `elapsed < duration`)', async () => {
-            const match = matchInBreak({ secondsIntoBreak: 60, breakDuration: 60 });
-            Match.where.mockResolvedValue([match]);
+            const id = matchInBreak({ secondsIntoBreak: 60, breakDuration: 60 });
 
             await worker.performJob();
 
-            expect(match.startRound).toHaveBeenCalledTimes(1);
+            expect(roundsOf(id)).toHaveLength(2);
         });
 
 
         it('clears break_started_at and break_duration and persists BEFORE starting the round', async () => {
-            const match = matchInBreak({ secondsIntoBreak: 90, breakDuration: 60 });
-            Match.where.mockResolvedValue([match]);
+            const id = matchInBreak({ secondsIntoBreak: 90, breakDuration: 60 });
 
             await worker.performJob();
 
+            const match = world.row('matches', id);
             expect(match.break_started_at).toBeNull();
             expect(match.break_duration).toBeNull();
-            expect(match.save).toHaveBeenCalledTimes(1);
-            expect(match.save).toHaveBeenCalledBefore(match.startRound);
+            expect(world.writes()).toEqual(['UPDATE matches', 'INSERT rounds']);
         });
 
 
         it('starts the next round', async () => {
-            const match = matchInBreak({ secondsIntoBreak: 90 });
-            Match.where.mockResolvedValue([match]);
+            const id = matchInBreak({ secondsIntoBreak: 90 });
 
             await worker.performJob();
 
-            expect(match.startRound).toHaveBeenCalledTimes(1);
-            expect(match.startRound).toHaveBeenCalledWith();
+            const rounds = roundsOf(id);
+            expect(rounds).toHaveLength(2);
+            expect(rounds[1].ended_at).toBeNull();
         });
 
 
         it('emits `break.ended`', async () => {
-            const match = matchInBreak({ secondsIntoBreak: 90 });
-            Match.where.mockResolvedValue([match]);
+            matchInBreak({ secondsIntoBreak: 90 });
 
             await worker.performJob();
 
@@ -176,46 +164,37 @@ describe('CHARACTERIZATION: BreakTransitionWorker', () => {
         });
 
 
-        // The payload comes from a FRESHLY refetched match, not the in-memory
-        // one, so the newly created round is present in the response.
-        it('re-fetches the match by id and emits the fresh record\'s payload', async () => {
-            const match = matchInBreak({ id: 'match-7', secondsIntoBreak: 90 });
-            Match.where.mockResolvedValue([match]);
-
-            const freshPayload = { id: 'match-7', rounds: [{ id: 'new-round' }] };
-            const fresh        = { toApiResponse: jest.fn().mockResolvedValue(freshPayload) };
-            Match.find.mockResolvedValue(fresh);
+        // The payload comes from the match as it is AFTER the new round
+        // opened, so the newly created round is present in it.
+        it('re-reads the match by id and emits the fresh record\'s payload', async () => {
+            const id = matchInBreak({ id: W.X('700'), secondsIntoBreak: 90 });
 
             await worker.performJob();
 
-            expect(Match.find).toHaveBeenCalledWith('match-7');
-            expect(match.startRound).toHaveBeenCalledBefore(Match.find);
-            expect(worker.notifyServer).toHaveBeenCalledWith(EVENTS.BREAK_ENDED, freshPayload);
+            const [event, payload] = worker.notifyServer.mock.calls[0];
+            expect(event).toBe(EVENTS.BREAK_ENDED);
+            expect(payload.id).toBe(id);
+            expect(payload.rounds).toHaveLength(2);
+            expect(payload.rounds[1].id).toBe(roundsOf(id)[1].id);
+            expect(payload).toEqual(serializeLeakedMatch(await findMatchGraph(world.db, id), { includeMat: true, includeMatchJudges: true, includeRounds: true }));
         });
 
 
         it('renders with includeMat, includeMatchJudges and includeRounds', async () => {
-            const match = matchInBreak({ secondsIntoBreak: 90 });
-            Match.where.mockResolvedValue([match]);
-
-            const fresh = { toApiResponse: jest.fn().mockResolvedValue({}) };
-            Match.find.mockResolvedValue(fresh);
+            matchInBreak({ secondsIntoBreak: 90 });
 
             await worker.performJob();
 
-            expect(fresh.toApiResponse).toHaveBeenCalledWith({
-                includeMat:         true,
-                includeMatchJudges: true,
-                includeRounds:      true,
-            });
+            const [, payload] = worker.notifyServer.mock.calls[0];
+            expect(payload).toHaveProperty('mat');
+            expect(payload).toHaveProperty('judges');
+            expect(payload).toHaveProperty('rounds');
         });
 
 
         it('handles several expired breaks in the same tick', async () => {
-            Match.where.mockResolvedValue([
-                matchInBreak({ id: 'm1', secondsIntoBreak: 90 }),
-                matchInBreak({ id: 'm2', secondsIntoBreak: 61 }),
-            ]);
+            matchInBreak({ id: W.X('100'), secondsIntoBreak: 90 });
+            matchInBreak({ id: W.X('200'), secondsIntoBreak: 61 });
 
             await worker.performJob();
 
@@ -225,13 +204,12 @@ describe('CHARACTERIZATION: BreakTransitionWorker', () => {
 
 
     describe('failure behavior', () => {
-        // FINDINGS.md F-03 — no try/catch in Worker#_performJob, so this
-        // rejection escapes and the worker stops re-queuing.
+        // The base loop does not catch a rejected performJob(); the worker
+        // stops re-queuing. Pinned so a change is deliberate.
         it('lets a rejection escape performJob() (unhandled)', async () => {
-            Match.where.mockRejectedValue(new Error('db down'));
+            const failing = newWorker(W.failingDb('db down'));
 
-            // F-09.5: `.rejects` needs a promise, not a function.
-            await expect(worker.performJob()).rejects.toThrow('db down');
+            await expect(failing.performJob()).rejects.toThrow('db down');
         });
     });
 });

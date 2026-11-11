@@ -15,24 +15,26 @@
  *    `stoppage`, `tie`, `tech-fall`) has a dedicated round here, plus an
  *    in-progress round, a paused round and a round with a completed pause.
  *
- * 2. **Fixtures are built through the models, not the HTTP API.** The API can
- *    only reach a few of those states, and only in a fixed order. Building the
- *    rows directly is what makes exotic states (tech-fall, tie, mid-break)
- *    available to a plain `GET`. The mutating endpoints are still exercised
- *    for real by the capture plan — on the dedicated `flowMat` fixtures.
+ * 2. **Fixtures are built through the repository insert functions, not the
+ *    HTTP API.** The API can only reach a few of those states, and only in a
+ *    fixed order. Building the rows directly is what makes exotic states
+ *    (tech-fall, tie, mid-break) available to a plain `GET`. The mutating
+ *    endpoints are still exercised for real by the capture plan, on the
+ *    dedicated `flowMat` fixtures.
+ *
+ * Riding-time votes get random ids, like votes created by the API.
  *
  * See `README.md` in this directory for what the goldens are and what changing
  * one means.
  */
 
-/* eslint-disable @typescript-eslint/no-var-requires */
-const { Mat }            = require('../../models/mat');
-const { MatCode }        = require('../../models/matCode');
-const { Match }          = require('../../models/match');
-const { RidingTimeVote } = require('../../models/ridingTimeVote');
-const { Round }          = require('../../models/round');
-const { RoundPause }     = require('../../models/roundPause');
-const { User }           = require('../../models/user');
+import { createDb, type Db } from '../../src/db';
+import { addMatJudge, addMatViewer, insertMat } from '../../src/db/repositories/mats';
+import { insertMatCode } from '../../src/db/repositories/matCodes';
+import { insertMatch, setMatchJudges } from '../../src/db/repositories/matches';
+import { insertRound, insertRoundPause, setPauseResumed } from '../../src/db/repositories/rounds';
+import { insertUser } from '../../src/db/repositories/users';
+import { insertRidingTimeVote, setVoteEnded } from '../../src/db/repositories/votes';
 
 
 /** A controllable wall clock. `capture.ts` backs this with `jest.setSystemTime`. */
@@ -178,9 +180,9 @@ export const CODES = {
 // Builders
 // ---------------------------------------------------------------------------
 
-async function makeUser(clock: Clock, at: number, key: string, name: string) {
+async function makeUser(db: Db, clock: Clock, at: number, key: string, name: string) {
     clock.set(at);
-    return await User.create({
+    return await insertUser(db, {
         id:        IDS[key as keyof typeof IDS],
         name,
         api_token: IDS[key.replace('user:', 'token:') as keyof typeof IDS],
@@ -188,28 +190,26 @@ async function makeUser(clock: Clock, at: number, key: string, name: string) {
 }
 
 
-async function makeMat(clock: Clock, at: number, key: string, name: string,
+async function makeMat(db: Db, clock: Clock, at: number, key: string, name: string,
                        creatorId: string, judgeCount: number | null) {
     clock.set(at);
-    // `judge_count` is NOT NULL with a DB default of 1. Passing an explicit
-    // null is a validation error, so "unspecified" has to mean omitting the
-    // key — which is also how MatsController creates a mat without one.
-    const attributes: Record<string, any> = {
+    // `judge_count` is NOT NULL with a DB default of 1, so "unspecified" means
+    // omitting the key, which is also how `POST /mats` creates a mat without one.
+    const mat = await insertMat(db, {
         id:         IDS[key as keyof typeof IDS],
         name,
         creator_id: creatorId,
-    };
-    if (judgeCount != null) attributes.judge_count = judgeCount;
-    const mat = await Mat.create(attributes);
+        ...(judgeCount != null ? { judge_count: judgeCount } : {}),
+    });
 
     const slug = key.replace('mat:', '');
-    await MatCode.create({
+    await insertMatCode(db, {
         id:      IDS[`matcode:${slug}-admin` as keyof typeof IDS],
         mat_id:  mat.id,
         code:    CODES[`code:${slug}-admin` as keyof typeof CODES],
         role:    'admin',
     });
-    await MatCode.create({
+    await insertMatCode(db, {
         id:      IDS[`matcode:${slug}-viewer` as keyof typeof IDS],
         mat_id:  mat.id,
         code:    CODES[`code:${slug}-viewer` as keyof typeof CODES],
@@ -230,12 +230,12 @@ interface MatchSpec {
     endedAt?:   number | null;
     breakStartedAt?: number | null;
     breakDuration?:  number | null;
-    judges?:   any[];
+    judges?:   Array<{ id: string }>;
 }
 
-async function makeMatch(clock: Clock, spec: MatchSpec) {
+async function makeMatch(db: Db, clock: Clock, spec: MatchSpec) {
     clock.set(spec.at);
-    const match = await Match.create({
+    const match = await insertMatch(db, {
         id:                IDS[spec.key as keyof typeof IDS],
         mat_id:            spec.matId,
         creator_id:        IDS['user:creator'],
@@ -246,7 +246,7 @@ async function makeMatch(clock: Clock, spec: MatchSpec) {
         break_started_at:  spec.breakStartedAt == null ? null : new Date(spec.breakStartedAt),
         break_duration:    spec.breakDuration ?? null,
     });
-    if (spec.judges?.length) await match.setJudges(spec.judges);
+    if (spec.judges?.length) await setMatchJudges(db, match.id, spec.judges.map(j => j.id));
     return match;
 }
 
@@ -261,15 +261,22 @@ interface RoundSpec {
     stoppage?: boolean | null;
 }
 
-async function makeRound(clock: Clock, spec: RoundSpec) {
+async function makeRound(db: Db, clock: Clock, spec: RoundSpec) {
     clock.set(spec.startedAt);
-    return await Round.create({
+    return await insertRound(db, {
         id:                 IDS[spec.key as keyof typeof IDS],
         match_id:           spec.matchId,
         ended_at:           spec.endedAt == null ? null : new Date(spec.endedAt),
         declared_winner_id: spec.declaredWinnerId ?? null,
         stoppage:           spec.stoppage ?? null,
     });
+}
+
+
+/** A round pause created at the current clock, resumed at `resumedAt` when given. */
+async function makePause(db: Db, id: string, roundId: string, pausedAt: number, resumedAt: number | null) {
+    const pause = await insertRoundPause(db, { id, round_id: roundId, paused_at: new Date(pausedAt) });
+    if (resumedAt != null) await setPauseResumed(db, pause.id, new Date(resumedAt));
 }
 
 
@@ -281,24 +288,17 @@ async function makeRound(clock: Clock, spec: RoundSpec) {
  * votes must overlap for any control time to accrue. Score is
  * `floor(seconds / 3)` per `RDojoKombatRules.scoreRound`.
  */
-async function makeConsensusVotes(clock: Clock, roundKey: string, roundId: string,
+async function makeConsensusVotes(db: Db, clock: Clock, roundId: string,
                                   competitorId: string, judges: string[],
                                   from: number, to: number | null) {
-    const votes: any[] = [];
+    const votes: Array<{ id: string }> = [];
     clock.set(from);
-    for (let i = 0; i < judges.length; i++) {
-        votes.push(await RidingTimeVote.create({
-            round_id:      roundId,
-            judge_id:      judges[i],
-            competitor_id: competitorId,
-        }));
+    for (const judgeId of judges) {
+        votes.push(await insertRidingTimeVote(db, { round_id: roundId, judge_id: judgeId, competitor_id: competitorId }));
     }
     if (to != null) {
         clock.set(to);
-        for (const vote of votes) {
-            vote.ended_at = new Date(to);
-            await vote.save();
-        }
+        for (const vote of votes) await setVoteEnded(db, vote.id, new Date(to));
     }
     return votes;
 }
@@ -348,22 +348,33 @@ function at(seconds: number): number {
  *  80      match:upcoming  never started
  *  100-210 mat:flow matches, driven through the real endpoints by capture.ts
  */
-export async function seed(clock: Clock): Promise<Fixtures> {
+export async function seed(clock: Clock, target?: Db): Promise<Fixtures> {
+    if (!target && !process.env.DATABASE_PATH) throw new Error('seed() needs a database: pass one, or set DATABASE_PATH');
+    const db = target ?? createDb({ path: process.env.DATABASE_PATH });
+    try {
+        return await seedInto(db, clock);
+    } finally {
+        if (!target) db.$client.close();
+    }
+}
+
+
+async function seedInto(db: Db, clock: Clock): Promise<Fixtures> {
     const users: Record<string, any> = {};
     const mats: Record<string, any> = {};
     const matches: Record<string, any> = {};
 
     // --- users ---------------------------------------------------------------
-    users.creator  = await makeUser(clock, at(0), 'user:creator',  'Casey Creator');
-    users.judgeA   = await makeUser(clock, at(1), 'user:judgeA',   'Jordan Judge');
-    users.judgeB   = await makeUser(clock, at(2), 'user:judgeB',   'Jamie Judge');
-    users.viewer   = await makeUser(clock, at(3), 'user:viewer',   'Val Viewer');
-    users.outsider = await makeUser(clock, at(4), 'user:outsider', 'Ollie Outsider');
-    users.joiner   = await makeUser(clock, at(5), 'user:joiner',   'Jo Joiner');
-    users.red      = await makeUser(clock, at(6), 'user:red',      'Rory Red');
-    users.blue     = await makeUser(clock, at(7), 'user:blue',     'Blair Blue');
-    users.red2     = await makeUser(clock, at(8), 'user:red2',     'Robin Red');
-    users.blue2    = await makeUser(clock, at(9), 'user:blue2',    'Bailey Blue');
+    users.creator  = await makeUser(db, clock, at(0), 'user:creator',  'Casey Creator');
+    users.judgeA   = await makeUser(db, clock, at(1), 'user:judgeA',   'Jordan Judge');
+    users.judgeB   = await makeUser(db, clock, at(2), 'user:judgeB',   'Jamie Judge');
+    users.viewer   = await makeUser(db, clock, at(3), 'user:viewer',   'Val Viewer');
+    users.outsider = await makeUser(db, clock, at(4), 'user:outsider', 'Ollie Outsider');
+    users.joiner   = await makeUser(db, clock, at(5), 'user:joiner',   'Jo Joiner');
+    users.red      = await makeUser(db, clock, at(6), 'user:red',      'Rory Red');
+    users.blue     = await makeUser(db, clock, at(7), 'user:blue',     'Blair Blue');
+    users.red2     = await makeUser(db, clock, at(8), 'user:red2',     'Robin Red');
+    users.blue2    = await makeUser(db, clock, at(9), 'user:blue2',    'Bailey Blue');
 
     const judgeIds = [users.judgeA.id, users.judgeB.id];
 
@@ -372,21 +383,21 @@ export async function seed(clock: Clock): Promise<Fixtures> {
     // `mat:empty` — a mat with no judges and no matches (the "all empty" shape).
     // `mat:flow`  — carries every match the capture plan MUTATES.
     // `mat:join`  — carries the join/leave mutations, so mat:main's roster is stable.
-    mats.main  = await makeMat(clock, at(10), 'mat:main',  'Main Mat',  users.creator.id, 2);
-    mats.empty = await makeMat(clock, at(11), 'mat:empty', 'Empty Mat', users.creator.id, null);
-    mats.flow  = await makeMat(clock, at(12), 'mat:flow',  'Flow Mat',  users.creator.id, 2);
-    mats.join  = await makeMat(clock, at(13), 'mat:join',  'Join Mat',  users.creator.id, 2);
-    mats.solo  = await makeMat(clock, at(15), 'mat:solo',  'Solo Mat',  users.creator.id, 1);
+    mats.main  = await makeMat(db, clock, at(10), 'mat:main',  'Main Mat',  users.creator.id, 2);
+    mats.empty = await makeMat(db, clock, at(11), 'mat:empty', 'Empty Mat', users.creator.id, null);
+    mats.flow  = await makeMat(db, clock, at(12), 'mat:flow',  'Flow Mat',  users.creator.id, 2);
+    mats.join  = await makeMat(db, clock, at(13), 'mat:join',  'Join Mat',  users.creator.id, 2);
+    mats.solo  = await makeMat(db, clock, at(15), 'mat:solo',  'Solo Mat',  users.creator.id, 1);
 
     clock.set(at(14));
-    await mats.main.addJudge(users.judgeA);
-    await mats.main.addJudge(users.judgeB);
-    await mats.main.addViewer(users.viewer);
-    await mats.flow.addJudge(users.judgeA);
-    await mats.flow.addJudge(users.judgeB);
-    await mats.join.addJudge(users.judgeA);
-    await mats.join.addViewer(users.viewer);
-    await mats.solo.addJudge(users.judgeA);
+    await addMatJudge(db, mats.main.id, users.judgeA.id);
+    await addMatJudge(db, mats.main.id, users.judgeB.id);
+    await addMatViewer(db, mats.main.id, users.viewer.id);
+    await addMatJudge(db, mats.flow.id, users.judgeA.id);
+    await addMatJudge(db, mats.flow.id, users.judgeB.id);
+    await addMatJudge(db, mats.join.id, users.judgeA.id);
+    await addMatViewer(db, mats.join.id, users.viewer.id);
+    await addMatJudge(db, mats.solo.id, users.judgeA.id);
 
     const bothJudges = [users.judgeA, users.judgeB];
 
@@ -398,23 +409,23 @@ export async function seed(clock: Clock): Promise<Fixtures> {
     // Red takes rounds 1 and 3, blue takes round 2, so Match.getWinner() resolves
     // to red on a best-2-of-3 over all `maxRounds` rounds. This is the only
     // fixture where `Match.winner` is non-null.
-    matches.done = await makeMatch(clock, {
+    matches.done = await makeMatch(db, clock, {
         key: 'match:done', at: at(20), matId: mats.main.id,
         red: users.red.id, blue: users.blue.id,
         startedAt: at(20), endedAt: at(200), judges: bothJudges,
     });
     // Round 1 — POINTS. 60s of two-judge consensus for red is floor(60/3) = 20,
     // which sits under round 1's tech-fall threshold of 24.
-    await makeRound(clock, { key: 'round:done-1', matchId: matches.done.id,
+    await makeRound(db, clock, { key: 'round:done-1', matchId: matches.done.id,
                              startedAt: at(20), endedAt: at(90) });
-    await makeConsensusVotes(clock, 'round:done-1', IDS['round:done-1'],
+    await makeConsensusVotes(db, clock, IDS['round:done-1'],
                              users.red.id, judgeIds, at(25), at(85));
     // Round 2 — SUBMISSION. A declared winner with `stoppage` falsy.
-    await makeRound(clock, { key: 'round:done-2', matchId: matches.done.id,
+    await makeRound(db, clock, { key: 'round:done-2', matchId: matches.done.id,
                              startedAt: at(100), endedAt: at(160),
                              declaredWinnerId: users.blue.id, stoppage: false });
     // Round 3 — STOPPAGE. A declared winner with `stoppage` true.
-    await makeRound(clock, { key: 'round:done-3', matchId: matches.done.id,
+    await makeRound(db, clock, { key: 'round:done-3', matchId: matches.done.id,
                              startedAt: at(170), endedAt: at(200),
                              declaredWinnerId: users.red.id, stoppage: true });
 
@@ -423,72 +434,69 @@ export async function seed(clock: Clock): Promise<Fixtures> {
     // clock, and `paused` is false because the only pause was resumed.
     // Created first among the incomplete matches, so it is mat:main's
     // `current_match`.
-    matches.open = await makeMatch(clock, {
+    matches.open = await makeMatch(db, clock, {
         key: 'match:open', at: at(30), matId: mats.main.id,
         red: users.red.id, blue: users.blue.id,
         startedAt: at(470), judges: bothJudges,
     });
-    await makeRound(clock, { key: 'round:open', matchId: matches.open.id,
+    await makeRound(db, clock, { key: 'round:open', matchId: matches.open.id,
                              startedAt: at(470) });
     clock.set(at(480));
-    await RoundPause.create({ id: IDS['pause:open-closed'], round_id: IDS['round:open'],
-                              paused_at: new Date(at(480)), resumed_at: new Date(at(490)) });
+    await makePause(db, IDS['pause:open-closed'], IDS['round:open'], at(480), at(490));
     // Votes still OPEN — these accrue against NOW, exercising the live path.
-    await makeConsensusVotes(clock, 'round:open', IDS['round:open'],
+    await makeConsensusVotes(db, clock, IDS['round:open'],
                              users.blue.id, judgeIds, at(500), null);
 
     // --- match:paused — a round in progress with an OPEN pause (`paused: true`).
     // `time_remaining` freezes at the pause instant instead of tracking the clock.
-    matches.paused = await makeMatch(clock, {
+    matches.paused = await makeMatch(db, clock, {
         key: 'match:paused', at: at(40), matId: mats.main.id,
         red: users.red2.id, blue: users.blue.id,
         startedAt: at(480), judges: bothJudges,
     });
-    await makeRound(clock, { key: 'round:paused', matchId: matches.paused.id,
+    await makeRound(db, clock, { key: 'round:paused', matchId: matches.paused.id,
                              startedAt: at(480) });
     clock.set(at(500));
-    await RoundPause.create({ id: IDS['pause:paused-open'], round_id: IDS['round:paused'],
-                              paused_at: new Date(at(500)), resumed_at: null });
+    await makePause(db, IDS['pause:paused-open'], IDS['round:paused'], at(500), null);
 
     // --- match:break — between rounds. The only read-only fixture with a
     // non-null `break_remaining` (60s break started 20s ago => 40 remaining).
-    matches.break = await makeMatch(clock, {
+    matches.break = await makeMatch(db, clock, {
         key: 'match:break', at: at(50), matId: mats.main.id,
         red: users.red.id, blue: users.blue2.id,
         startedAt: at(490), judges: bothJudges,
         breakStartedAt: at(580), breakDuration: 60,
     });
-    await makeRound(clock, { key: 'round:break', matchId: matches.break.id,
+    await makeRound(db, clock, { key: 'round:break', matchId: matches.break.id,
                              startedAt: at(490), endedAt: at(580) });
     clock.set(at(500));
-    await RoundPause.create({ id: IDS['pause:break-closed'], round_id: IDS['round:break'],
-                              paused_at: new Date(at(500)), resumed_at: new Date(at(530)) });
+    await makePause(db, IDS['pause:break-closed'], IDS['round:break'], at(500), at(530));
 
     // --- match:techfall — one ended round whose score crosses the threshold.
     // 90s of consensus is floor(90/3) = 30 >= 24, so the method is `tech-fall`
     // and `value` is the winning score as a string.
-    matches.techfall = await makeMatch(clock, {
+    matches.techfall = await makeMatch(db, clock, {
         key: 'match:techfall', at: at(60), matId: mats.main.id,
         red: users.red2.id, blue: users.blue2.id,
         startedAt: at(210), judges: bothJudges,
     });
-    await makeRound(clock, { key: 'round:techfall', matchId: matches.techfall.id,
+    await makeRound(db, clock, { key: 'round:techfall', matchId: matches.techfall.id,
                              startedAt: at(210), endedAt: at(310) });
-    await makeConsensusVotes(clock, 'round:techfall', IDS['round:techfall'],
+    await makeConsensusVotes(db, clock, IDS['round:techfall'],
                              users.red2.id, judgeIds, at(215), at(305));
 
     // --- match:tie — one ended round with no votes at all: 0-0.
-    matches.tie = await makeMatch(clock, {
+    matches.tie = await makeMatch(db, clock, {
         key: 'match:tie', at: at(70), matId: mats.main.id,
         red: users.red.id, blue: users.blue2.id,
         startedAt: at(320), judges: bothJudges,
     });
-    await makeRound(clock, { key: 'round:tie', matchId: matches.tie.id,
+    await makeRound(db, clock, { key: 'round:tie', matchId: matches.tie.id,
                              startedAt: at(320), endedAt: at(340) });
 
     // --- match:upcoming — created but never started. Populates the mat's
     // `upcoming_matches`.
-    matches.upcoming = await makeMatch(clock, {
+    matches.upcoming = await makeMatch(db, clock, {
         key: 'match:upcoming', at: at(80), matId: mats.main.id,
         red: users.red2.id, blue: users.blue2.id,
     });
@@ -498,37 +506,37 @@ export async function seed(clock: Clock): Promise<Fixtures> {
     // =========================================================================
 
     // POST /match/:id/start
-    matches.toStart = await makeMatch(clock, {
+    matches.toStart = await makeMatch(db, clock, {
         key: 'match:toStart', at: at(100), matId: mats.flow.id,
         red: users.red.id, blue: users.blue.id,
     });
 
     // POST /match/:id/end
-    matches.toEnd = await makeMatch(clock, {
+    matches.toEnd = await makeMatch(db, clock, {
         key: 'match:toEnd', at: at(110), matId: mats.flow.id,
         red: users.red.id, blue: users.blue.id,
         startedAt: at(520), judges: bothJudges,
     });
-    await makeRound(clock, { key: 'round:toEnd', matchId: matches.toEnd.id,
+    await makeRound(db, clock, { key: 'round:toEnd', matchId: matches.toEnd.id,
                              startedAt: at(520) });
 
     // POST /match/:id/rounds — needs the previous round already ended, i.e. a break.
-    matches.toStartRound = await makeMatch(clock, {
+    matches.toStartRound = await makeMatch(db, clock, {
         key: 'match:toStartRound', at: at(120), matId: mats.flow.id,
         red: users.red.id, blue: users.blue.id,
         startedAt: at(530), judges: bothJudges,
         breakStartedAt: at(595), breakDuration: 60,
     });
-    await makeRound(clock, { key: 'round:toStartRound', matchId: matches.toStartRound.id,
+    await makeRound(db, clock, { key: 'round:toStartRound', matchId: matches.toStartRound.id,
                              startedAt: at(530), endedAt: at(595) });
 
     // POST /match/:id/rounds/end
-    matches.toEndRound = await makeMatch(clock, {
+    matches.toEndRound = await makeMatch(db, clock, {
         key: 'match:toEndRound', at: at(130), matId: mats.flow.id,
         red: users.red.id, blue: users.blue.id,
         startedAt: at(540), judges: bothJudges,
     });
-    await makeRound(clock, { key: 'round:toEndRound', matchId: matches.toEndRound.id,
+    await makeRound(db, clock, { key: 'round:toEndRound', matchId: matches.toEndRound.id,
                              startedAt: at(540) });
 
     // PATCH /match/:id/rounds/result — submission, stoppage, and clearing.
@@ -538,14 +546,14 @@ export async function seed(clock: Clock): Promise<Fixtures> {
         ['match:toStoppage',    'round:toStoppage',    at(150), at(550)],
         ['match:toClearResult', 'round:toClearResult', at(160), at(555)],
     ] as const) {
-        const match = await makeMatch(clock, {
+        const match = await makeMatch(db, clock, {
             key, at: createdAt, matId: mats.flow.id,
             red: users.red.id, blue: users.blue.id,
             startedAt, judges: bothJudges,
             breakStartedAt: at(595), breakDuration: 60,
         });
         matches[key.replace('match:', '')] = match;
-        await makeRound(clock, { key: roundKey, matchId: match.id,
+        await makeRound(db, clock, { key: roundKey, matchId: match.id,
                                  startedAt, endedAt: at(595),
                                  // toClearResult starts WITH a declared result, so
                                  // the `winner: null` PATCH has something to clear.
@@ -554,26 +562,26 @@ export async function seed(clock: Clock): Promise<Fixtures> {
     }
 
     // POST /match/:id/rounds/pause + /resume
-    matches.toPause = await makeMatch(clock, {
+    matches.toPause = await makeMatch(db, clock, {
         key: 'match:toPause', at: at(170), matId: mats.flow.id,
         red: users.red.id, blue: users.blue.id,
         startedAt: at(560), judges: bothJudges,
     });
-    await makeRound(clock, { key: 'round:toPause', matchId: matches.toPause.id,
+    await makeRound(db, clock, { key: 'round:toPause', matchId: matches.toPause.id,
                              startedAt: at(560) });
 
     // POST + DELETE /match/:id/ridingTime
-    matches.toVote = await makeMatch(clock, {
+    matches.toVote = await makeMatch(db, clock, {
         key: 'match:toVote', at: at(180), matId: mats.flow.id,
         red: users.red.id, blue: users.blue.id,
         startedAt: at(565), judges: bothJudges,
     });
-    await makeRound(clock, { key: 'round:toVote', matchId: matches.toVote.id,
+    await makeRound(db, clock, { key: 'round:toVote', matchId: matches.toVote.id,
                              startedAt: at(565) });
 
     // Never started — the "this match has not started" 400 on POST /end, and the
     // "no active round" 422s on pause/resume.
-    matches.notStarted = await makeMatch(clock, {
+    matches.notStarted = await makeMatch(db, clock, {
         key: 'match:notStarted', at: at(190), matId: mats.flow.id,
         red: users.red.id, blue: users.blue.id,
     });
@@ -581,32 +589,32 @@ export async function seed(clock: Clock): Promise<Fixtures> {
     // --- WebSocket fixtures ---------------------------------------------------
     // Already over the tech-fall threshold with the round still open, so
     // TechFallTrackerWorker ends it and emits `round.tech-fall` on the first tick.
-    matches.wsTechFall = await makeMatch(clock, {
+    matches.wsTechFall = await makeMatch(db, clock, {
         key: 'match:wsTechFall', at: at(200), matId: mats.flow.id,
         red: users.red2.id, blue: users.blue2.id,
         startedAt: at(350), judges: bothJudges,
     });
-    await makeRound(clock, { key: 'round:wsTechFall', matchId: matches.wsTechFall.id,
+    await makeRound(db, clock, { key: 'round:wsTechFall', matchId: matches.wsTechFall.id,
                              startedAt: at(350) });
-    await makeConsensusVotes(clock, 'round:wsTechFall', IDS['round:wsTechFall'],
+    await makeConsensusVotes(db, clock, IDS['round:wsTechFall'],
                              users.red2.id, judgeIds, at(355), at(445));
 
     // Break already expired (started 180s ago for a 60s break), so
     // BreakTransitionWorker starts the next round and emits `break.ended`.
-    matches.wsBreakEnded = await makeMatch(clock, {
+    matches.wsBreakEnded = await makeMatch(db, clock, {
         key: 'match:wsBreakEnded', at: at(210), matId: mats.flow.id,
         red: users.red.id, blue: users.blue2.id,
         startedAt: at(360), judges: bothJudges,
         breakStartedAt: at(420), breakDuration: 60,
     });
-    await makeRound(clock, { key: 'round:wsBreakEnded', matchId: matches.wsBreakEnded.id,
+    await makeRound(db, clock, { key: 'round:wsBreakEnded', matchId: matches.wsBreakEnded.id,
                              startedAt: at(360), endedAt: at(420) });
 
     // In a break but carrying NO rounds at all. Unreachable through the API
     // (a break only ever starts when a round ends), but it is the only way to
     // open the result window while `getLastRound()` is null, which is the
     // "No ended round to update" 422 branch of patchRoundResult.
-    matches.breakNoRounds = await makeMatch(clock, {
+    matches.breakNoRounds = await makeMatch(db, clock, {
         key: 'match:breakNoRounds', at: at(220), matId: mats.flow.id,
         red: users.red.id, blue: users.blue.id,
         startedAt: at(370), judges: bothJudges,
@@ -619,15 +627,15 @@ export async function seed(clock: Clock): Promise<Fixtures> {
     // code hits UsersController#addAsJudge's "cannot join a solo match in
     // progress" branch. Leaving it again exercises the judge-removal path that
     // closes an open riding-time vote and drops the judge from the live match.
-    matches.soloJudge = await makeMatch(clock, {
+    matches.soloJudge = await makeMatch(db, clock, {
         key: 'match:soloJudge', at: at(230), matId: mats.solo.id,
         red: users.red.id, blue: users.blue.id,
         startedAt: at(380), judges: [users.judgeA],
     });
-    await makeRound(clock, { key: 'round:soloJudge', matchId: matches.soloJudge.id,
+    await makeRound(db, clock, { key: 'round:soloJudge', matchId: matches.soloJudge.id,
                              startedAt: at(380) });
     // One OPEN vote by judgeA, so DELETE /mat/:code/join has a vote to end.
-    await makeConsensusVotes(clock, 'round:soloJudge', IDS['round:soloJudge'],
+    await makeConsensusVotes(db, clock, IDS['round:soloJudge'],
                              users.red.id, [users.judgeA.id], at(390), null);
 
     // Everything the capture pass observes happens at exactly this instant.

@@ -1,61 +1,75 @@
 /**
  * CHARACTERIZATION — error class → HTTP status + response envelope.
  *
- * Pins `applicationServer.js#handleError` (lines ~268-292 at the time of
- * writing) and the envelope `serverController.js#formatJSONBody` wraps it in.
+ * Pins `src/http/middleware/errors.ts#handleError` and the `{ data, status }`
+ * envelope it renders.
  *
- * Driven through `ApplicationServer#requestHandler` — the real production path
- * (setupRequestState → callbacks → action → performRequest → handleError →
- * render) — with Express request/response doubles, so both the status code and
- * the exact JSON body are observed as a client would see them.
- *
- * Consumed by task 12, which must reproduce all four mappings. The Sequelize
- * branch becomes a SQLite/Drizzle unique-violation branch, so its OUTPUT
- * shape is pinned independently of what triggers it.
+ * Driven through the production path: a route registered by the route
+ * registry (request state → gates → handler → the route's error handler →
+ * handleError → render) on a real Express app, observed over HTTP, so both
+ * the status code and the exact JSON body are seen as a client sees them.
  */
-const { beforeEach, describe, expect, it, jest, mock } = require('bun:test');
-
-// bun's mock.module() does not hoist (FINDINGS.md F-09.1). These keep
-// setupRequestState() away from the database; no test here supplies an
-// api token, a matId or a matchId, so none of them is actually consulted.
-mock.module('../../models/matCode', () => ({ MatCode: { ROLES: { ADMIN: 'admin', VIEWER: 'viewer' }, CODE_REGEXP: /\w+\.\w+\.\w+/, findByCode: jest.fn() } }));
-mock.module('../../models/mat',     () => ({ Mat:   { find: jest.fn() } }));
-mock.module('../../models/match',   () => ({ Match: { find: jest.fn() } }));
-mock.module('../../models/user',    () => ({ User:  { findByApiToken: jest.fn() } }));
-
-const { ApplicationServer } = require('../../lib/server/applicationServer');
-const { AuthorizationError,
-        ServerController,
-        ValidationError }   = require('../../lib/server/serverController');
-const { makeRequest, makeResponse } = require('../helpers/express');
+const { afterAll, beforeAll, beforeEach, describe, expect, it } = require('bun:test');
+const express = require('express');
+const { createDb, migrateDb } = require('../../src/db');
+const { routeResponses } = require('../../src/contract/responses');
+const { AuthorizationError, ValidationError } = require('../../src/http/errors');
+const { defineRoute } = require('../../src/http/route');
+const { legacyBodyParsers, registerRoutes } = require('../../src/http/router');
 
 
-/** A controller whose single action throws whatever the test hands it. */
-class ThrowingController extends ServerController {
-    static thrown = null;
-    async getProbe() { throw ThrowingController.thrown; }
-}
+/** A route whose handler throws whatever the test hands it. */
+let thrown = null;
+const probe = defineRoute({
+    method:    'get',
+    path:      '/probe',
+    authorize: { scope: 'none', level: 'public' },
+    response:  routeResponses['GET /system/healthCheck'],
+    tags:      ['test'],
+    handler:   async () => { throw thrown; },
+});
+
+let db;
+let server;
+let origin;
+/** Per request: how often `res.json` and `res.end` were called. */
+let calls;
+
+beforeAll(async () => {
+    db = createDb({ path: ':memory:' });
+    migrateDb(db);
+    const app = express();
+    app.use((req, res, next) => {
+        const json = res.json.bind(res);
+        const end  = res.end.bind(res);
+        res.json = (...args) => { calls.json++; return json(...args); };
+        res.end  = (...args) => { calls.end++; return end(...args); };
+        next();
+    });
+    app.use(...legacyBodyParsers());
+    registerRoutes(app, [probe], { db, dev: false });
+    server = await new Promise((resolve) => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
+    origin = `http://127.0.0.1:${server.address().port}`;
+});
+
+afterAll(() => {
+    server?.close();
+    server?.closeAllConnections();
+    db?.$client.close();
+});
 
 
-/**
- * Runs one request end-to-end through ApplicationServer#requestHandler and
- * returns the observed HTTP status and JSON body.
- */
+/** Runs one request whose handler throws `err`; returns the observed HTTP status and JSON body. */
 async function requestThatThrows(err) {
-    ThrowingController.thrown = err;
-
-    const server   = new ApplicationServer();
-    const request  = makeRequest();
-    const response = makeResponse();
-
-    await server.requestHandler('getProbe', ThrowingController)(request, response);
-
-    return { status: response.statusCode, body: response._body };
+    thrown = err;
+    calls = { json: 0, end: 0 };
+    const res = await fetch(`${origin}/probe`);
+    return { status: res.status, body: await res.json() };
 }
 
 
 describe('CHARACTERIZATION: error class → HTTP response', () => {
-    beforeEach(() => { ThrowingController.thrown = null; });
+    beforeEach(() => { thrown = null; });
 
 
     describe('AuthorizationError → 401', () => {
@@ -74,9 +88,9 @@ describe('CHARACTERIZATION: error class → HTTP response', () => {
         });
 
 
-        // The branch is `err.constructor == AuthorizationError` — an exact
+        // The branch is `err.constructor === AuthorizationError`: an exact
         // constructor identity check, NOT instanceof. A subclass therefore
-        // falls through to the 500 branch. Pinned for fidelity; see F-13.
+        // falls through to the 500 branch. Pinned for fidelity.
         it('does NOT match a SUBCLASS of AuthorizationError (falls through to 500)', async () => {
             class DerivedAuthorizationError extends AuthorizationError {}
             const { status, body } = await requestThatThrows(new DerivedAuthorizationError('nope'));
@@ -126,8 +140,7 @@ describe('CHARACTERIZATION: error class → HTTP response', () => {
 
     describe('SequelizeUniqueConstraintError → 400 with per-field error arrays', () => {
         // Matched by `err.name == 'SequelizeUniqueConstraintError'` (a string
-        // comparison), so a plain object with that name is a faithful stand-in
-        // for the Sequelize instance.
+        // comparison), so a plain object with that name is the whole input.
         function uniqueConstraintError({ errors, parent } = {}) {
             return {
                 name:   'SequelizeUniqueConstraintError',
@@ -158,9 +171,9 @@ describe('CHARACTERIZATION: error class → HTTP response', () => {
         });
 
 
-        // `errors[null] = err.parent.message` assigns a raw STRING under the
-        // key "null", breaking the per-field array shape every other key has.
-        // Pinned for fidelity; see FINDINGS.md F-14.
+        // The driver message goes under the key "null" as a raw STRING,
+        // breaking the per-field array shape every other key has. Pinned for
+        // fidelity.
         it('adds the driver message under the literal key "null", as a bare string', async () => {
             const { status, body } = await requestThatThrows(uniqueConstraintError({
                 errors: [{ path: 'code', message: 'code must be unique' }],
@@ -220,22 +233,17 @@ describe('CHARACTERIZATION: error class → HTTP response', () => {
         ];
 
         it.each(cases)('%s always renders { data, status } and ends the response', async (_label, err, expectedStatus) => {
-            ThrowingController.thrown = err;
+            const { status, body } = await requestThatThrows(err);
 
-            const server   = new ApplicationServer();
-            const request  = makeRequest();
-            const response = makeResponse();
-            await server.requestHandler('getProbe', ThrowingController)(request, response);
-
-            expect(response.statusCode).toBe(expectedStatus);
-            expect(Object.keys(response._body).sort()).toEqual(['data', 'status']);
-            expect(response.json).toHaveBeenCalledTimes(1);
-            expect(response.end).toHaveBeenCalledTimes(1);
+            expect(status).toBe(expectedStatus);
+            expect(Object.keys(body).sort()).toEqual(['data', 'status']);
+            expect(calls.json).toBe(1);
+            expect(calls.end).toBe(1);
         });
 
 
         it('maps every pinned status code to its statusText', async () => {
-            // serverController.js#statusText — the `status` half of the envelope.
+            // envelope.ts#statusText — the `status` half of the envelope.
             expect((await requestThatThrows(new AuthorizationError())).body.status).toBe('unauthorized');
             expect((await requestThatThrows(new ValidationError({}))).body.status).toBe('bad request');
             expect((await requestThatThrows(new Error('x'))).body.status).toBe('server error');

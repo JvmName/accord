@@ -1,18 +1,17 @@
 /**
- * Task 12 — envelope and error-mapping parity of the route registry.
+ * The response envelope and error rendering of the route registry.
  *
- *   1. Unit: `statusText` and the `_formatJSONBody` walk, verbatim legacy rules.
- *   2. GOLDENS: task-04 goldens whose bodies the registry itself produces
+ *   1. Unit: `statusText` and the `formatJSONBody` walk.
+ *   2. GOLDENS: contract goldens whose bodies the registry itself produces
  *      (validation 400s, gate 401/404/400s) are replayed over HTTP against the
  *      registry and must match status, content type and body exactly. Goldens
  *      whose bodies come from a handler (422s, 500, success envelopes) are
  *      replayed with a stub handler returning that golden's payload, which
- *      proves the envelope/status machinery (e.g. the F-21 status-less 422).
- *   3. DIFFERENTIAL: the four `handleError` branches, driven through the legacy
- *      `LegacyControllerDispatch#requestHandler` (the same harness as
- *      `test/characterization/errorMapping.test.js`) and through the registry,
- *      must render identical status + body for every case, plus a REAL SQLite
- *      unique violation raised through Drizzle (F-14 shape).
+ *      proves the envelope/status machinery (e.g. the status-less 422).
+ *   3. ERRORS: every error case in ./errorCases.js, thrown from a route
+ *      handler, must render the status and body of the `errorRendering`
+ *      snapshot fixture, plus a REAL SQLite unique violation raised through
+ *      Drizzle.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import fs from 'fs';
@@ -37,9 +36,8 @@ import {
 } from './support/registryApp';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const { LegacyControllerDispatch } = require('../../lib/server/applicationServer');
-const legacy = require('../../lib/server/serverController');
-const { makeRequest, makeResponse } = require('../helpers/express');
+const { ERROR_CASES } = require('./errorCases');
+const F = require('../support/frozen');
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 const GOLDENS = path.join(__dirname, '..', 'contract', 'goldens');
@@ -49,18 +47,18 @@ const golden = (name: string) => JSON.parse(fs.readFileSync(path.join(GOLDENS, `
 // 1. Unit
 // ---------------------------------------------------------------------------
 
-describe('envelope: statusText (serverController.js:149-162)', () => {
+describe('envelope: statusText', () => {
     it('maps exactly 200/400/401/404/500 and nothing else', () => {
         expect([200, 400, 401, 404, 500].map(statusText)).toEqual(['ok', 'bad request', 'unauthorized', 'not found', 'server error']);
         for (const code of [201, 204, 403, 409, 422, 503]) expect(statusText(code)).toBeUndefined();
     });
 
-    it('a 422 envelope serialises WITHOUT a status key (F-21)', () => {
+    it('a 422 envelope serialises WITHOUT a status key', () => {
         expect(JSON.stringify(envelopeFor(422, { errors: { matchId: ['x'] } }))).toBe('{"data":{"errors":{"matchId":["x"]}}}');
     });
 });
 
-describe('envelope: the _formatJSONBody walk', () => {
+describe('envelope: the formatJSONBody walk', () => {
     it('renders undefined as null at the top level, in objects and in arrays', () => {
         expect(formatJSONBody(undefined)).toBeNull();
         expect(formatJSONBody({ a: undefined, b: { c: undefined } })).toEqual({ a: null, b: { c: null } });
@@ -73,7 +71,7 @@ describe('envelope: the _formatJSONBody walk', () => {
         expect(formatJSONBody({ at: d, list: [d] })).toEqual({ at: '2026-01-02T03:04:05.678Z', list: ['2026-01-02T03:04:05.678Z'] });
     });
 
-    it('passes primitives and null through, and mutates objects in place like legacy', () => {
+    it('passes primitives and null through, and mutates objects in place', () => {
         expect([null, 0, '', false, 'x', 5].map(formatJSONBody)).toEqual([null, 0, '', false, 'x', 5]);
         const body = { a: undefined as unknown };
         expect(formatJSONBody(body)).toBe(body);
@@ -107,7 +105,7 @@ stubFromGolden('http.match.end.alreadyEnded.400', 'POST /match/:matchId/end',
     (async (ctx: any) => ctx.renderErrors({ matchId: ['this match has already ended'] })) as AnyRouteDefinition['handler']);
 stubFromGolden('http.users.create.objectName.500', 'POST /users',
     // The handler is reached ONLY because the runtime schema lets an object
-    // `name` through (presence check), as legacy did; the insert then fails.
+    // `name` through (presence check only); the insert then fails.
     (async (ctx: any) => {
         if (typeof ctx.body.name === 'object') throw new Error('string violation: name cannot be an array or an object');
         return {};
@@ -178,7 +176,7 @@ const GOLDEN_CASES: GoldenCase[] = [
     { golden: 'http.match.get.openRound', request: async w => ({ method: 'GET', path: `/match/${(await createStartedMatch(app.db, w)).id}`, token: w.creator.api_token }) },
 ];
 
-describe('envelope: task-04 goldens replayed through the registry', () => {
+describe('envelope: contract goldens replayed through the registry', () => {
     for (const c of GOLDEN_CASES) {
         it(`${c.golden}`, async () => {
             const g     = golden(c.golden);
@@ -201,19 +199,8 @@ describe('envelope: task-04 goldens replayed through the registry', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. Differential: handleError, legacy vs registry
+// 3. Errors thrown from a handler, against the snapshot
 // ---------------------------------------------------------------------------
-
-/** Legacy: one request through LegacyControllerDispatch#requestHandler (no DB access: no token/params). */
-async function legacyRender(err: unknown): Promise<{ status: number; body: unknown }> {
-    class ThrowingController extends legacy.ServerController {
-        async getProbe() { throw err; }
-    }
-    const server   = new LegacyControllerDispatch();
-    const response = makeResponse();
-    await server.requestHandler('getProbe', ThrowingController)(makeRequest(), response);
-    return { status: response.statusCode, body: JSON.parse(JSON.stringify(response._body)) };
-}
 
 const PROBE_PATH = '/__probe';
 let probeApp: RegistryApp;
@@ -239,48 +226,32 @@ async function registryRender(err: unknown): Promise<{ status: number; body: unk
     return { status: res.status, body: await res.json() };
 }
 
-type ErrorCase = { label: string; legacy: () => unknown; modern: () => unknown; status: number };
+const CLASSES = { AuthorizationError: NewAuthorizationError, ValidationError: NewValidationError };
+const recorded = () => F.readFixture('errorRendering').records;
 
-const ERROR_CASES: ErrorCase[] = [
-    { label: 'AuthorizationError', status: 401,
-      legacy: () => new legacy.AuthorizationError('super secret detail'), modern: () => new NewAuthorizationError('super secret detail') },
-    { label: 'a SUBCLASS of AuthorizationError (F-13: falls to 500)', status: 500,
-      legacy: () => new (class extends legacy.AuthorizationError {} as any)('nope'), modern: () => new (class extends NewAuthorizationError {})('nope') },
-    { label: 'ValidationError with errors', status: 400,
-      legacy: () => new legacy.ValidationError({ name: ['required'], judge_count: ['a', 'b'] }),
-      modern: () => new NewValidationError({ name: ['required'], judge_count: ['a', 'b'] }) },
-    { label: 'ValidationError({})', status: 400, legacy: () => new legacy.ValidationError({}), modern: () => new NewValidationError({}) },
-    { label: 'a SUBCLASS of ValidationError (F-13: falls to 500)', status: 500,
-      legacy: () => new (class extends legacy.ValidationError {} as any)({ a: ['b'] }), modern: () => new (class extends NewValidationError {})({ a: ['b'] }) },
-    { label: 'Sequelize-shaped unique error with parent (F-14)', status: 400,
-      legacy: () => ({ name: 'SequelizeUniqueConstraintError', errors: [{ path: 'code', message: 'code must be unique' }, { path: 'code', message: 'code is already taken' }, { path: 'name', message: 'name must be unique' }], parent: { message: 'SQLITE_CONSTRAINT: UNIQUE constraint failed: mat_codes.code' } }),
-      modern: () => ({ name: 'SequelizeUniqueConstraintError', errors: [{ path: 'code', message: 'code must be unique' }, { path: 'code', message: 'code is already taken' }, { path: 'name', message: 'name must be unique' }], parent: { message: 'SQLITE_CONSTRAINT: UNIQUE constraint failed: mat_codes.code' } }) },
-    { label: 'Sequelize-shaped unique error without parent', status: 400,
-      legacy: () => ({ name: 'SequelizeUniqueConstraintError', errors: [{ path: 'code', message: 'code must be unique' }] }),
-      modern: () => ({ name: 'SequelizeUniqueConstraintError', errors: [{ path: 'code', message: 'code must be unique' }] }) },
-    { label: 'generic Error', status: 500, legacy: () => new Error('boom'), modern: () => new Error('boom') },
-    { label: 'thrown non-Error object', status: 500, legacy: () => ({ name: 'NotAnError' }), modern: () => ({ name: 'NotAnError' }) },
-    { label: 'Error subclass', status: 500, legacy: () => new (class extends Error {})('unexpected'), modern: () => new (class extends Error {})('unexpected') },
-];
+describe('errors: rendering of a thrown error (snapshot)', () => {
+    it('the fixture holds exactly the error cases defined', () => {
+        expect([...recorded().keys()]).toEqual(ERROR_CASES.map((c: { label: string }) => c.label));
+    });
 
-describe('errors: handleError differential (legacy requestHandler vs registry)', () => {
-    for (const c of ERROR_CASES) {
-        it(`renders ${c.label} identically`, async () => {
-            const before = await legacyRender(c.legacy());
-            const after  = await registryRender(c.modern());
-            expect(after).toEqual(before);
+    for (const c of ERROR_CASES as Array<{ label: string; status: number; make: (k: typeof CLASSES) => unknown }>) {
+        it(`renders ${c.label} as recorded`, async () => {
+            const { key, ...expected } = recorded().get(c.label);
+            expect(key).toBe(c.label);
+            const after = await registryRender(c.make(CLASSES));
+            expect(after).toEqual(expected);
             expect(after.status).toBe(c.status);
         });
     }
 
-    it('agrees on the exact pinned bodies (errorMapping.test.js), not merely with each other', async () => {
+    it('records the exact pinned bodies, not merely agreement', async () => {
         expect(await registryRender(new Error('boom'))).toEqual({ status: 500, body: { data: { error: 'boom' }, status: 'server error' } });
-        expect(await legacyRender(new Error('boom'))).toEqual({ status: 500, body: { data: { error: 'boom' }, status: 'server error' } });
+        expect(recorded().get('generic Error')).toEqual({ key: 'generic Error', status: 500, body: { data: { error: 'boom' }, status: 'server error' } });
         expect(await registryRender({ name: 'NotAnError' })).toEqual({ status: 500, body: { data: { error: null }, status: 'server error' } });
         expect(await registryRender(new NewAuthorizationError())).toEqual({ status: 401, body: { data: null, status: 'unauthorized' } });
         expect(await registryRender(new NewValidationError({ name: ['required'] })))
             .toEqual({ status: 400, body: { data: { errors: { name: ['required'] } }, status: 'bad request' } });
-        expect((await legacyRender({ name: 'SequelizeUniqueConstraintError', errors: [{ path: 'code', message: 'm' }], parent: { message: 'p' } })).body)
+        expect(recorded().get('Sequelize-shaped unique error with short messages').body)
             .toEqual({ data: { errors: { code: ['m'], 'null': 'p' } }, status: 'bad request' });
     });
 
@@ -289,7 +260,7 @@ describe('errors: handleError differential (legacy requestHandler vs registry)',
     });
 });
 
-describe('errors: a REAL SQLite unique violation through Drizzle (F-14 shape)', () => {
+describe('errors: a REAL SQLite unique violation through Drizzle', () => {
     it('is detected behind DrizzleQueryError and rendered like the Sequelize branch', async () => {
         const world = await createWorld(probeApp.db);
         let err: unknown;

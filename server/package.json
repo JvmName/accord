@@ -6,6 +6,7 @@
         "start": "nodemon ./bin/www",
         "worker": "nodemon ./bin/worker",
         "test": "bun test --isolate",
+        "test:update-fixtures": "bun test/support/updateFrozen.js",
         "typecheck": "tsc --noEmit",
         "generate:openapi": "bun run bin/generate-openapi.ts",
         "db:create_migration": "./bin/migrate create_migration",

@@ -3,20 +3,10 @@
  *
  * Boots an actual `ApplicationServer` on a free port against a throwaway
  * SQLite database under $TMPDIR, so tests can drive the server the way a client
- * does — with `fetch` — rather than through internal classes.
+ * does, with `fetch`, rather than through internal classes.
  *
- * Used by test/characterization/authorization.test.js, whose whole point is to
- * state the authorization matrix WITHOUT coupling to `Authorizer`, so that the
- * same assertions still run after task 15 deletes that class.
- *
- * Two deliberate choices:
- *
- * 1. `DATABASE_PATH` is set before anything can open a connection, so
- *    `config/db/database.test.sqlite` is never touched.
- * 2. Migrations are applied by calling the migration modules directly instead
- *    of running `bin/migrate`, because `migration.runMigrations()` also calls
- *    `generateActiveRecordSchemaFiles()`, which REWRITES the tracked source
- *    file `config/db/schemas/default.js`. A test must not write to source.
+ * `DATABASE_PATH` is set before anything can open a connection, so the
+ * configured development and test databases are never touched.
  */
 const fs   = require('fs');
 const net  = require('net');
@@ -25,9 +15,9 @@ const path = require('path');
 
 
 /**
- * Point every connection at a fresh, empty SQLite file. MUST be called before
- * any model module opens a connection (connections are created lazily, so
- * "before the first query" is sufficient, but earliest is safest).
+ * Point every connection at a fresh, empty SQLite file. Must be called before
+ * anything opens a connection (connections open lazily, so "before the first
+ * query" is enough, but earliest is safest).
  */
 function useTemporaryDatabase(label = 'accord-char') {
     const file = path.join(
@@ -39,29 +29,15 @@ function useTemporaryDatabase(label = 'accord-char') {
 }
 
 
-/**
- * Applies every migration in version order.
- *
- * `fs.readdirSync` is NOT sorted under bun (FINDINGS.md F-04), and migrations
- * are order-dependent, so the explicit numeric sort here is load-bearing.
- */
+/** Creates the schema in the `DATABASE_PATH` database (the Drizzle migrations). */
 async function migrate() {
-    const { Migrator } = require('../../lib/activeRecord/db/migrator');
-    const   utils      = require('../../lib/activeRecord/utils');
-    const   versioning = require('../../lib/activeRecord/db/migrationVersion');
-
-    const migrations = fs.readdirSync(utils.migrationsDirectory)
-        .map(fileName => {
-            const m = fileName.match(/_(?<version>\d+)(\.(?<databaseId>\w+))?\.js$/);
-            return m ? { fileName, databaseId: m.groups.databaseId, version: m.groups.version } : null;
-        })
-        .filter(Boolean)
-        .sort((a, b) => parseInt(a.version) - parseInt(b.version));
-
-    for (const migration of migrations) {
-        if (await versioning.migrationHasRun(migration)) continue;
-        await Migrator.runMigration(migration);
-        await versioning.markVersionAsPerformed(migration);
+    const { createDb, migrateDb } = require('../../src/db');
+    if (!process.env.DATABASE_PATH) throw new Error('call useTemporaryDatabase() before migrate()');
+    const db = createDb({ path: process.env.DATABASE_PATH });
+    try {
+        migrateDb(db);
+    } finally {
+        db.$client.close();
     }
 }
 

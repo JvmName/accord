@@ -1,11 +1,8 @@
 /**
  * Global test setup, preloaded by `bunfig.toml`.
  *
- * Replaces Jest's `setupFilesAfterEach: ["jest-extended/all"]`.
- *
- * Only ONE jest-extended matcher is actually used by this suite:
- * `toHaveBeenCalledBefore` (8 uses in test/server/legacyControllerDispatch.test.js).
- * `bun:test` does not ship it, so it is re-implemented here with the same
+ * Adds `toHaveBeenCalledBefore` (used by the worker characterization tests).
+ * `bun:test` does not ship it, so it is implemented here with the same
  * semantics as jest-extended: compare the FIRST invocation order of each mock.
  * Every other matcher in use is core Jest and is natively supported by bun.
  */

@@ -1,55 +1,59 @@
 /**
- * CHARACTERIZATION — `MatCode.CODE_REGEXP` code-vs-UUID discrimination.
+ * CHARACTERIZATION — `CODE_REGEXP` code-vs-UUID discrimination.
  *
- * `serverController.js#initCurrentMat` uses this regexp to decide whether the
- * `:matId` path segment of `GET /mat/:matId` is a word-code
- * ("morning.coffee.bicycle") or a primary key. A regression here silently
- * misroutes every mat lookup, so both the regexp itself and the branch it
- * drives are pinned.
- *
- * Consumed by task 12 (the request-state middleware that replaces
- * `#initCurrentMat`).
+ * Request-state resolution (`src/http/middleware/requestState.ts`) uses this
+ * regexp to decide whether the `:matId` path segment of `GET /mat/:matId` is a
+ * word code ("morning.coffee.bicycle") or a primary key. A regression here
+ * silently misroutes every mat lookup, so both the regexp itself and the
+ * branch it drives are pinned.
  *
  * NOTE (fidelity, not correctness): the regexp is UNANCHORED and built from
  * `\w`, so it matches anywhere in the string and accepts underscores and
  * digits. Both properties are asserted below because they are current
- * behavior, not because they are desirable. See FINDINGS.md F-12.
+ * behavior, not because they are desirable.
+ *
+ * The branch is observed on a real database with decoys: a mat whose id is
+ * the code string itself, and a mat code whose code is the UUID string, so a
+ * lookup down the wrong branch finds the decoy instead of the expected mat.
  */
-const { afterEach, beforeEach, describe, expect, it, jest, mock } = require('bun:test');
+const { afterAll, beforeAll, describe, expect, it } = require('bun:test');
+const { createDb, migrateDb, schema } = require('../../src/db');
+const MatCodes = require('../../src/domain/matCode');
+const { resolveRequestState } = require('../../src/http/middleware/requestState');
 
-// bun's mock.module() does not hoist (FINDINGS.md F-09.1) — these must precede
-// the require() of the module under test.
-const { MatCode: RealMatCode } = require('../../models/matCode');
+const UUID = '550e8400-e29b-41d4-a716-446655440000';
+const STAMPS = { created_at: new Date(0), updated_at: new Date(0) };
 
-const matCodeDouble = {
-    ROLES:       RealMatCode.ROLES,
-    CODE_REGEXP: RealMatCode.CODE_REGEXP,   // the real regexp, deliberately
-    findByCode:  jest.fn(),
-};
-const matDouble  = { find: jest.fn() };
-const userDouble = { findByApiToken: jest.fn() };
+let db;
 
-mock.module('../../models/matCode', () => ({ MatCode: matCodeDouble }));
-mock.module('../../models/mat',     () => ({ Mat:     matDouble     }));
-mock.module('../../models/user',    () => ({ User:    userDouble    }));
-mock.module('../../models/match',   () => ({ Match:   { find: jest.fn() } }));
+beforeAll(async () => {
+    db = createDb({ path: ':memory:' });
+    migrateDb(db);
+    await db.insert(schema.mats).values([
+        { id: 'mat-1', name: 'Mat 1', creator_id: 'u', ...STAMPS },
+        { id: UUID, name: 'Mat by id', creator_id: 'u', ...STAMPS },
+        // decoys: a mat whose primary key IS a code string
+        { id: 'morning.coffee.bicycle', name: 'decoy: id is a code', creator_id: 'u', ...STAMPS },
+        { id: 'no.such.code', name: 'decoy: id is an unknown code', creator_id: 'u', ...STAMPS },
+    ]);
+    await db.insert(schema.mat_codes).values([
+        { id: 'c1', mat_id: 'mat-1', code: 'morning.coffee.bicycle', role: 'admin', ...STAMPS },
+        { id: 'c2', mat_id: 'mat-1', code: 'a.b.c', role: 'viewer', ...STAMPS },
+        // decoy: a mat code whose code IS the UUID
+        { id: 'c3', mat_id: 'mat-1', code: UUID, role: 'other', ...STAMPS },
+    ]);
+});
 
-const { ServerController } = require('../../lib/server/serverController');
-const { makeRequest, makeResponse } = require('../helpers/express');
+afterAll(() => db?.$client.close());
 
-
-class ProbeController extends ServerController {}
-
-
-async function setupRequestStateFor(matId) {
-    const controller = new ProbeController(makeRequest({ params: { matId } }), makeResponse());
-    await controller.setupRequestState();
-    return controller;
+/** Request state for a request with these path params and nothing else. */
+function setupRequestStateFor(params) {
+    return resolveRequestState(db, { headers: {}, params, body: {}, query: {} }, { scope: 'mat', level: 'view' });
 }
 
 
-describe('CHARACTERIZATION: MatCode.CODE_REGEXP', () => {
-    const CODE_REGEXP = RealMatCode.CODE_REGEXP;
+describe('CHARACTERIZATION: CODE_REGEXP', () => {
+    const CODE_REGEXP = MatCodes.CODE_REGEXP;
 
     describe('the regexp itself', () => {
         it('is exactly /\\w+\\.\\w+\\.\\w+/', () => {
@@ -64,7 +68,7 @@ describe('CHARACTERIZATION: MatCode.CODE_REGEXP', () => {
 
 
         it('matches codes containing generated multi-word entries joined with _', () => {
-            // WordGenerator replaces whitespace with '_', e.g. "blue whale".
+            // The word generator replaces whitespace with '_', e.g. "blue whale".
             expect(CODE_REGEXP.test('blue_whale.manta_ray.sea_urchin')).toBe(true);
         });
 
@@ -95,64 +99,38 @@ describe('CHARACTERIZATION: MatCode.CODE_REGEXP', () => {
     });
 
 
-    describe('the branch it drives in ServerController#initCurrentMat', () => {
-        beforeEach(() => {
-            matDouble.find.mockReset();
-            matCodeDouble.findByCode.mockReset();
-            userDouble.findByApiToken.mockReset();
-        });
+    describe('the branch it drives in request-state resolution', () => {
+        it('resolves a word-code :matId through the mat-code lookup, not the mat lookup', async () => {
+            const state = await setupRequestStateFor({ matId: 'morning.coffee.bicycle' });
 
-        afterEach(() => { jest.clearAllMocks(); });
-
-
-        it('resolves a word-code :matId through MatCode.findByCode, not Mat.find', async () => {
-            const mat = { id: 'mat-1' };
-            matCodeDouble.findByCode.mockResolvedValue({ mat_id: 'mat-1', getMat: async () => mat });
-
-            const controller = await setupRequestStateFor('morning.coffee.bicycle');
-
-            expect(matCodeDouble.findByCode).toHaveBeenCalledWith('morning.coffee.bicycle');
-            expect(matDouble.find).not.toHaveBeenCalled();
-            expect(controller.currentMat).toBe(mat);
-            expect(controller.currentMatCode).not.toBeNull();
+            expect(state.currentMatCode?.code).toBe('morning.coffee.bicycle');
+            expect(state.currentMat?.id).toBe('mat-1');      // not the decoy mat with that id
+            expect(state.currentMatCode).not.toBeNull();
         });
 
 
-        it('resolves a UUID :matId through Mat.find, not MatCode.findByCode', async () => {
-            const mat = { id: '550e8400-e29b-41d4-a716-446655440000' };
-            matDouble.find.mockResolvedValue(mat);
+        it('resolves a UUID :matId through the mat lookup, not the mat-code lookup', async () => {
+            const state = await setupRequestStateFor({ matId: UUID });
 
-            const controller = await setupRequestStateFor('550e8400-e29b-41d4-a716-446655440000');
-
-            expect(matDouble.find).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-446655440000');
-            expect(matCodeDouble.findByCode).not.toHaveBeenCalled();
-            expect(controller.currentMat).toBe(mat);
-            expect(controller.currentMatCode).toBeNull();
+            expect(state.currentMat?.id).toBe(UUID);
+            expect(state.currentMat?.name).toBe('Mat by id'); // not mat-1 through the decoy code
+            expect(state.currentMatCode).toBeNull();
         });
 
 
-        it('leaves currentMat null when a word-code resolves to no MatCode', async () => {
-            matCodeDouble.findByCode.mockResolvedValue(null);
+        it('leaves currentMat null when a word-code resolves to no mat code', async () => {
+            const state = await setupRequestStateFor({ matId: 'no.such.code' });
 
-            const controller = await setupRequestStateFor('no.such.code');
-
-            expect(controller.currentMat).toBeNull();
-            expect(controller.currentMatCode).toBeNull();
+            expect(state.currentMat).toBeNull();               // the decoy mat with that id is never looked up
+            expect(state.currentMatCode).toBeNull();
         });
 
 
         it('prefers an explicit matCode param over the matId branch entirely', async () => {
-            const mat = { id: 'mat-1' };
-            matCodeDouble.findByCode.mockResolvedValue({ mat_id: 'mat-1', getMat: async () => mat });
+            const state = await setupRequestStateFor({ matCode: 'a.b.c', matId: UUID });
 
-            const controller = new ProbeController(
-                makeRequest({ params: { matCode: 'a.b.c', matId: '550e8400-e29b-41d4-a716-446655440000' } }),
-                makeResponse(),
-            );
-            await controller.setupRequestState();
-
-            expect(matCodeDouble.findByCode).toHaveBeenCalledWith('a.b.c');
-            expect(matDouble.find).not.toHaveBeenCalled();
+            expect(state.currentMatCode?.code).toBe('a.b.c');
+            expect(state.currentMat?.id).toBe('mat-1');      // not the mat whose id is matId
         });
     });
 });

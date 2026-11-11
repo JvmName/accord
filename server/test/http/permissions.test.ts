@@ -1,140 +1,50 @@
 /**
- * Task 12 — DIFFERENTIAL test of the ported permission rules
- * (`src/http/permissions.ts`) against the legacy `lib/server/authorizer.js`.
- *
- * Both are evaluated over the full grid of
+ * The permission rules (`src/http/permissions.ts`) over the full grid of
  *     subject (user x mat code) x scope (every kind, incl. null) x action (every known + unknown)
- * and must agree on every cell (grant/deny, or both throwing the same error).
- * The legacy side gets Sequelize model INSTANCES (its dispatch reads
- * `scope.constructor.name`, F-53); the new side gets plain rows with the scope
- * kind made explicit, and relationship reads through `PermissionLoaders`
- * returning the same data the legacy instances return.
- *
- * Also restates `test/server/authorizer.test.js` (which dies with the class in
- * task 15) against the new module, grants AND denies.
+ * against the `permissions` snapshot fixture (grant, deny, or the thrown
+ * error, per cell; see ./permissionGrid.js), then the individual rules
+ * restated case by case, grants AND denies.
  */
 import { describe, expect, it } from 'bun:test';
 import type { Mat, MatCode, Match, User } from '../../src/db/types';
-import { can, type PermissionLoaders, type Scope, type Subject } from '../../src/http/permissions';
+import { can, type PermissionLoaders, type Subject } from '../../src/http/permissions';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const { Authorizer }        = require('../../lib/server/authorizer');
-const { Mat: LegacyMat }    = require('../../models/mat');
-const { Match: LegacyMatch } = require('../../models/match');
-const { MatCode: LegacyMatCode } = require('../../models/matCode');
-const { User: LegacyUser }  = require('../../models/user');
+const G = require('./permissionGrid');
+const F = require('../support/frozen');
 /* eslint-enable @typescript-eslint/no-require-imports */
 
-// ---------------------------------------------------------------------------
-// The world, in plain data.
-// ---------------------------------------------------------------------------
-
-const USERS = { creator: 'u-creator', judge: 'u-judge', other: 'u-other', creator2: 'u-creator2' } as const;
-const MATS  = { mat1: { id: 'mat-1', creator_id: USERS.creator }, mat2: { id: 'mat-2', creator_id: USERS.creator2 } };
-
-const MATCHES = {
-    // started match on mat1, judged by `judge`
-    matchA: { id: 'match-a', mat_id: MATS.mat1.id, judges: [USERS.judge] },
-    // match on mat2 with no judges
-    matchB: { id: 'match-b', mat_id: MATS.mat2.id, judges: [] as string[] },
-    // match whose mat row is missing (impossible through the API): `manage` throws on both sides
-    matchOrphan: { id: 'match-orphan', mat_id: 'mat-missing', judges: [USERS.judge] },
-} as const;
-
-const MAT_CODES = {
-    none:        null,
-    mat1Admin:   { mat_id: MATS.mat1.id, role: 'admin' },
-    mat1Viewer:  { mat_id: MATS.mat1.id, role: 'viewer' },
-    mat2Admin:   { mat_id: MATS.mat2.id, role: 'admin' },
-    mat2Viewer:  { mat_id: MATS.mat2.id, role: 'viewer' },
-    mat1OddRole: { mat_id: MATS.mat1.id, role: 'ADMIN' },
-} as const;
-
-const SUBJECT_USERS = { anonymous: null, ...USERS } as const;
-
-const ACTIONS = ['assign', 'create a match', 'create', 'be assigned judge', 'view', 'judge', 'manage', 'pause', 'bogus'] as const;
-
-type ScopeCase = { label: string; legacy: () => unknown; modern: () => Scope };
-
-const matById = (id: string) => Object.values(MATS).find(m => m.id === id) ?? null;
-
-function legacyMatch(m: { id: string; mat_id: string; judges: readonly string[] }) {
-    const match = new LegacyMatch({ id: m.id, mat_id: m.mat_id });
-    match.getJudges = async () => m.judges.map(id => new LegacyUser({ id }));
-    match.getMat    = async () => { const mat = matById(m.mat_id); return mat ? new LegacyMat(mat) : null; };
-    return match;
-}
-
-const SCOPES: ScopeCase[] = [
-    ...['test', 'authenticated', 'unauthenticated', 'something-else', ''].map((value): ScopeCase => ({
-        label: `string '${value}'`, legacy: () => value, modern: () => ({ kind: 'string', value }),
-    })),
-    { label: 'Mat class', legacy: () => LegacyMat, modern: () => ({ kind: 'matClass' }) },
-    { label: 'mat null', legacy: () => null, modern: () => ({ kind: 'mat', mat: null }) },
-    ...Object.entries(MATS).map(([label, mat]): ScopeCase => ({
-        label, legacy: () => new LegacyMat(mat), modern: () => ({ kind: 'mat', mat: mat as unknown as Mat }),
-    })),
-    { label: 'match null', legacy: () => null, modern: () => ({ kind: 'match', match: null }) },
-    ...Object.entries(MATCHES).map(([label, m]): ScopeCase => ({
-        label, legacy: () => legacyMatch(m), modern: () => ({ kind: 'match', match: { id: m.id, mat_id: m.mat_id } as unknown as Match }),
-    })),
-    { label: 'user null', legacy: () => null, modern: () => ({ kind: 'user', user: null }) },
-    { label: 'user other', legacy: () => new LegacyUser({ id: USERS.other }), modern: () => ({ kind: 'user', user: { id: USERS.other } as unknown as User }) },
-];
+const { USERS, MATS, MATCHES, MAT_CODES } = G;
 
 const loaders: PermissionLoaders = {
-    matchJudges: async match => Object.values(MATCHES).find(m => m.id === match.id)!.judges.map(id => ({ id })),
-    matchMat:    async match => matById(match.mat_id),
+    matchJudges: async match => (Object.values(MATCHES) as Array<{ id: string; judges: string[] }>).find(m => m.id === match.id)!.judges.map(id => ({ id })) as never,
+    matchMat:    async match => G.matById(match.mat_id),
 };
 
-async function outcome(fn: () => Promise<unknown>): Promise<string> {
-    try {
-        return Boolean(await fn()) ? 'GRANT' : 'deny';
-    } catch (err) {
-        return `THROW ${(err as Error)?.constructor?.name}: ${(err as Error)?.message}`;
-    }
-}
-
-describe('permissions: differential against the legacy Authorizer', () => {
+describe('permissions: the full grid against the snapshot', () => {
     it('agrees on every (subject x scope x action) cell', async () => {
+        const fixture = F.readFixture('permissions');
+        const actual: Array<{ key: string }> = await G.recordGrid(G.currentRules());
+        expect(actual.map(r => r.key)).toEqual([...fixture.records.keys()]);
         const mismatches: string[] = [];
-        let cells = 0;
-        let grants = 0;
-        let denies = 0;
-
-        for (const [userLabel, userId] of Object.entries(SUBJECT_USERS)) {
-            for (const [codeLabel, code] of Object.entries(MAT_CODES)) {
-                const legacyAuthorizer = new Authorizer(
-                    userId ? new LegacyUser({ id: userId }) : null,
-                    code ? new LegacyMatCode(code) : undefined,
-                );
-                const subject: Subject = {
-                    user:    userId ? ({ id: userId } as unknown as User) : null,
-                    matCode: code ? (code as unknown as MatCode) : null,
-                };
-
-                for (const scope of SCOPES) {
-                    for (const action of ACTIONS) {
-                        cells++;
-                        const legacy = await outcome(() => legacyAuthorizer.can(action, scope.legacy()));
-                        const modern = await outcome(() => can(subject, action as never, scope.modern(), loaders));
-                        if (legacy === 'GRANT') grants++;
-                        if (legacy === 'deny') denies++;
-                        if (legacy !== modern) mismatches.push(`${userLabel}/${codeLabel} ${action} on ${scope.label}: legacy=${legacy} new=${modern}`);
-                    }
-                }
-            }
+        for (const record of actual) {
+            const recorded = fixture.records.get(record.key);
+            if (JSON.stringify(F.asStored(record)) !== JSON.stringify(recorded)) mismatches.push(`${record.key}: now ${JSON.stringify(record)} recorded ${JSON.stringify(recorded)}`);
         }
-
         expect(mismatches).toEqual([]);
+
         // The grid must exercise both answers heavily, or agreement means nothing.
-        expect(cells).toBe(Object.keys(SUBJECT_USERS).length * Object.keys(MAT_CODES).length * SCOPES.length * ACTIONS.length);
-        expect(grants).toBeGreaterThan(200);
-        expect(denies).toBeGreaterThan(200);
+        const axes = fixture.records.get('axes');
+        const cells = [...fixture.records.values()].filter(r => r.key !== 'axes').flatMap(r => r.rows as string[]).join('');
+        expect(cells.length).toBe(G.CELLS);
+        expect(cells.length).toBe(axes.users.length * axes.codes.length * axes.scopes.length * axes.actions.length);
+        expect(cells.length).toBe(4050);
+        expect([...cells].filter(c => c === 'G').length).toBeGreaterThan(200);
+        expect([...cells].filter(c => c === 'd').length).toBeGreaterThan(200);
     });
 });
 
-describe('permissions: authorizer.test.js restated against the new module', () => {
+describe('permissions: each rule, grants and denies', () => {
     const subject = (user: string | null, code: (typeof MAT_CODES)[keyof typeof MAT_CODES] = null): Subject => ({
         user: user ? ({ id: user } as unknown as User) : null,
         matCode: code as unknown as MatCode | null,
@@ -182,7 +92,7 @@ describe('permissions: authorizer.test.js restated against the new module', () =
         expect(await can(subject(null), 'manage', matchA, loaders)).toBe(false);
     });
 
-    it('match pause PERMISSION: creator or judge (the route never reaches the judge branch, F-11)', async () => {
+    it('match pause PERMISSION: creator or judge (the route never reaches the judge branch)', async () => {
         expect(await can(subject(USERS.creator), 'pause', matchA, loaders)).toBe(true);
         expect(await can(subject(USERS.judge), 'pause', matchA, loaders)).toBe(true);
         expect(await can(subject(USERS.other), 'pause', matchA, loaders)).toBe(false);

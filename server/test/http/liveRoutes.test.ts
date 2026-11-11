@@ -8,8 +8,8 @@
  *     development, all of them in development);
  *   - every route is served by the route registry's chain, ending in its own
  *     error handler.
- * It also checks that the routes and the Sequelize models use the same
- * database file.
+ * It also checks that the server opens the `DATABASE_PATH` file, the one
+ * every other process (the worker, migrations) opens.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import fs from 'fs';
@@ -97,7 +97,7 @@ describe('live route table', () => {
     });
 });
 
-describe('one database file for both stacks', () => {
+describe('one database file for every connection', () => {
     let booted: any;
 
     beforeAll(async () => {
@@ -107,26 +107,29 @@ describe('one database file for both stacks', () => {
 
     afterAll(() => booted?.server.close());
 
-    it('opens the Drizzle database lazily, at the same path Sequelize uses', async () => {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { Connection } = require('../../lib/activeRecord/db/connection');
+    it('opens the database lazily, at DATABASE_PATH, and shares it with any other connection to that file', async () => {
         const request = Http.makeClient(booted.origin);
 
         const created = await request('POST', '/users', { body: { name: 'same file' } });
         expect(created.status).toBe(200);
 
         expect(booted.server.db.$client.filename).toBe(databaseFile);
-        expect(new Connection().sequelizeOptions.storage).toBe(databaseFile);
+        expect(process.env.DATABASE_PATH).toBe(databaseFile);
 
-        // A row the registry wrote is visible to the legacy models, and the reverse.
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { User } = require('../../models/user');
-        const legacyView = await User.findByApiToken(created.body.data.api_token);
-        expect(legacyView?.id).toBe(created.body.data.user.id);
+        // A row the server wrote is visible to a second connection, and the reverse.
+        const other = createDb({ path: databaseFile });
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const Users = require('../../src/db/repositories/users');
+            const seen = await Users.findUserByApiToken(other, created.body.data.api_token);
+            expect(seen?.id).toBe(created.body.data.user.id);
 
-        const legacyUser = await User.create({ name: 'from sequelize' });
-        const viaRegistry = await request('POST', '/mats', { token: legacyUser.api_token, body: { name: 'Mat' } });
-        expect(viaRegistry.status).toBe(200);
-        expect(viaRegistry.body.data.mat.creator_id).toBe(legacyUser.id);
+            const outside = await Users.insertUser(other, { name: 'from another connection' });
+            const viaServer = await request('POST', '/mats', { token: outside.api_token, body: { name: 'Mat' } });
+            expect(viaServer.status).toBe(200);
+            expect(viaServer.body.data.mat.creator_id).toBe(outside.id);
+        } finally {
+            other.$client.close();
+        }
     });
 });

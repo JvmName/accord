@@ -1,33 +1,31 @@
 const { afterAll, beforeAll, describe, expect, it, setSystemTime } = require('bun:test');
 /**
- * GOLDEN EQUIVALENCE (server-ts task 11): the new mappers, fed by Drizzle reads,
+ * GOLDEN EQUIVALENCE: the mappers (src/serialize), fed by Drizzle reads,
  * reproduce every captured HTTP/WS payload that renders a User, Mat, Match or
  * Round, field for field, absent-vs-null included.
  *
- * How: this file REPLAYS the task-04 capture plan against the real legacy
- * server, on a temp DB created by the LEGACY migrations and seeded through
- * `test/contract/seed.ts` (exactly as `contract.test.js` does), with the clock
- * frozen at the capture instant (`NOW`). The plan order is read from
- * `capture.ts` itself and each request is rebuilt from its golden. Right
- * after each response, the same rows are read back through the task-10
- * repositories (Drizzle, a second connection to the same file) and rendered
- * by `src/serialize` with the route's legacy render options. The result is
- * normalised with a copy of the capture normaliser and compared,
- * byte-for-byte as canonical JSON, to the committed golden. Legacy writes
- * every mutation; the mappers only ever see the resulting rows.
+ * How: this file REPLAYS the contract capture plan against the real server, on
+ * a temp DB seeded by `test/contract/seed.ts` (exactly as `contract.test.js`
+ * does), with the clock frozen at the capture instant (`NOW`). The plan order
+ * is read from `capture.ts` itself and each request is rebuilt from its golden.
+ * Right after each response, the same rows are read back through the
+ * repositories (a second connection to the same file) and rendered by
+ * `src/serialize` with the route's render options. The result is normalised
+ * with a copy of the capture normaliser and compared, byte-for-byte as
+ * canonical JSON, to the committed golden.
  *
- * The WebSocket goldens are replayed the same way by running the four real
+ * The WebSocket goldens are replayed the same way by running the four
  * workers' `performJob()` in capture order, with `notifyServer` captured
- * instead of emitted, and rendering with the F-22 `serializeLeaked*` mappers.
+ * instead of emitted, and rendering with the `serializeLeaked*` mappers (the
+ * WebSocket payloads still carry the competitors' full user rows).
  *
- * The Sequelize stack is never pointed at a Drizzle-baseline DB (F-47); no
- * real sqlite file is touched (`DATABASE_PATH` is a temp file).
+ * No real sqlite file is touched (`DATABASE_PATH` is a temp file).
  */
 const fs   = require('fs');
 const path = require('path');
 const Http = require('../helpers/httpServer');
 
-// Must happen before any model module opens a connection.
+// Must happen before anything opens a connection.
 const previousDatabasePath = process.env.DATABASE_PATH;
 const file = Http.useTemporaryDatabase('accord-serialize-golden');
 
@@ -79,7 +77,7 @@ async function matGraph(id) {
 
 /**
  * The route's success payload, rendered by the NEW mappers from Drizzle rows.
- * `live` is the legacy response body; only entity ids are taken from it (and
+ * `live` is the server's response body; only entity ids are taken from it (and
  * the mat code from the request path). Render options are the controllers'.
  */
 const MATCH_ALL   = { includeMat: true, includeMatchJudges: true, includeRounds: true };
@@ -161,7 +159,7 @@ async function replayHttp(origin) {
             route:       golden.route,
             status:      res.status,
             goldenStatus: golden.response.status,
-            // Replay fidelity: legacy's live body, normalised by the copied normaliser, IS the golden.
+            // Replay fidelity: the live body, normalised by the copied normaliser, IS the golden.
             liveMatchesGolden: canonical(normalizeHttp(routePath, requestBody, live)) === canonical(golden.response.body),
             rendered: null,
         };
@@ -186,9 +184,9 @@ async function replayHttp(origin) {
 
 async function replayWebSocket(port) {
     const { IDS } = seedModule;
-    const { MatchUpdateWorker }     = require('../../lib/workerQueue/matchUpdateWorker');
-    const { TechFallTrackerWorker } = require('../../lib/workerQueue/techFallTrackerWorker');
-    const { BreakTransitionWorker } = require('../../lib/workerQueue/breakTransitionWorker');
+    const { MatchUpdateWorker }     = require('../../src/workers/matchUpdateWorker');
+    const { TechFallTrackerWorker } = require('../../src/workers/techFallTrackerWorker');
+    const { BreakTransitionWorker } = require('../../src/workers/breakTransitionWorker');
 
     // capture.ts's observe() order, one fresh worker each. notifyServer is
     // captured instead of emitted; socket.io JSON-encodes, hence the round trip.
@@ -201,13 +199,13 @@ async function replayWebSocket(port) {
     for (const [name, key, WorkerCls, event, options] of plan) {
         const matchId = IDS[key];
         const emitted = [];
-        const worker  = new WorkerCls('contract-capture-worker', { port, host: '127.0.0.1' });
+        const worker  = new WorkerCls('contract-capture-worker', { port, host: '127.0.0.1', db });
         worker.notifyServer = (ev, payload) => emitted.push({ event: ev, payload: JSON.parse(JSON.stringify(payload)) });
         await worker.performJob();
         worker.close();
 
         const golden = readGolden(name);
-        const legacyEvent = emitted.find((e) => e.event === event && e.payload && e.payload.id === matchId);
+        const workerEvent = emitted.find((e) => e.event === event && e.payload && e.payload.id === matchId);
 
         const normalizeWs = (payload) => {
             const dyn = new N.DynamicNames();
@@ -220,8 +218,8 @@ async function replayWebSocket(port) {
         const schema = socketPayloads[event].safeParse(payload);
         results.ws.push({
             name,
-            legacyEmitted:     Boolean(legacyEvent),
-            liveMatchesGolden: Boolean(legacyEvent) && canonical(normalizeWs(legacyEvent.payload)) === canonical(golden.payload),
+            workerEmitted:     Boolean(workerEvent),
+            liveMatchesGolden: Boolean(workerEvent) && canonical(normalizeWs(workerEvent.payload)) === canonical(golden.payload),
             schemaOk:          schema.success,
             actual:            canonical(normalizeWs(JSON.parse(JSON.stringify(payload)))),
             expected:          canonical(golden.payload),
@@ -257,7 +255,7 @@ describe('GOLDEN EQUIVALENCE: src/serialize over Drizzle rows == the committed g
         expect(results.http.map((r) => r.name).sort()).toEqual(onDisk);
     });
 
-    it('the replay is faithful: legacy answers every request exactly as captured (status and normalised body)', () => {
+    it('the replay is faithful: the server answers every request exactly as captured (status and normalised body)', () => {
         const drift = results.http.filter((r) => r.status !== r.goldenStatus || !r.liveMatchesGolden).map((r) => r.name);
         expect(drift).toEqual([]);
     });
@@ -283,10 +281,10 @@ describe('GOLDEN EQUIVALENCE: src/serialize over Drizzle rows == the committed g
         expect(mismatched).toEqual([]);
     });
 
-    it('WebSocket: the legacy workers emitted what was captured, and serializeLeakedMatch reproduces all four ws.* goldens', () => {
+    it('WebSocket: the workers emitted what was captured, and serializeLeakedMatch reproduces all four ws.* goldens', () => {
         expect(results.ws.map((r) => r.name)).toEqual(['ws.match.update.openRound', 'ws.match.update.inBreak', 'ws.round.techFall', 'ws.break.ended']);
         for (const r of results.ws) {
-            expect({ name: r.name, emitted: r.legacyEmitted, live: r.liveMatchesGolden, schema: r.schemaOk })
+            expect({ name: r.name, emitted: r.workerEmitted, live: r.liveMatchesGolden, schema: r.schemaOk })
                 .toEqual({ name: r.name, emitted: true, live: true, schema: true });
             expect({ name: r.name, payload: JSON.parse(r.actual) }).toEqual({ name: r.name, payload: JSON.parse(r.expected) });
             expect(r.actual).toBe(r.expected);

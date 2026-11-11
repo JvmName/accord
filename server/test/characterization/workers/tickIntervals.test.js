@@ -1,35 +1,22 @@
 /**
  * CHARACTERIZATION — worker tick cadence.
  *
- * Pins `requeueInterval` for ALL FOUR workers so task 14 cannot quietly change
- * how often they run:
+ * Pins `requeueInterval` for all four workers so a change to how often they
+ * run cannot slip through unnoticed:
  *
  *   MatchUpdateWorker      250ms   (overridden)
  *   TechFallTrackerWorker  1000ms  (inherited default)
  *   BreakTransitionWorker  1000ms  (inherited default)
  *   RoundTimerWorker       1000ms  (inherited default)
  *
- * `test/workerQueue/matchUpdateWorker.test.js` covers MatchUpdateWorker's
- * broadcast throttling thoroughly but never asserts its interval, so the 250ms
- * figure is pinned here rather than duplicated there.
- *
  * Also pins the scheduling contract itself (setTimeout-driven re-queue, and
  * `close()` stopping it), because the cadence is only meaningful if the loop
  * behaves this way.
- *
- * Consumed by task 14.
  */
 const { afterEach, beforeEach, describe, expect, it, jest, mock } = require('bun:test');
 
-// bun's mock.module() does NOT hoist (F-09.1); bare specifiers no-op (F-09.2).
-mock.module('../../../models/round', () => ({ Round: { getOpenRounds: jest.fn().mockResolvedValue([]) } }));
-mock.module('../../../models/match', () => ({
-    Match: {
-        where: jest.fn().mockResolvedValue([]),
-        find:  jest.fn(),
-        get Operators() { return { ne: Symbol('ne') }; },
-    },
-}));
+// bun's mock.module() does not hoist, and a bare package name is silently
+// ignored, so the mocks come before the requires and use file paths.
 mock.module(require.resolve('socket.io-client'), () => ({ io: jest.fn(() => ({ on: jest.fn(), emit: jest.fn(), close: jest.fn() })) }));
 mock.module('../../../lib/logger', () => ({ logger: { debug: jest.fn(), info: jest.fn(), error: jest.fn() } }));
 

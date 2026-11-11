@@ -1,13 +1,11 @@
 /**
- * Shared setup for the repository tests (server-ts task 10). Not a test file.
+ * Shared setup for the repository tests. Not a test file.
  *
  * Every DB is an in-memory bun:sqlite database built by applying ./drizzle
- * through the real migrator — no mocks, no real sqlite file touched.
+ * through the real migrator: no mocks, no real sqlite file touched.
  *
  * Ids and codes mirror `test/contract/seed.ts` (IDS / CODES) so the two
- * fixture sets read alike. seed.ts itself is NOT required here: it loads the
- * Sequelize models, which open the configured legacy DB file. Only the
- * differential test uses it, against a temp legacy-migrated DB.
+ * fixture sets read alike; these tests build smaller graphs of their own.
  */
 const { createDb, migrateDb, schema } = require('../../../src/db');
 
