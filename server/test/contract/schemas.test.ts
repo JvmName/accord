@@ -22,7 +22,7 @@ import { z } from 'zod';
 
 import {
     errorEnvelopeSchema,
-    leakedMatchSchema,
+    matchSchema,
     routeResponses,
     socketEventSchema,
     socketPayloads,
@@ -214,7 +214,7 @@ describe('contract schemas — optionality is not accidentally loose', () => {
             .success).toBe(true);
     });
 
-    it('rejects a competitor api_token on the HTTP Match (F-22 stays WebSocket-only)', () => {
+    it('rejects a competitor api_token on a Match, over HTTP and WebSocket (F-22)', () => {
         const match = baseMatch();
         const leaky = {
             ...match,
@@ -223,14 +223,10 @@ describe('contract schemas — optionality is not accidentally loose', () => {
         expect(routeResponses['GET /match/{matchId}']
             .safeParse({ data: { match: leaky }, status: 'ok' }).success).toBe(false);
 
-        // …while the WebSocket schema requires it, because the server sends it.
+        // The WebSocket payload is the same Match shape.
         const wsPayload = readGolden('ws.match.update.openRound.json').payload;
-        expect(leakedMatchSchema.safeParse(wsPayload).success).toBe(true);
-        const { api_token, ...strippedCompetitor } = wsPayload.red_competitor;
-        expect(
-            leakedMatchSchema.safeParse({ ...wsPayload, red_competitor: strippedCompetitor })
-                .success,
-        ).toBe(false);
+        expect(matchSchema.safeParse(wsPayload).success).toBe(true);
+        expect(matchSchema.safeParse({ ...wsPayload, red_competitor: { ...wsPayload.red_competitor, api_token: 'leaked' } }).success).toBe(false);
     });
 
     it('accepts a 422 error envelope with no status key (F-21)', () => {

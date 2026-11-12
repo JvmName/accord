@@ -32,14 +32,13 @@ beforeAll(async () => {
     migrateDb(db);
     db.$client.close();
 
-    const started = await Http.startServer();
+    const started = await Http.startServer({ serverOptions: { workerToken: 'modules-test' } });
     server = started.server;
 
     const { io } = require('socket.io-client');
+    // The database has no users, so the handshake is refused; that still runs the client path of the tier.
     const client = io(started.origin, { auth: { apiToken: 'whatever' }, transports: ['websocket'], forceNew: true, reconnection: false });
-    await new Promise((resolve) => client.on('connect', resolve));
-    client.emit('match.join', '00000000-0000-4000-8000-000000000000');
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => client.on('connect_error', resolve));
     client.close();
 
     const W = require('../../src/workers');

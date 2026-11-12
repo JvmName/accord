@@ -6,7 +6,7 @@
 import type { Logger } from 'pino';
 import { findMatchGraphsByIds, findMatchesInBreak, type MatchGraph } from '../db/repositories/matches';
 import { findOpenRounds } from '../db/repositories/rounds';
-import { serializeLeakedMatch, type MatchRenderOptions } from '../serialize';
+import { serializeMatch, type MatchRenderOptions } from '../serialize';
 import { EVENTS } from '../ws/workerWebSocket';
 import { MATCH_UPDATE_TICK_MS, Worker } from './worker';
 
@@ -64,6 +64,6 @@ export class MatchUpdateWorker extends Worker {
     }
 
     #broadcast(graph: MatchGraph): void {
-        this.notifyServer(EVENTS.MATCH_UPDATE, serializeLeakedMatch(graph, RENDER_OPTIONS));
+        this.notifyServer(EVENTS.MATCH_UPDATE, serializeMatch(graph, RENDER_OPTIONS));
     }
 }

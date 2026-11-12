@@ -50,7 +50,7 @@ function defaultDb(): DbOrTx {
 export function assertSocketPayload<E extends SocketEvent>(event: E, payload: SocketPayload<E>): void {
     if (!wireValidationEnabled()) return;
     const result = socketPayloads[event].safeParse(payload);
-    if (!result.success) throw new WireContractError('leakedMatch', result.error.issues);
+    if (!result.success) throw new WireContractError('match', result.error.issues);
 }
 
 export abstract class Worker {

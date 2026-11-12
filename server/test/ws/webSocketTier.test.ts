@@ -41,38 +41,44 @@ const expectSection = (prefix, count) => {
 describe('webSocketTier snapshot: src/ws', () => {
     it('the fixture holds exactly the scripts, handler cases and lookups defined', () => {
         expect([...fixture.records.keys()].sort()).toEqual([...records.keys()].sort());
-        expect(fixture.records.size).toBe(W.SCRIPTS.length + W.HANDLER_CASES.length + W.TOKEN_VALUES.length + W.MATCH_VALUES.length);
+        expect(fixture.records.size).toBe(W.SCRIPTS.length + 1 + W.HANDLER_CASES.length + W.TOKEN_VALUES.length + W.MATCH_VALUES.length);
     });
 
     it('every client script observes the recorded transcript', () => {
-        expectSection('script ', 25);
+        expectSection('script ', W.SCRIPTS.length);
 
         // Not vacuous: the scripts reach every outcome.
         const seen = (name) => {
             const { key, ...rest } = fixture.records.get(`script ${name}`);
             return rest;
         };
-        expect(seen('a judge joins the match').received).toEqual(['match.update:the match', 'round.tech-fall:the match', 'break.ended:the match']);
+        const everything = ['match.update:the match', 'round.tech-fall:the match', 'break.ended:the match'];
+        const refused = { connected: false, connectError: 'unauthorized', received: [] };
+        expect(seen('a judge joins the match').received).toEqual(everything);
         expect(seen('connected but not joined').received).toEqual([]);
         expect(seen('join then leave').received).toEqual([]);
-        expect(seen('unknown token still connects; room.join works').received).toHaveLength(3);
-        expect(seen('no token: connects, has no handlers')).toEqual({ connected: true, connectError: null, received: [] });
-        expect(seen('object token: connect_error')).toEqual({ connected: false, connectError: 'Invalid value {}', received: [] });
-        expect(seen('array token [junk, token]').received).toHaveLength(3);
+        expect(seen('join with an object does not stop the socket').received).toEqual(everything);
+        expect(seen('room.join is not a handler').received).toEqual([]);
+        expect(seen('client token AND worker token: treated as a client').received).toEqual(everything);
+        for (const name of ['unknown token is refused', 'unknown token, connect only', 'no token is refused', 'empty-string token is no token',
+            'array token [token] is refused', 'array token [] is refused', 'object token is refused', 'true token is refused',
+            'wrong worker token is refused', 'non-string worker token is refused']) {
+            expect(seen(name)).toEqual(refused);
+        }
+        expect(seen('worker socket: room.join is not a handler')).toEqual({ connected: true, connectError: null, received: [] });
     }, 60000);
 
-    it('handler calls that throw do so as recorded (each would be an unhandled rejection in the web process)', () => {
-        expectSection('handler ', 7);
-        expect([...fixture.records.values()].filter((r) => r.key.startsWith('handler ') && !r.outcome.ok).map((r) => r.key.slice('handler '.length))).toEqual([
-            'unknown token, existing match', 'valid token, true', 'valid token, object', 'valid token, array', 'valid token, empty array',
-        ]);
+    it('a handler call never throws: unknown tokens are refused at init, bad arguments are denied', () => {
+        expectSection('handler ', W.HANDLER_CASES.length);
+        expect([...fixture.records.values()].filter((r) => r.key.startsWith('handler ') && !r.outcome.ok)).toEqual([]);
+        expect(fixture.records.get('init unknown token').outcome).toEqual({ error: 'SocketAuthError', message: 'unauthorized' });
     });
 
     it('token lookups: findUserForToken answers as recorded for every JSON type', () => {
-        expectSection('token ', 24);
+        expectSection('token ', W.TOKEN_VALUES.length);
     });
 
     it('match lookups: findMatchForId answers as recorded for every JSON type', () => {
-        expectSection('match ', 12);
+        expectSection('match ', W.MATCH_VALUES.length);
     });
 });

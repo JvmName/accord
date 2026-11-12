@@ -23,12 +23,12 @@
  * Input is the match graph (`findMatchGraph`) plus one of its rounds: a round
  * cannot be rendered without its match (competitors, judges, position).
  */
-import type { LeakedRound, LeakedUser, Round as WireRound, User as WireUser } from '../contract';
+import type { Round as WireRound, User as WireUser } from '../contract';
 import type { MatchGraph, RoundWithActivity } from '../db/repositories/matches';
 import type { RoundPause, User } from '../db/types';
 import type { RoundResult, RoundScore, Rules, ScoringModule } from '../domain/types';
 import { present } from '../domain/present';
-import { serializeLeakedUser, serializeUser } from './user';
+import { serializeUser } from './user';
 import { resolveNow, wireTime, type ClockOptions } from './values';
 
 // CommonJS domain modules, typed at the require (as src/services does).
@@ -134,13 +134,4 @@ function renderRound<U>(match: RoundMatchContext,
 /** The HTTP round shape (`roundSchema`). `result.winner` is the safe `{id, name}`. */
 export function serializeRound(match: RoundMatchContext, round: RoundInput, options: ClockOptions = {}): WireRound {
     return renderRound<WireUser>(match, round, resolveNow(options), serializeUser);
-}
-
-/**
- * ⚠️ F-22: the WebSocket round shape (`leakedRoundSchema`): `result.winner`
- * carries `api_token`/`created_at`/`updated_at`. For task 14's worker
- * payloads only; DELETE IN TASK 18 together with the leak.
- */
-export function serializeLeakedRound(match: RoundMatchContext, round: RoundInput, options: ClockOptions = {}): LeakedRound {
-    return renderRound<LeakedUser>(match, round, resolveNow(options), serializeLeakedUser);
 }

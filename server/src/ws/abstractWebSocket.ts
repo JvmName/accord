@@ -21,6 +21,14 @@ export interface SocketHost {
 
 export type SocketEventHandler = (...args: any[]) => unknown;
 
+/** A handshake the server refuses; the client sees `connect_error` with this message. */
+export class SocketAuthError extends Error {
+    constructor() {
+        super('unauthorized');
+        this.name = 'SocketAuthError';
+    }
+}
+
 export class AbstractWebSocket {
     #ioSocket: Socket;
     #server: SocketHost;
@@ -34,8 +42,6 @@ export class AbstractWebSocket {
         this.resetSocket();
 
         this.on('disconnect', ()             => { logger.info(`Web socket disconnected (${this.id})`) });
-        this.on('room.join',  (room: string) => { this.join(room)  });
-        this.on('room.leave', (room: string) => { this.leave(room) });
 
         // The adapter belongs to the namespace, not to this socket: these
         // replace the listeners every previously initialized socket added
@@ -61,8 +67,20 @@ export class AbstractWebSocket {
 
     addEventHandlers(): void {}
 
+    /**
+     * Registers a socket event handler. socket.io does not await handlers, so
+     * a throw or rejection would be an unhandled rejection that ends the
+     * process; it is logged and dropped instead.
+     */
     on(eventName: string, eventHandler: SocketEventHandler): void {
-        this.#ioSocket.on(eventName, eventHandler.bind(this));
+        const handler = eventHandler.bind(this);
+        this.#ioSocket.on(eventName, async (...args: unknown[]) => {
+            try {
+                await handler(...args);
+            } catch (err) {
+                logger.error(`Socket handler for ${eventName} failed (${this.id}): ${err instanceof Error ? err.message : String(err)}`);
+            }
+        });
     }
 
     emitToRoom(room: string, eventName: SocketEvent, eventData: unknown): void {

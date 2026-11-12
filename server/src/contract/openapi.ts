@@ -79,10 +79,6 @@ const taggedSchemas: z.ZodType[] = [
     tagSchema('RoundResultMethod', contract.roundResultMethodSchema),
     tagSchema('RoundResult', contract.roundResultSchema),
 
-    // --- WebSocket-only leaked variants (F-22) — no hand-written counterpart. ---
-    tagSchema('LeakedUser', contract.leakedUserSchema),
-    tagSchema('LeakedMatch', contract.leakedMatchSchema),
-    tagSchema('LeakedRound', contract.leakedRoundSchema),
 
     // --- Request bodies — the hand-written spec had none of these as named components. ---
     tagSchema('CreateUserRequest', contract.createUserRequestSchema),

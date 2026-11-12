@@ -28,13 +28,13 @@
  * Input is always the full graph (`findMatchGraph` / `findMatchGraphsByIds`),
  * even when no association is rendered: `winner` needs every round's score.
  */
-import type { LeakedMatch, LeakedRound, LeakedUser, Match as WireMatch, Round as WireRound, User as WireUser } from '../contract';
+import type { Match as WireMatch, Round as WireRound, User as WireUser } from '../contract';
 import type { MatchGraph } from '../db/repositories/matches';
 import type { User } from '../db/types';
 import type { Competitor, Rules, ScoringModule } from '../domain/types';
 import { serializeMat } from './mat';
-import { roundOutcome, serializeLeakedRound, serializeRound } from './round';
-import { serializeNullableLeakedUser, serializeNullableUser, serializeUser } from './user';
+import { roundOutcome, serializeRound } from './round';
+import { serializeNullableUser, serializeUser } from './user';
 import { legacyColumn, resolveNow, wireTime, type ClockOptions } from './values';
 
 const { RDojoKombatRules }: { RDojoKombatRules: Rules } = require('../domain/rules');
@@ -130,18 +130,4 @@ function renderMatch<U, R>(match: MatchInput,
 /** The HTTP match shape (`matchSchema`). Competitors and winner are the safe `{id, name}`. */
 export function serializeMatch(match: MatchInput, options: MatchRenderOptions = {}): WireMatch {
     return renderMatch<WireUser, WireRound>(match, options, serializeNullableUser, serializeRound) as WireMatch;
-}
-
-/**
- * ⚠️ F-22: the WebSocket match shape (`leakedMatchSchema`), reproducing the
- * worker path that skips `_formatJSONBody`: `red_competitor`,
- * `blue_competitor`, `winner` and every `rounds[].result.winner` carry
- * `api_token`, `created_at`, `updated_at`. `judges` and `mat` stay safe.
- * For task 14's worker payloads only (MatchUpdateWorker / BreakTransition:
- * all three includes; TechFallTracker / RoundTimer: `includeRounds` only).
- * DELETE IN TASK 18, when the leak is fixed and the ws goldens change
- * (FINDINGS F-22, F-66).
- */
-export function serializeLeakedMatch(match: MatchInput, options: MatchRenderOptions = {}): LeakedMatch {
-    return renderMatch<LeakedUser, LeakedRound>(match, options, serializeNullableLeakedUser, serializeLeakedRound) as LeakedMatch;
 }

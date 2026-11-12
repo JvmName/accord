@@ -8,7 +8,7 @@
  */
 import { z } from 'zod';
 import { idSchema, isoDateTimeSchema, nullableRef } from './scalars';
-import { leakedUserSchema, userSchema } from './user';
+import { userSchema } from './user';
 
 export const roundResultTypeSchema = z.enum([
     'submission',
@@ -71,10 +71,6 @@ const makeRoundSchema = (winnerUser: z.ZodType) =>
 /** The HTTP shape. */
 export const roundSchema = makeRoundSchema(userSchema);
 export type Round = z.infer<typeof roundSchema>;
-
-/** The WebSocket shape — identical but for the F-22 `result.winner` leak. */
-export const leakedRoundSchema = makeRoundSchema(leakedUserSchema);
-export type LeakedRound = z.infer<typeof leakedRoundSchema>;
 
 export const roundResultSchema = makeRoundResultSchema(userSchema);
 export type RoundResult = z.infer<typeof roundResultSchema>;

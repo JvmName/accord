@@ -25,6 +25,8 @@ const IDS = {
 };
 const tokens = { creator: IDS.creatorToken, other: IDS.otherToken };
 const matchId = IDS.match;
+/** The worker token the tier under test is booted with. */
+const WORKER_TOKEN = 'test-worker-token';
 const room = `match:${matchId}`;
 
 const NAMES = new Map([[IDS.creator, '<user:creator>'], [IDS.other, '<user:other>'], [IDS.red, '<user:red>'], [IDS.blue, '<user:blue>'], [IDS.match, 'the match']]);
@@ -75,7 +77,7 @@ async function observe(origin, { auth, query, actions = [] }: { auth?: unknown; 
         client.emit(event, arg);
         await sleep(80);
     }
-    const worker = io(origin, { transports: ['websocket'], forceNew: true, reconnection: false, query: { workerToken: 'any' } });
+    const worker = io(origin, { transports: ['websocket'], forceNew: true, reconnection: false, query: { workerToken: WORKER_TOKEN } });
     await sleep(120);
     for (const event of ['match.update', 'round.tech-fall', 'break.ended']) worker.emit(event, { id: matchId });
     await sleep(150);
@@ -93,27 +95,26 @@ const SCRIPTS = [
     ['join with a number', { auth: { apiToken: tokens.creator }, actions: [['match.join', 5]] }],
     ['join with nothing', { auth: { apiToken: tokens.creator }, actions: [['match.join', undefined]] }],
     ['join with null', { auth: { apiToken: tokens.creator }, actions: [['match.join', null]] }],
-    ['room.join by name, no authorization', { auth: { apiToken: tokens.creator }, actions: [['room.join', room]] }],
+    ['join with an object does not stop the socket', { auth: { apiToken: tokens.creator }, actions: [['match.join', {}], ['match.join', matchId]] }],
+    ['room.join is not a handler', { auth: { apiToken: tokens.creator }, actions: [['room.join', room]] }],
     ['room.join then room.leave', { auth: { apiToken: tokens.creator }, actions: [['room.join', room], ['room.leave', room]] }],
-    ['unknown token still connects; room.join works', { auth: { apiToken: 'not-a-token' }, actions: [['room.join', room]] }],
-    ['unknown token, connected only', { auth: { apiToken: 'not-a-token' } }],
-    ['no token: connects, has no handlers', { actions: [['room.join', room], ['match.join', matchId]] }],
+    ['unknown token is refused', { auth: { apiToken: 'not-a-token' }, actions: [['room.join', room]] }],
+    ['unknown token, connect only', { auth: { apiToken: 'not-a-token' } }],
+    ['no token is refused', { actions: [['room.join', room], ['match.join', matchId]] }],
     ['empty-string token is no token', { auth: { apiToken: '' }, actions: [['room.join', room]] }],
-    ['array token [token]', { auth: { apiToken: [tokens.creator] }, actions: [['match.join', matchId]] }],
-    ['array token [junk, token]', { auth: { apiToken: ['x', tokens.other] }, actions: [['match.join', matchId]] }],
-    ['array token [] (truthy, matches nobody)', { auth: { apiToken: [] }, actions: [['room.join', room]] }],
-    ['object token: connect_error', { auth: { apiToken: {} }, actions: [['room.join', room]] }],
-    ['object token with keys: connect_error', { auth: { apiToken: { $ne: 'x' } } }],
-    ['array holding an object: connect_error', { auth: { apiToken: [{}] } }],
-    ['true token: connects with no user', { auth: { apiToken: true }, actions: [['room.join', room]] }],
-    ['client token AND worker token: treated as a client', { auth: { apiToken: tokens.creator }, query: { workerToken: 'w' }, actions: [['match.join', matchId]] }],
-    ['worker socket: no match.join handler', { query: { workerToken: 'w' }, actions: [['match.join', matchId]] }],
-    ['worker socket: room.join works', { query: { workerToken: 'w' }, actions: [['room.join', room]] }],
+    ['array token [token] is refused', { auth: { apiToken: [tokens.creator] }, actions: [['match.join', matchId]] }],
+    ['array token [] is refused', { auth: { apiToken: [] }, actions: [['room.join', room]] }],
+    ['object token is refused', { auth: { apiToken: {} }, actions: [['room.join', room]] }],
+    ['true token is refused', { auth: { apiToken: true }, actions: [['room.join', room]] }],
+    ['client token AND worker token: treated as a client', { auth: { apiToken: tokens.creator }, query: { workerToken: WORKER_TOKEN }, actions: [['match.join', matchId]] }],
+    ['worker socket: no match.join handler', { query: { workerToken: WORKER_TOKEN }, actions: [['match.join', matchId]] }],
+    ['worker socket: room.join is not a handler', { query: { workerToken: WORKER_TOKEN }, actions: [['room.join', room]] }],
+    ['wrong worker token is refused', { query: { workerToken: 'w' }, actions: [['room.join', room]] }],
+    ['non-string worker token is refused', { query: { workerToken: ['x'] }, actions: [['room.join', room]] }],
     ['a client relaying a worker event reaches nobody', { auth: { apiToken: tokens.creator }, actions: [['match.join', matchId], ['match.update', { id: matchId, forged: true }]] }],
 ];
 
 const HANDLER_CASES = [
-    ['unknown token, existing match', 'not-a-token', matchId],
     ['valid token, true',             tokens.creator, true],
     ['valid token, object',           tokens.creator, {}],
     ['valid token, array',            tokens.creator, [1, 2]],
@@ -123,13 +124,11 @@ const HANDLER_CASES = [
 ];
 
 const TOKEN_VALUES = [
-    tokens.creator, tokens.other, 'nope', 5, 0, true, false, null, 1.5,
-    [], [tokens.creator], [tokens.other, tokens.creator], [tokens.creator, tokens.other], ['x', tokens.other],
-    [null], [5], [true], [[tokens.creator]], [tokens.creator, null],
-    {}, { id: 1 }, { $ne: 'x' }, [{}], [tokens.creator, { a: 1 }],
+    tokens.creator, tokens.other, 'nope', '', 5, 0, true, false, null, 1.5,
+    [], [tokens.creator], [tokens.other, tokens.creator], {}, { $ne: 'x' }, [{}],
 ];
 
-const MATCH_VALUES = [matchId, 'nope', 5, 0, true, false, null, undefined, [], [matchId], {}, { id: matchId }];
+const MATCH_VALUES = [matchId, 'nope', '', 5, 0, true, false, null, undefined, [], [matchId], {}, { id: matchId }];
 
 /** Replaces the fixed ids in a JSON text with their names. */
 const named = (text) => [...NAMES].reduce((t, [id, name]) => t.split(id).join(name), text);
@@ -147,6 +146,13 @@ async function recordTier(tier) {
         eventNames: () => [], removeAllListeners() {}, on() {}, join() {}, leave() {}, disconnect() {},
         id: 'socket', handshake: { auth: { apiToken }, query: {} },
     });
+    // An unknown token never gets a socket: `init` refuses it.
+    {
+        const socket = new tier.WebSocket(fakeSocket('not-a-token'), tier.host);
+        let outcome;
+        try { await socket.init(); outcome = { ok: true }; } catch (err: any) { outcome = { error: err.constructor.name, message: err.message }; }
+        records.push({ key: 'init unknown token', outcome });
+    }
     for (const [name, token, arg] of HANDLER_CASES) {
         const socket = new tier.WebSocket(fakeSocket(token), tier.host);
         await socket.init();
@@ -167,7 +173,7 @@ async function modernTier(db) {
     const { WebSocketServer } = require('../../src/ws/webSocketServer');
     const WS = require('../../src/ws/webSocket');
     /* eslint-enable global-require */
-    const server = await boot(WebSocketServer, [db]);
+    const server = await boot(WebSocketServer, [db, WORKER_TOKEN]);
     return {
         ...server,
         WebSocket: WS.WebSocket,
@@ -177,4 +183,4 @@ async function modernTier(db) {
     };
 }
 
-export { HANDLER_CASES, IDS, MATCH_VALUES, SCRIPTS, TOKEN_VALUES, boot, modernTier, recordTier, seedRows, tokens };
+export { HANDLER_CASES, IDS, MATCH_VALUES, SCRIPTS, TOKEN_VALUES, WORKER_TOKEN, boot, modernTier, recordTier, seedRows, tokens };

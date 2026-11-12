@@ -7,7 +7,7 @@ import type { Logger } from 'pino';
 import { findMatchGraph, findMatchGraphsByIds, type MatchGraph } from '../db/repositories/matches';
 import { findOpenRounds } from '../db/repositories/rounds';
 import type { Round } from '../db/types';
-import { roundMaxDuration, roundTimeRemaining, serializeLeakedMatch } from '../serialize';
+import { roundMaxDuration, roundTimeRemaining, serializeMatch } from '../serialize';
 import { endRound } from '../services/matchLifecycle';
 import { EVENTS } from '../ws/workerWebSocket';
 import { Worker } from './worker';
@@ -40,7 +40,7 @@ export class RoundTimerWorker extends Worker {
 
         // Rounds only: no mat and no judges in this payload.
         const ended = await findMatchGraph(this.db, graph.id);
-        this.notifyServer(EVENTS.MATCH_UPDATE, serializeLeakedMatch(present(ended, 'the match'), { includeRounds: true }));
+        this.notifyServer(EVENTS.MATCH_UPDATE, serializeMatch(present(ended, 'the match'), { includeRounds: true }));
     }
 
     #timeRemaining(round: Round, graph: MatchGraph): number | null {

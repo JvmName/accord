@@ -82,7 +82,8 @@ RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
 
 - **Server**: Socket.IO with room-based broadcasting (`/server/lib/server/webSocketServer.js`)
   - Each match has its own room: `match:${matchId}`
-  - Authentication via `socket.handshake.auth.apiToken`
+  - Clients authenticate with `socket.handshake.auth.apiToken` (a string naming a user); the worker with `socket.handshake.query.workerToken`, which must equal the server's `workerToken`. Any other handshake is refused with a `connect_error` (`unauthorized`). Only `match.join` / `match.leave` exist for clients; there are no generic room events.
+  - Payloads are the same safe `Match` shape the HTTP routes render: competitors are `{ id, name }`, never `api_token`.
 
 - **Worker process** (`/server/bin/worker.ts`, token from `WORKER_TOKEN` or the first argument): Separate process that connects via WebSocket using `workerToken`. Runs four background jobs:
   - `MatchUpdateWorker`: Ticks every **250ms**. Broadcasts `match.update` for every open (not-yet-ended) round **and** for every match currently in a break, throttled to ~1s. Also tracks active match IDs across ticks — when a match exits the active set (just ended), immediately broadcasts one final `match.update` so judges receive the ended state without waiting for their local countdown to expire. The other three workers tick every 1 second:

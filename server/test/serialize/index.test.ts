@@ -75,10 +75,8 @@ describe('assertWire / devAssertWire (opt-in runtime contract check)', () => {
         expect(() => S.assertWire('match', withScore)).toThrow(S.WireContractError);
         const nulledMat = { ...goodMatch(), mat: null };               // absent collapsed to null
         expect(() => S.assertWire('match', nulledMat)).toThrow(/wire contract violation \(match\): mat/);
-        const leaky = { ...goodMatch(), red_competitor: S.serializeLeakedUser(F.USERS.red) };
+        const leaky = { ...goodMatch(), red_competitor: { ...F.USERS.red } };    // a full user row, api_token included
         expect(() => S.assertWire('match', leaky)).toThrow(S.WireContractError);
-        // `leaky` is deliberately not a LeakedMatch (only one competitor leaks), hence the cast.
-        expect(() => S.assertWire('leakedMatch', leaky as never)).toThrow(S.WireContractError); // blue/winner shapes differ
     });
 
     it('wireValidationEnabled: ACCORD_VALIDATE_WIRE=1 forces on, =0 forces off, else NODE_ENV=development', () => {

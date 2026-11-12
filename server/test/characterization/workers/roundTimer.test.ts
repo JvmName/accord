@@ -26,7 +26,7 @@ mock.module(lifecyclePath, () => ({ ...lifecycle, endRound }));
 const { RoundTimerWorker }     = require('../../../src/workers/roundTimerWorker');
 const { EVENTS }               = require('../../../src/ws/workerWebSocket');
 const { findMatchGraph }       = require('../../../src/db/repositories/matches');
-const { serializeLeakedMatch } = require('../../../src/serialize');
+const { serializeMatch } = require('../../../src/serialize');
 const W = require('./world');
 
 const MAX_DURATION = 180; // rDojoKombat round 1
@@ -185,7 +185,7 @@ describe('CHARACTERIZATION: RoundTimerWorker', () => {
             const [, payload] = worker.notifyServer.mock.calls[0];
             expect(payload.id).toBe(MATCH);
             expect(payload.rounds.map((r) => r.id)).toEqual([ROUND, r2]);
-            expect(payload).toEqual(serializeLeakedMatch(await findMatchGraph(world.db, MATCH), { includeRounds: true }));
+            expect(payload).toEqual(serializeMatch(await findMatchGraph(world.db, MATCH), { includeRounds: true }));
         });
 
 

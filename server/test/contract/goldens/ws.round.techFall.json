@@ -6,11 +6,8 @@
   "room": "match:<match:wsTechFall>",
   "payload": {
     "blue_competitor": {
-      "api_token": "<token:blue2>",
-      "created_at": "2026-01-01T12:00:09.000Z",
       "id": "<user:blue2>",
-      "name": "Bailey Blue",
-      "updated_at": "2026-01-01T12:00:09.000Z"
+      "name": "Bailey Blue"
     },
     "break_duration": 60,
     "break_remaining": 60,
@@ -20,11 +17,8 @@
     "id": "<match:wsTechFall>",
     "mat_id": "<mat:flow>",
     "red_competitor": {
-      "api_token": "<token:red2>",
-      "created_at": "2026-01-01T12:00:08.000Z",
       "id": "<user:red2>",
-      "name": "Robin Red",
-      "updated_at": "2026-01-01T12:00:08.000Z"
+      "name": "Robin Red"
     },
     "rounds": [
       {
@@ -38,11 +32,8 @@
             "value": "30"
           },
           "winner": {
-            "api_token": "<token:red2>",
-            "created_at": "2026-01-01T12:00:08.000Z",
             "id": "<user:red2>",
-            "name": "Robin Red",
-            "updated_at": "2026-01-01T12:00:08.000Z"
+            "name": "Robin Red"
           }
         },
         "score": {

@@ -70,7 +70,7 @@ describe('generated openapi.json components vs. goldens', () => {
             let payload: unknown;
 
             if (file.startsWith('ws.')) {
-                component = 'LeakedMatch';
+                component = 'Match';
                 payload = golden.payload;
             } else if (golden.response.status === 200 && golden.route) {
                 component =

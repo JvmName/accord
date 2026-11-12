@@ -14,9 +14,6 @@
 import type { z } from 'zod';
 import { loadConfig } from '../config';
 import {
-    leakedMatchSchema,
-    leakedRoundSchema,
-    leakedUserSchema,
     matCodeSchema,
     matSchema,
     matchSchema,
@@ -24,15 +21,15 @@ import {
     userSchema,
 } from '../contract';
 
-export { serializeLeakedUser, serializeNullableLeakedUser, serializeNullableUser, serializeUser, serializeUsers } from './user';
+export { serializeNullableUser, serializeUser, serializeUsers } from './user';
 export type { UserInput } from './user';
 export { serializeMatCode } from './matCode';
 export type { MatCodeInput } from './matCode';
 export { serializeMat, splitIncompleteMatches } from './mat';
 export type { MatInput, MatRenderOptions } from './mat';
-export { matchBreakRemaining, matchWinner, serializeLeakedMatch, serializeMatch } from './match';
+export { matchBreakRemaining, matchWinner, serializeMatch } from './match';
 export type { MatchInput, MatchRenderOptions } from './match';
-export { currentPause, roundMaxDuration, roundOutcome, roundTimeRemaining, serializeLeakedRound, serializeRound } from './round';
+export { currentPause, roundMaxDuration, roundOutcome, roundTimeRemaining, serializeRound } from './round';
 export type { RoundInput, RoundMatchContext, RoundOutcome } from './round';
 export { legacyColumn, resolveNow, wireTime } from './values';
 export type { ClockOptions } from './values';
@@ -42,16 +39,13 @@ export type { ClockOptions } from './values';
  * Opt-in runtime contract check
  * ------------------------------------------------------------------------- */
 
-/** Each mapper's output schema. The `leaked*` entries are F-22 (task 18 deletes them). */
+/** Each mapper's output schema. */
 export const wireSchemas = {
     user:        userSchema,
     matCode:     matCodeSchema,
     mat:         matSchema,
     match:       matchSchema,
     round:       roundSchema,
-    leakedUser:  leakedUserSchema,
-    leakedMatch: leakedMatchSchema,
-    leakedRound: leakedRoundSchema,
 } as const;
 
 export type WireKind = keyof typeof wireSchemas;

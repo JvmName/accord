@@ -16,8 +16,7 @@ import { afterAll, beforeAll, describe, expect, it, setSystemTime } from 'bun:te
  *
  * The WebSocket goldens are replayed the same way by running the four
  * workers' `performJob()` in capture order, with `notifyServer` captured
- * instead of emitted, and rendering with the `serializeLeaked*` mappers (the
- * WebSocket payloads still carry the competitors' full user rows).
+ * instead of emitted, and rendering with `serializeMatch`.
  *
  * No real sqlite file is touched (`DATABASE_PATH` is a temp file).
  */
@@ -213,7 +212,7 @@ async function replayWebSocket(port) {
             return N.normalizeValue(payload, statics, dyn);
         };
 
-        const payload = S.serializeLeakedMatch(await matchGraph(matchId), { ...options, now: NOW });
+        const payload = S.serializeMatch(await matchGraph(matchId), { ...options, now: NOW });
         assertNoUndefined(payload);
         const schema = socketPayloads[event].safeParse(payload);
         results.ws.push({
@@ -235,7 +234,7 @@ beforeAll(async () => {
     await seedModule.seed({ set: (ms) => setSystemTime(new Date(ms)) }); // leaves the clock frozen at NOW
     db = createDb({ path: file });
 
-    const started = await Http.startServer();
+    const started = await Http.startServer({ serverOptions: { workerToken: 'contract-capture-worker' } });
     server = started.server;
     await replayHttp(started.origin);
     await replayWebSocket(started.port);
@@ -281,7 +280,7 @@ describe('GOLDEN EQUIVALENCE: src/serialize over Drizzle rows == the committed g
         expect(mismatched).toEqual([]);
     });
 
-    it('WebSocket: the workers emitted what was captured, and serializeLeakedMatch reproduces all four ws.* goldens', () => {
+    it('WebSocket: the workers emitted what was captured, and serializeMatch reproduces all four ws.* goldens', () => {
         expect(results.ws.map((r) => r.name)).toEqual(['ws.match.update.openRound', 'ws.match.update.inBreak', 'ws.round.techFall', 'ws.break.ended']);
         for (const r of results.ws) {
             expect({ name: r.name, emitted: r.workerEmitted, live: r.liveMatchesGolden, schema: r.schemaOk })

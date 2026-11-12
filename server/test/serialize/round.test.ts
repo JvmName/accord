@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'bun:test';
 /**
- * `serializeRound` / `serializeLeakedRound` (task 11), from plain fixture rows.
+ * `serializeRound` (task 11), from plain fixture rows.
  * No database. Every output is also parsed through the task-05 schema.
  */
 import * as S from '../../src/serialize';
-import { roundSchema, leakedRoundSchema } from '../../src/contract';
+import { roundSchema } from '../../src/contract';
 import * as F from './fixtures';
 
 const { at, iso, ID, USERS } = F;
@@ -38,16 +38,12 @@ describe('serializeRound — field set', () => {
         expect(out.score).toEqual({ [ID.red]: 0, [ID.blue]: 0 });
     });
 
-    it('result.winner is the SAFE user {id, name}; the leaked variant carries api_token (F-22)', () => {
+    it('result.winner is the SAFE user {id, name}: never api_token or timestamps (F-22)', () => {
         const rounds = [F.round({ started: 20, ended: 90, declaredWinnerId: ID.blue, stoppage: false })];
         const match = F.matchGraph({ rounds });
-        expect(S.serializeRound(match, rounds[0], { now: NOW }).result.winner).toEqual({ id: ID.blue, name: 'Blair Blue' });
-        const leaked = S.serializeLeakedRound(match, rounds[0], { now: NOW });
-        expect(leakedRoundSchema.safeParse(leaked).success).toBe(true);
-        expect(leaked.result.winner).toEqual({
-            id: ID.blue, name: 'Blair Blue', api_token: USERS.blue.api_token,
-            created_at: USERS.blue.created_at.toISOString(), updated_at: USERS.blue.updated_at.toISOString(),
-        });
+        const out = S.serializeRound(match, rounds[0], { now: NOW });
+        expect(out.result.winner).toEqual({ id: ID.blue, name: 'Blair Blue' });
+        expect(F.allKeys(out).has('api_token')).toBe(false);
     });
 });
 

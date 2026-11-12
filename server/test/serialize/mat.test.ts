@@ -4,7 +4,7 @@ import { describe, expect, it } from 'bun:test';
  * fixture rows. No database. Outputs are parsed through the task-05 schemas.
  */
 import * as S from '../../src/serialize';
-import { matSchema, matCodeSchema, userSchema, leakedUserSchema } from '../../src/contract';
+import { matSchema, matCodeSchema, userSchema } from '../../src/contract';
 import * as F from './fixtures';
 
 const { at, ID, USERS } = F;
@@ -38,14 +38,6 @@ describe('serializeUser / serializeUsers', () => {
         expect(S.serializeNullableUser(undefined)).toBeNull();
         expect(S.serializeUsers([USERS.judgeB, USERS.judgeA]).map((u) => u.id)).toEqual([ID.judgeB, ID.judgeA]);
         expect(S.serializeUsers([])).toEqual([]);
-    });
-
-    it('serializeLeakedUser (F-22, ws only): every column, raw values, ISO dates', () => {
-        const out = S.serializeLeakedUser({ ...USERS.red, name: '' });
-        expect(out).toEqual({ id: ID.red, name: '', api_token: USERS.red.api_token,
-                              created_at: USERS.red.created_at.toISOString(), updated_at: USERS.red.updated_at.toISOString() });
-        expect(S.serializeNullableLeakedUser(null)).toBeNull();
-        expect(leakedUserSchema.safeParse(S.serializeLeakedUser(USERS.red)).success).toBe(true);
     });
 });
 

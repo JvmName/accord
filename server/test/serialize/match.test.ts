@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'bun:test';
 /**
- * `serializeMatch` / `serializeLeakedMatch` (task 11), from plain fixture rows.
+ * `serializeMatch` (task 11), from plain fixture rows.
  * No database. Every output is also parsed through the task-05 schema.
  */
 import * as S from '../../src/serialize';
-import { matchSchema, leakedMatchSchema } from '../../src/contract';
+import { matchSchema } from '../../src/contract';
 import * as F from './fixtures';
 
 const { at, iso, ID, USERS } = F;
@@ -89,7 +89,7 @@ describe('serializeMatch — break_remaining (F-20: computed on HTTP too)', () =
     it('present on every render, including partial payloads', () => {
         const g = F.matchGraph({ break_started_at: at(580), break_duration: 60 });
         expect(render(g, { includeRounds: true }).break_remaining).toBe(40);
-        expect(S.serializeLeakedMatch(g, { now: NOW }).break_remaining).toBe(40);
+        expect(S.serializeMatch(g, { now: NOW }).break_remaining).toBe(40);
     });
 });
 
@@ -175,27 +175,13 @@ describe('serializeMatch — winner', () => {
     });
 });
 
-describe('serializeLeakedMatch (F-22 — WebSocket only, delete in task 18)', () => {
-    it('competitors, winner and rounds[].result.winner carry api_token/created_at/updated_at; judges and mat stay safe', () => {
-        const g = F.matchGraph({ rounds: doneRounds(), ended_at: at(200) });
-        const out = S.serializeLeakedMatch(g, { now: NOW, includeMat: true, includeMatchJudges: true, includeRounds: true });
-        expect(leakedMatchSchema.safeParse(out).success).toBe(true);
-        const leaked = (u) => ({ id: u.id, name: u.name, api_token: u.api_token,
-                                 created_at: u.created_at.toISOString(), updated_at: u.updated_at.toISOString() });
-        expect(out.red_competitor).toEqual(leaked(USERS.red));
-        expect(out.blue_competitor).toEqual(leaked(USERS.blue));
-        expect(out.winner).toEqual(leaked(USERS.red));
-        expect(out.rounds!.map((r) => r.result.winner)).toEqual([leaked(USERS.red), leaked(USERS.blue), leaked(USERS.red)]);
-        expect(out.judges).toEqual(JUDGES.map((j) => ({ id: j.id, name: j.name })));
-        expect(F.allKeys(out.mat).has('api_token')).toBe(false);
-    });
-
-    it('is otherwise identical to the HTTP shape', () => {
+describe('serializeMatch never carries a credential (F-22)', () => {
+    it('no key anywhere in a fully rendered match is api_token, created_at or updated_at', () => {
         const g = F.matchGraph({ rounds: doneRounds(), ended_at: at(200), break_started_at: at(590), break_duration: 60 });
-        const opts = { now: NOW, includeRounds: true };
-        const strip = (m) => JSON.parse(JSON.stringify(m, (k, v) => (v && typeof v === 'object' && 'api_token' in v ? { id: v.id, name: v.name } : v)));
-        expect(strip(S.serializeLeakedMatch(g, opts))).toEqual(S.serializeMatch(g, opts));
-        // ...and the HTTP shape fails the leaked schema (it is not a superset by accident).
-        expect(leakedMatchSchema.safeParse(S.serializeMatch(g, opts)).success).toBe(false);
+        const out = S.serializeMatch(g, { now: NOW, includeMat: true, includeMatchJudges: true, includeRounds: true });
+        const keys = F.allKeys(out);
+        for (const key of ['api_token', 'created_at', 'updated_at']) expect(keys.has(key)).toBe(false);
+        expect(out.red_competitor).toEqual({ id: USERS.red.id, name: USERS.red.name });
+        expect(out.winner).toEqual({ id: USERS.red.id, name: USERS.red.name });
     });
 });

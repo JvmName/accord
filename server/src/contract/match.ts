@@ -6,9 +6,9 @@
  */
 import { z } from 'zod';
 import { matSchema } from './mat';
-import { leakedRoundSchema, roundSchema } from './round';
+import { roundSchema } from './round';
 import { idSchema, isoDateTimeSchema, nullableRef } from './scalars';
-import { leakedUserSchema, userSchema } from './user';
+import { userSchema } from './user';
 
 /**
  * Nullable-vs-optional, field by field. `models.kt` gives Kotlin defaults to
@@ -68,9 +68,3 @@ const makeMatchSchema = <U extends z.ZodType, R extends z.ZodType>(competitorUse
 export const matchSchema = makeMatchSchema(userSchema, roundSchema);
 export type Match = z.infer<typeof matchSchema>;
 
-/**
- * The WebSocket shape — identical but for the F-22 `api_token` leak on the
- * two competitors, `winner`, and `rounds[].result.winner`.
- */
-export const leakedMatchSchema = makeMatchSchema(leakedUserSchema, leakedRoundSchema);
-export type LeakedMatch = z.infer<typeof leakedMatchSchema>;

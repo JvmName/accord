@@ -224,7 +224,7 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
     await Http.migrate();
     const fixtures = await seed(clock);
 
-    const { server, origin, port } = await Http.startServer();
+    const { server, origin, port } = await Http.startServer({ serverOptions: { workerToken: 'contract-capture-worker' } });
     const request = makeRawClient(origin);
 
     const TOKENS: Record<string, string> = {

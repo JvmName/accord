@@ -1,4 +1,4 @@
-{"format":1,"note":"Snapshot of the expected behavior, originally recorded from the pre-migration implementation (commit 6a55eaec2d87) on 2026-10-13. Updated only on purpose, never by hand: run `bun run test:update-fixtures` and review the diff.","records":68,"suite":"webSocketTier"}
+{"format":1,"note":"Snapshot of the expected behavior, originally recorded from the pre-migration implementation (commit 6a55eaec2d87) on 2026-10-13. Updated only on purpose, never by hand: run `bun run test:update-fixtures` and review the diff.","records":61,"suite":"webSocketTier"}
 {"connectError":null,"connected":true,"key":"script a judge joins the match","received":["match.update:the match","round.tech-fall:the match","break.ended:the match"]}
 {"connectError":null,"connected":true,"key":"script any user may view (join) any match","received":["match.update:the match","round.tech-fall:the match","break.ended:the match"]}
 {"connectError":null,"connected":true,"key":"script connected but not joined","received":[]}
@@ -7,33 +7,34 @@
 {"connectError":null,"connected":true,"key":"script join with a number","received":[]}
 {"connectError":null,"connected":true,"key":"script join with nothing","received":[]}
 {"connectError":null,"connected":true,"key":"script join with null","received":[]}
-{"connectError":null,"connected":true,"key":"script room.join by name, no authorization","received":["match.update:the match","round.tech-fall:the match","break.ended:the match"]}
+{"connectError":null,"connected":true,"key":"script join with an object does not stop the socket","received":["match.update:the match","round.tech-fall:the match","break.ended:the match"]}
+{"connectError":null,"connected":true,"key":"script room.join is not a handler","received":[]}
 {"connectError":null,"connected":true,"key":"script room.join then room.leave","received":[]}
-{"connectError":null,"connected":true,"key":"script unknown token still connects; room.join works","received":["match.update:the match","round.tech-fall:the match","break.ended:the match"]}
-{"connectError":null,"connected":true,"key":"script unknown token, connected only","received":[]}
-{"connectError":null,"connected":true,"key":"script no token: connects, has no handlers","received":[]}
-{"connectError":null,"connected":true,"key":"script empty-string token is no token","received":[]}
-{"connectError":null,"connected":true,"key":"script array token [token]","received":["match.update:the match","round.tech-fall:the match","break.ended:the match"]}
-{"connectError":null,"connected":true,"key":"script array token [junk, token]","received":["match.update:the match","round.tech-fall:the match","break.ended:the match"]}
-{"connectError":null,"connected":true,"key":"script array token [] (truthy, matches nobody)","received":["match.update:the match","round.tech-fall:the match","break.ended:the match"]}
-{"connectError":"Invalid value {}","connected":false,"key":"script object token: connect_error","received":[]}
-{"connectError":"Invalid value { '$ne': 'x' }","connected":false,"key":"script object token with keys: connect_error","received":[]}
-{"connectError":"Invalid value {}","connected":false,"key":"script array holding an object: connect_error","received":[]}
-{"connectError":null,"connected":true,"key":"script true token: connects with no user","received":["match.update:the match","round.tech-fall:the match","break.ended:the match"]}
+{"connectError":"unauthorized","connected":false,"key":"script unknown token is refused","received":[]}
+{"connectError":"unauthorized","connected":false,"key":"script unknown token, connect only","received":[]}
+{"connectError":"unauthorized","connected":false,"key":"script no token is refused","received":[]}
+{"connectError":"unauthorized","connected":false,"key":"script empty-string token is no token","received":[]}
+{"connectError":"unauthorized","connected":false,"key":"script array token [token] is refused","received":[]}
+{"connectError":"unauthorized","connected":false,"key":"script array token [] is refused","received":[]}
+{"connectError":"unauthorized","connected":false,"key":"script object token is refused","received":[]}
+{"connectError":"unauthorized","connected":false,"key":"script true token is refused","received":[]}
 {"connectError":null,"connected":true,"key":"script client token AND worker token: treated as a client","received":["match.update:the match","round.tech-fall:the match","break.ended:the match"]}
 {"connectError":null,"connected":true,"key":"script worker socket: no match.join handler","received":[]}
-{"connectError":null,"connected":true,"key":"script worker socket: room.join works","received":["match.update:the match","round.tech-fall:the match","break.ended:the match"]}
+{"connectError":null,"connected":true,"key":"script worker socket: room.join is not a handler","received":[]}
+{"connectError":"unauthorized","connected":false,"key":"script wrong worker token is refused","received":[]}
+{"connectError":"unauthorized","connected":false,"key":"script non-string worker token is refused","received":[]}
 {"connectError":null,"connected":true,"key":"script a client relaying a worker event reaches nobody","received":["match.update:the match","round.tech-fall:the match","break.ended:the match"]}
-{"key":"handler unknown token, existing match","outcome":{"error":"TypeError","message":"Expected a user to exist"}}
-{"key":"handler valid token, true","outcome":{"error":"Error","message":"Argument passed to findByPk is invalid: true"}}
-{"key":"handler valid token, object","outcome":{"error":"Error","message":"Argument passed to findByPk is invalid: [object Object]"}}
-{"key":"handler valid token, array","outcome":{"error":"Error","message":"Argument passed to findByPk is invalid: 1,2"}}
-{"key":"handler valid token, empty array","outcome":{"error":"Error","message":"Argument passed to findByPk is invalid: "}}
+{"key":"init unknown token","outcome":{"error":"SocketAuthError","message":"unauthorized"}}
+{"key":"handler valid token, true","outcome":{"ok":true}}
+{"key":"handler valid token, object","outcome":{"ok":true}}
+{"key":"handler valid token, array","outcome":{"ok":true}}
+{"key":"handler valid token, empty array","outcome":{"ok":true}}
 {"key":"handler valid token, existing match","outcome":{"ok":true}}
 {"key":"handler valid token, unknown string","outcome":{"ok":true}}
 {"key":"token \"00000000-0000-4000-9000-00000000a1c0\"","user":"<user:creator>"}
 {"key":"token \"00000000-0000-4000-9000-00000000a1c1\"","user":"<user:other>"}
 {"key":"token \"nope\"","user":null}
+{"key":"token \"\"","user":null}
 {"key":"token 5","user":null}
 {"key":"token 0","user":null}
 {"key":"token true","user":null}
@@ -41,29 +42,21 @@
 {"key":"token null","user":null}
 {"key":"token 1.5","user":null}
 {"key":"token []","user":null}
-{"key":"token [\"00000000-0000-4000-9000-00000000a1c0\"]","user":"<user:creator>"}
-{"key":"token [\"00000000-0000-4000-9000-00000000a1c1\",\"00000000-0000-4000-9000-00000000a1c0\"]","user":"<user:creator>"}
-{"key":"token [\"00000000-0000-4000-9000-00000000a1c0\",\"00000000-0000-4000-9000-00000000a1c1\"]","user":"<user:creator>"}
-{"key":"token [\"x\",\"00000000-0000-4000-9000-00000000a1c1\"]","user":"<user:other>"}
-{"key":"token [null]","user":null}
-{"key":"token [5]","user":null}
-{"key":"token [true]","user":null}
-{"key":"token [[\"00000000-0000-4000-9000-00000000a1c0\"]]","user":"<user:creator>"}
-{"key":"token [\"00000000-0000-4000-9000-00000000a1c0\",null]","user":"<user:creator>"}
-{"key":"token {}","user":"throws: Invalid value {}"}
-{"key":"token {\"id\":1}","user":"throws: Invalid value { id: 1 }"}
-{"key":"token {\"$ne\":\"x\"}","user":"throws: Invalid value { '$ne': 'x' }"}
-{"key":"token [{}]","user":"throws: Invalid value {}"}
-{"key":"token [\"00000000-0000-4000-9000-00000000a1c0\",{\"a\":1}]","user":"throws: Invalid value { a: 1 }"}
+{"key":"token [\"00000000-0000-4000-9000-00000000a1c0\"]","user":null}
+{"key":"token [\"00000000-0000-4000-9000-00000000a1c1\",\"00000000-0000-4000-9000-00000000a1c0\"]","user":null}
+{"key":"token {}","user":null}
+{"key":"token {\"$ne\":\"x\"}","user":null}
+{"key":"token [{}]","user":null}
 {"key":"match \"the match\"","match":"the match"}
 {"key":"match \"nope\"","match":null}
+{"key":"match \"\"","match":null}
 {"key":"match 5","match":null}
 {"key":"match 0","match":null}
-{"key":"match true","match":"throws: Argument passed to findByPk is invalid: true"}
-{"key":"match false","match":"throws: Argument passed to findByPk is invalid: false"}
+{"key":"match true","match":null}
+{"key":"match false","match":null}
 {"key":"match null","match":null}
 {"key":"match undefined","match":null}
-{"key":"match []","match":"throws: Argument passed to findByPk is invalid: "}
-{"key":"match [\"the match\"]","match":"throws: Argument passed to findByPk is invalid: 00000000-0000-4000-9000-0000000000f0"}
-{"key":"match {}","match":"throws: Argument passed to findByPk is invalid: [object Object]"}
-{"key":"match {\"id\":\"the match\"}","match":"throws: Argument passed to findByPk is invalid: [object Object]"}
+{"key":"match []","match":null}
+{"key":"match [\"the match\"]","match":null}
+{"key":"match {}","match":null}
+{"key":"match {\"id\":\"the match\"}","match":null}

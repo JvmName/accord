@@ -6,7 +6,7 @@ import { present } from '../domain/present';
 import type { Logger } from 'pino';
 import { findMatchGraph, findMatchesInBreak, updateMatch } from '../db/repositories/matches';
 import type { Match } from '../db/types';
-import { serializeLeakedMatch, type MatchRenderOptions } from '../serialize';
+import { serializeMatch, type MatchRenderOptions } from '../serialize';
 import { startRound } from '../services/matchLifecycle';
 import { EVENTS } from '../ws/workerWebSocket';
 import { Worker } from './worker';
@@ -36,6 +36,6 @@ export class BreakTransitionWorker extends Worker {
         await startRound(this.db, match.id);
 
         const fresh = await findMatchGraph(this.db, match.id);
-        this.notifyServer(EVENTS.BREAK_ENDED, serializeLeakedMatch(present(fresh, 'the match'), RENDER_OPTIONS));
+        this.notifyServer(EVENTS.BREAK_ENDED, serializeMatch(present(fresh, 'the match'), RENDER_OPTIONS));
     }
 }

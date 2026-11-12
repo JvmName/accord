@@ -2,10 +2,11 @@
  * Socket.IO, attached to the web process's `http.Server` so HTTP and
  * WebSocket share one port. Each match has a room, `match:<id>`.
  *
- * A connection is a client when its handshake `auth.apiToken` is truthy,
- * otherwise the worker when its handshake query carries a truthy
- * `workerToken`. The worker token is not compared with anything.
+ * A connection is a client when its handshake `auth.apiToken` is present and
+ * names a user, or the worker when its handshake query carries the server's
+ * `workerToken`. Any other handshake is refused with a `connect_error`.
  */
+import { createHash, timingSafeEqual } from 'node:crypto';
 import type { Server as HttpServer } from 'http';
 import type { Server as IoServer, Socket } from 'socket.io';
 import type { Logger } from 'pino';
@@ -13,6 +14,7 @@ import type { SocketEvent } from '../contract/websocket';
 import { createLazyDb } from '../db';
 import type { DbOrTx } from '../db/repositories/internal';
 import type { SocketHost } from './abstractWebSocket';
+import { SocketAuthError } from './abstractWebSocket';
 import { WebSocket } from './webSocket';
 import { WorkerWebSocket } from './workerWebSocket';
 
@@ -25,16 +27,23 @@ const { Server }: { Server: typeof IoServer } = require('socket.io');
 
 type Next = (err?: Error) => void;
 
+/** Constant-time string comparison (hashing first makes the buffers equal length). */
+function safeEqual(a: string, b: string): boolean {
+    return timingSafeEqual(createHash('sha256').update(a).digest(), createHash('sha256').update(b).digest());
+}
+
 export class WebSocketServer implements SocketHost {
     #corsOrigin: string[] | undefined;
     #httpServer: HttpServer | undefined;
     #db: DbOrTx | undefined;
+    #workerToken: string | undefined;
     #_ioServer: IoServer | undefined;
 
-    constructor(httpServer?: HttpServer, corsOrigin?: string[], db?: DbOrTx) {
-        this.#httpServer = httpServer;
-        this.#corsOrigin = corsOrigin;
-        this.#db         = db;
+    constructor(httpServer?: HttpServer, corsOrigin?: string[], db?: DbOrTx, workerToken?: string) {
+        this.#httpServer  = httpServer;
+        this.#corsOrigin  = corsOrigin;
+        this.#db          = db;
+        this.#workerToken = workerToken;
     }
 
     listen(): void {
@@ -77,30 +86,38 @@ export class WebSocketServer implements SocketHost {
     }
 
     async _initWebSocket(ioSocket: Socket, next: Next): Promise<void> {
-        const auth  = ioSocket.handshake.auth;
-        const query = ioSocket.handshake.query;
+        const apiToken    = ioSocket.handshake.auth?.apiToken;
+        const workerToken = ioSocket.handshake.query?.workerToken;
         let socket: WebSocket | WorkerWebSocket;
+        let type: 'client' | 'worker';
 
-        if (auth?.apiToken) {
+        if (apiToken) {
             socket = new WebSocket(ioSocket, this);
-        } else if (query?.workerToken) {
+            type   = 'client';
+        } else if (workerToken && this.#isWorkerToken(workerToken)) {
             socket = new WorkerWebSocket(ioSocket, this);
+            type   = 'worker';
         } else {
-            logger.warn(`WebSocket rejected: no token (${ioSocket.id})`);
-            // Not connected yet, so this does not stop the connection.
-            ioSocket.disconnect();
-            return next();
+            logger.warn(`WebSocket refused: no valid token (${ioSocket.id})`);
+            return next(new SocketAuthError());
         }
 
         try {
             await socket.init();
-            const type = auth?.apiToken ? 'client' : 'worker';
             logger.info(`WebSocket initialized as ${type} (${ioSocket.id})`);
             next();
         } catch (err) {
-            if (CONSTANTS.ENV != 'test') logger.error(err);
+            if (err instanceof SocketAuthError) {
+                logger.warn(`WebSocket refused: unknown api token (${ioSocket.id})`);
+            } else if (CONSTANTS.ENV != 'test') {
+                logger.error(err);
+            }
             return next(err as Error); // socket.io's `next` takes an Error; whatever was thrown is passed on
         }
+    }
+
+    #isWorkerToken(token: unknown): boolean {
+        return typeof token === 'string' && this.#workerToken !== undefined && safeEqual(token, this.#workerToken);
     }
 
     numClientsInRoom(room: string): number {

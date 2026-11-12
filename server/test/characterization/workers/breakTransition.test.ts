@@ -18,7 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, jest, setSystemTime } from
 import { BreakTransitionWorker } from '../../../src/workers/breakTransitionWorker';
 import { EVENTS } from '../../../src/ws/workerWebSocket';
 import { findMatchGraph } from '../../../src/db/repositories/matches';
-import { serializeLeakedMatch } from '../../../src/serialize';
+import { serializeMatch } from '../../../src/serialize';
 import * as W from './world';
 
 const MATCH = W.X('100');
@@ -176,7 +176,7 @@ describe('CHARACTERIZATION: BreakTransitionWorker', () => {
             expect(payload.id).toBe(id);
             expect(payload.rounds).toHaveLength(2);
             expect(payload.rounds[1].id).toBe(roundsOf(id)[1].id);
-            expect(payload).toEqual(serializeLeakedMatch((await findMatchGraph(world.db, id))!, { includeMat: true, includeMatchJudges: true, includeRounds: true }));
+            expect(payload).toEqual(serializeMatch((await findMatchGraph(world.db, id))!, { includeMat: true, includeMatchJudges: true, includeRounds: true }));
         });
 
 

@@ -133,7 +133,7 @@ export class ApplicationServer {
 
     startWebSocketServer(): void {
         if (this.#webSocketServer) return;
-        this.#webSocketServer = new WebSocketServer(this.#httpServer, this.corsOrigin, this.db);
+        this.#webSocketServer = new WebSocketServer(this.#httpServer, this.corsOrigin, this.db, this.workerToken);
         this.#webSocketServer.listen();
     }
 

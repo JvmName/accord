@@ -13,7 +13,7 @@ const { WireContractError }: typeof import('../../src/serialize') = require('../
 
 /** A minimal payload that satisfies the event schema. */
 function validPayload() {
-    const user = { id: 'u1', name: 'n', api_token: 't', created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z' };
+    const user = { id: 'u1', name: 'n' };
     return {
         creator_id: 'c', id: 'm1', mat_id: 'mat', started_at: null, ended_at: null, break_started_at: null,
         break_duration: null, red_competitor: user, blue_competitor: { ...user, id: 'u2' }, winner: null, break_remaining: null,

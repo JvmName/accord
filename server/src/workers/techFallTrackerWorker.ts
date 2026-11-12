@@ -8,7 +8,7 @@ import { findMatchGraph, findMatchGraphsByIds, type MatchGraph } from '../db/rep
 import { findOpenRounds } from '../db/repositories/rounds';
 import type { Round } from '../db/types';
 import type { Rules } from '../domain/types';
-import { roundOutcome, serializeLeakedMatch } from '../serialize';
+import { roundOutcome, serializeMatch } from '../serialize';
 import { endRound } from '../services/matchLifecycle';
 import { EVENTS } from '../ws/workerWebSocket';
 import { Worker } from './worker';
@@ -63,6 +63,6 @@ export class TechFallTrackerWorker extends Worker {
 
         // Rounds only: no mat and no judges in this payload.
         const ended = await findMatchGraph(this.db, graph.id);
-        this.notifyServer(EVENTS.TECH_FALL, serializeLeakedMatch(present(ended, 'the match'), { includeRounds: true }));
+        this.notifyServer(EVENTS.TECH_FALL, serializeMatch(present(ended, 'the match'), { includeRounds: true }));
     }
 }

@@ -51,13 +51,11 @@ describe('WebSocket', () => {
             expect(socket.currentUser?.id).toBe(user.id);
         });
 
-        it('closes the socket if there is no user', async () => {
+        it('refuses the handshake if there is no user', async () => {
             const host = hostWithDb();
             const ioSocket = ioSocketDouble({ apiToken: 'no-such-token' });
 
-            await new WebSocket(ioSocket, host).init();
-
-            expect(ioSocket.disconnect).toHaveBeenCalledTimes(1);
+            await expect(new WebSocket(ioSocket, host).init()).rejects.toThrow('unauthorized');
         });
 
         it('sets up the disconnect, room and match handlers', async () => {
@@ -68,26 +66,40 @@ describe('WebSocket', () => {
 
             await socket.init();
 
-            expect(onSpy).toHaveBeenCalledTimes(5);
+            expect(onSpy).toHaveBeenCalledTimes(3);
             expect(onSpy).toHaveBeenCalledWith('disconnect', expect.any(Function));
-            expect(onSpy).toHaveBeenCalledWith('room.join',  expect.any(Function));
-            expect(onSpy).toHaveBeenCalledWith('room.leave', expect.any(Function));
+            expect(onSpy).not.toHaveBeenCalledWith('room.join', expect.any(Function));
+            expect(onSpy).not.toHaveBeenCalledWith('room.leave', expect.any(Function));
             expect(onSpy).toHaveBeenCalledWith('match.join', expect.any(Function));
             expect(onSpy).toHaveBeenCalledWith('match.leave', expect.any(Function));
         });
     });
 
     describe('WebSocket#on', () => {
-        it('calls `on` on the underlying socket with the handler bound to this socket', () => {
+        it('calls `on` on the underlying socket with the handler bound to this socket', async () => {
             const ioSocket = ioSocketDouble();
             const socket = new WebSocket(ioSocket, { emit: jest.fn(), db: null as never });
-            const handler = jest.fn(function (this: unknown) { return this; });
+            let receiver: unknown;
+            const handler = jest.fn(function (this: unknown, ..._args: unknown[]) { receiver = this; });
 
             socket.on('some.event', handler);
 
             expect(ioSocket.on).toHaveBeenCalledTimes(1);
             expect(ioSocket.on.mock.calls[0][0]).toBe('some.event');
-            expect(ioSocket.on.mock.calls[0][1]()).toBe(socket);
+            await ioSocket.on.mock.calls[0][1]('arg');
+            expect(receiver).toBe(socket);
+            expect(handler).toHaveBeenCalledWith('arg');
+        });
+
+        it('logs a handler that throws or rejects instead of letting it escape', async () => {
+            const ioSocket = ioSocketDouble();
+            const socket = new WebSocket(ioSocket, { emit: jest.fn(), db: null as never });
+
+            socket.on('sync.boom',  () => { throw new Error('sync'); });
+            socket.on('async.boom', async () => { throw new Error('async'); });
+
+            await expect(ioSocket.on.mock.calls[0][1]()).resolves.toBeUndefined();
+            await expect(ioSocket.on.mock.calls[1][1]()).resolves.toBeUndefined();
         });
     });
 
