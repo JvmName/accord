@@ -10,6 +10,7 @@ import { Database } from 'bun:sqlite';
 import { drizzle, type BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import path from 'node:path';
+import { loadConfig } from '../config';
 import * as schema from './schema';
 
 export { schema };
@@ -25,8 +26,8 @@ export const MIGRATIONS_FOLDER = path.resolve(__dirname, '../../drizzle');
  * `<cwd>/config/db/database.<NODE_ENV>.sqlite` (`development` when unset).
  */
 export function resolveDatabasePath(): string {
-    const env = process.env.NODE_ENV || 'development';
-    return process.env.DATABASE_PATH ?? path.join(process.cwd(), 'config', 'db', `database.${env}.sqlite`);
+    const { DATABASE_PATH, NODE_ENV } = loadConfig();
+    return DATABASE_PATH ?? path.join(process.cwd(), 'config', 'db', `database.${NODE_ENV}.sqlite`);
 }
 
 export interface CreateDbOptions {

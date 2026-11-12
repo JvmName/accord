@@ -13,20 +13,22 @@ The baseline `drizzle/0000_baseline.sql` is the only migration history.
 ## Commands (run from `server/`)
 
 ```bash
-bun run drizzle:generate   # diff schema.ts vs drizzle/meta, write a new migration
-bun run drizzle:migrate    # apply pending migrations to the configured SQLite file
-bun run drizzle:studio
+bun run db:generate   # diff schema.ts vs drizzle/meta, write a new migration
+bun run db:migrate    # apply pending migrations to the configured SQLite file
+bun run db:studio
 ```
 
-Each script is `bunx --bun drizzle-kit <cmd>`. `--bun` makes drizzle-kit run
-under the bun runtime, so it uses the built-in `bun:sqlite` driver and needs no
-native sqlite package. Use bun only, never npm/yarn/pnpm. `generate` never
-opens a database. `migrate`/`studio` use `$DATABASE_PATH`, else
+`db:generate` and `db:studio` run `bunx --bun drizzle-kit <cmd>`. `--bun` makes
+drizzle-kit run under the bun runtime, so it uses the built-in `bun:sqlite`
+driver and needs no native sqlite package. Use bun only, never npm/yarn/pnpm.
+`generate` never opens a database; `studio` uses `$DATABASE_PATH`, else
 `config/db/database.<NODE_ENV>.sqlite` (see `drizzle.config.ts`), which is a
-real file: do not point them at dev or production data by accident.
+real file: do not point it at dev or production data by accident.
 
-`bun run db:migrate` applies the pending migrations to the database that
-`resolveDatabasePath()` names, the same file the server opens.
+`db:migrate` runs `bin/migrate.ts`, which applies the pending migrations to the
+database that `resolveDatabasePath()` names, the same file the server opens.
+It uses only runtime dependencies, so it also works in a production-only
+install (drizzle-kit is a dev dependency).
 
 ## Decisions and caveats
 

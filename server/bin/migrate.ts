@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
-
-const { createDb, migrateDb, resolveDatabasePath } = require('../src/db');
+import { createDb, migrateDb, resolveDatabasePath } from '../src/db';
 
 const db = createDb();
 migrateDb(db);

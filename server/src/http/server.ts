@@ -8,6 +8,7 @@ import cors from 'cors';
 import express, { type ErrorRequestHandler, type Express, type RequestHandler } from 'express';
 import pinoHttp from 'pino-http';
 import responseTime from 'response-time';
+import { loadConfig } from '../config';
 import { createLazyDb, type Db } from '../db';
 import { assertImplemented, registerRoutes } from './router';
 import { routes } from './routes';
@@ -41,8 +42,9 @@ export interface ApplicationServerOptions {
 export function openApiValidationEnabled(option: boolean | undefined, dev: boolean, env: NodeJS.ProcessEnv = process.env): boolean {
     if (CONSTANTS.ENV === 'production') return false;
     if (option !== undefined) return option;
-    if (env[OPENAPI_VALIDATION_ENV] === '0') return false;
-    if (env[OPENAPI_VALIDATION_ENV] === '1') return true;
+    const { ACCORD_OPENAPI_VALIDATION: flag } = loadConfig(env);
+    if (flag === '0') return false;
+    if (flag === '1') return true;
     return dev;
 }
 
@@ -58,7 +60,7 @@ export class ApplicationServer {
     #routesMounted = false;
 
     constructor({ port, db, workerToken, dev, openApiValidation }: ApplicationServerOptions = {}) {
-        this.#port              = port || process.env.PORT || 3000;
+        this.#port              = port || loadConfig().PORT;
         this.#db                = db;
         this.#workerToken       = workerToken;
         this.#dev               = dev ?? CONSTANTS.DEV;
@@ -124,9 +126,8 @@ export class ApplicationServer {
 
     get corsOrigin(): string[] {
         const origins = ['http://localhost:8080'];
-        if (process.env.WEB_ORIGIN) {
-            origins.push(process.env.WEB_ORIGIN);
-        }
+        const { WEB_ORIGIN } = loadConfig();
+        if (WEB_ORIGIN) origins.push(WEB_ORIGIN);
         return origins;
     }
 

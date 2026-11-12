@@ -19,16 +19,16 @@ Accord is a distributed application for tracking "riding time" (controlled grapp
 cd server
 
 # Development
-bun run start                # Start dev server with nodemon
+bun run start                # Start the server and its worker
+bun run dev                  # Same, reloading on file changes
 
 # Testing
 bun run test                 # Run all tests with coverage
 bun run test -- <file>       # Run specific test file
 
 # Database migrations
-bun run db:create_migration  # Create new migration
-bun run db:migrate           # Run pending migrations
-bun run db:rollback          # Rollback last migration
+bun run db:generate          # Generate a new migration from src/db/schema.ts
+bun run db:migrate           # Apply pending Drizzle migrations
 ```
 
 **Never run a bare `bun test`.** It skips the `--isolate` flag that the `test` script supplies. bun shares one module registry across all test files without it, and the suite's `mock.module()` doubles for `sequelize` / `lib/activeRecord` then contaminate each other — a bare `bun test` gives 187 pass / 61 fail while every file passes alone. Worse, the same contamination can make an assertion pass while testing nothing.
@@ -84,7 +84,7 @@ RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
   - Each match has its own room: `match:${matchId}`
   - Authentication via `socket.handshake.auth.apiToken`
 
-- **Worker process** (`/server/bin/worker <workerToken>`): Separate process that connects via WebSocket using `workerToken`. Runs four background jobs:
+- **Worker process** (`/server/bin/worker.ts`, token from `WORKER_TOKEN` or the first argument): Separate process that connects via WebSocket using `workerToken`. Runs four background jobs:
   - `MatchUpdateWorker`: Ticks every **250ms**. Broadcasts `match.update` for every open (not-yet-ended) round **and** for every match currently in a break, throttled to ~1s. Also tracks active match IDs across ticks — when a match exits the active set (just ended), immediately broadcasts one final `match.update` so judges receive the ended state without waiting for their local countdown to expire. The other three workers tick every 1 second:
   - `TechFallTrackerWorker`: Checks open rounds for tech fall threshold; if reached, ends the round in the DB and broadcasts `round.tech-fall`
   - `BreakTransitionWorker`: Checks matches in break state; when break expires, starts the next round and broadcasts `break.ended`

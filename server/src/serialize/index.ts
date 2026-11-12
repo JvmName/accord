@@ -12,6 +12,7 @@
  * `.ai/plans/server-ts/artifacts/serialize-inventory.md`.
  */
 import type { z } from 'zod';
+import { loadConfig } from '../config';
 import {
     leakedMatchSchema,
     leakedRoundSchema,
@@ -87,9 +88,10 @@ export function assertWire<K extends WireKind>(kind: K, value: WireOf<K>): WireO
  * call `assertWire` directly).
  */
 export function wireValidationEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
-    if (env.ACCORD_VALIDATE_WIRE === '1') return true;
-    if (env.ACCORD_VALIDATE_WIRE === '0') return false;
-    return env.NODE_ENV === 'development';
+    const { ACCORD_VALIDATE_WIRE: flag, NODE_ENV } = loadConfig(env);
+    if (flag === '1') return true;
+    if (flag === '0') return false;
+    return NODE_ENV === 'development';
 }
 
 /**

@@ -1,6 +1,7 @@
-const ENV       = process.env.NODE_ENV || 'development';
-const DEV       = ENV == 'development';
-const LOG_LEVEL = (process.env.LOG_LEVEL || 'info').toLowerCase();
+const { loadConfigOrExit } = require('../src/config');
+
+const { NODE_ENV: ENV, LOG_LEVEL } = loadConfigOrExit();
+const DEV = ENV == 'development';
 
 
 module.exports = {

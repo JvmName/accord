@@ -3,16 +3,16 @@
     "version": "1.0.0-rc08",
     "private": true,
     "scripts": {
-        "start": "nodemon ./bin/www",
-        "worker": "nodemon ./bin/worker",
+        "start": "bun run bin/www.ts",
+        "dev": "bun --watch run bin/www.ts",
+        "worker": "bun run bin/worker.ts",
         "test": "bun test --isolate",
         "test:update-fixtures": "bun test/support/updateFrozen.js",
         "typecheck": "tsc --noEmit",
         "generate:openapi": "bun run bin/generate-openapi.ts",
-        "db:migrate": "bun bin/migrate",
-        "drizzle:generate": "bunx --bun drizzle-kit generate",
-        "drizzle:migrate": "bunx --bun drizzle-kit migrate",
-        "drizzle:studio": "bunx --bun drizzle-kit studio"
+        "db:migrate": "bun run bin/migrate.ts",
+        "db:generate": "bunx --bun drizzle-kit generate",
+        "db:studio": "bunx --bun drizzle-kit studio"
     },
     "engines": {
         "bun": ">=1.4.0"
@@ -28,6 +28,7 @@
         "pino-pretty": "^13.0.0",
         "response-time": "^2.0.0",
         "socket.io": "^4.0.0",
+        "socket.io-client": "^4.0.0",
         "zod": "^4.6.5"
     },
     "devDependencies": {
@@ -39,8 +40,6 @@
         "ajv": "^8.20.0",
         "bun-types": "^1.4.2",
         "drizzle-kit": "^0.31.11",
-        "nodemon": "^3.1.11",
-        "socket.io-client": "^4.0.0",
         "typescript": "5.9.3"
     }
 }

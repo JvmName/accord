@@ -176,7 +176,7 @@ describe('ApplicationServer', () => {
             delete process.env.PORT;
             expect(new ApplicationServer().port).toBe(3000);
             process.env.PORT = '4000';
-            expect(new ApplicationServer().port).toBe('4000');
+            expect(new ApplicationServer().port).toBe(4000);
             expect(new ApplicationServer({ port: 5000 }).port).toBe(5000);
         });
 

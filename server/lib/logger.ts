@@ -1,9 +1,11 @@
 import type { Logger } from 'pino';
 
+const { loadConfigOrExit } = require('../src/config');
+
 const pino      = require('pino');
 const CONSTANTS = require('./constants');
 
-const procName = process.env.PROC_NAME || "SERVER";
+const procName = loadConfigOrExit().PROC_NAME;
 const logger: Logger = pino({
     level: CONSTANTS.LOG_LEVEL,
     transport: {

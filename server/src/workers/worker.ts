@@ -7,6 +7,7 @@ import type { io as ioFunction, Socket as ClientSocket } from 'socket.io-client'
 import type { Logger } from 'pino';
 import type { z } from 'zod';
 import { socketPayloads, type SocketEvent } from '../contract/websocket';
+import { loadConfig } from '../config';
 import { createLazyDb } from '../db';
 import type { DbOrTx } from '../db/repositories/internal';
 import { WireContractError, wireValidationEnabled } from '../serialize';
@@ -61,8 +62,9 @@ export abstract class Worker {
     #db: DbOrTx | undefined;
 
     constructor(workerToken: string, { port, host, db }: WorkerOptions = {}) {
-        this.#host        = host || process.env.HOST || 'localhost';
-        this.#port        = port || process.env.PORT || 3000;
+        const config      = loadConfig();
+        this.#host        = host || config.HOST;
+        this.#port        = port || config.PORT;
         this.#workerToken = workerToken;
         this.#db          = db;
     }
