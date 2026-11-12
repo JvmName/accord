@@ -61,9 +61,9 @@ install (drizzle-kit is a dev dependency).
 
 ## Tests
 
-`test/db/schema.test.js` applies `./drizzle` to an in-memory database and
+`test/db/schema.test.ts` applies `./drizzle` to an in-memory database and
 checks the table list, columns, NOT NULL on value-class columns, unique
-constraints, round trips and relational queries. `test/db/datetime.test.js`
+constraints, round trips and relational queries. `test/db/datetime.test.ts`
 checks the stored ISO format, reads, ordering and NULLs on a temp-file DB.
 
 ## Repositories (task 10)
@@ -79,7 +79,7 @@ function, or -> task 10b) is
   `toApiResponse`/`apiSafeKeys`: rows carry every column (including
   `users.api_token`) and serialisation is task 11. ES `export`, like
   `schema.ts`: only TS/new code and tests load them (`require()` works under
-  bun; smoke-tested in `test/db/repositories/matCodes.test.js`).
+  bun; smoke-tested in `test/db/repositories/matCodes.test.ts`).
 - **Association caching is dropped, not ported.** `BaseRecord`'s
   per-instance `#cachedAssociations` existed because every association was a
   lazy round trip, and it brought stale-cache bugs with it (manual

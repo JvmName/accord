@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import net from 'net';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const Http = require('../helpers/httpServer');
+import * as Http from '../helpers/httpServer';
 // Before anything opens a database connection.
 Http.useTemporaryDatabase('accord-match-routes');
 /* eslint-enable @typescript-eslint/no-require-imports */

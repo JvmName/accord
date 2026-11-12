@@ -14,7 +14,7 @@ those rewrites and a silently broken client.
 
 ## Changing a golden
 
-**A red `contract.test.js` means the wire contract changed. Fix the server.**
+**A red `contract.test.ts` means the wire contract changed. Fix the server.**
 
 Regenerating goldens to turn the gate green is the one failure mode this
 directory exists to prevent, so it is deliberately awkward: goldens are only
@@ -37,13 +37,13 @@ place behaviour is allowed to change.
 cd server
 
 # THE GATE — replays every golden and asserts byte-equality.
-bun test --isolate test/contract/contract.test.js
+bun test --isolate test/contract/contract.test.ts
 
 # Completeness oracle: fails on any route with no golden, prints the summary.
-bun test --isolate --coverage test/contract/capture.test.js
+bun test --isolate --coverage test/contract/capture.test.ts
 
 # Regenerate (deliberate act — review the diff).
-CAPTURE_GOLDENS=1 bun test --isolate test/contract/capture.test.js
+CAPTURE_GOLDENS=1 bun test --isolate test/contract/capture.test.ts
 ```
 
 Both files also run as part of `bun run test`. Never a bare `bun test` — see
@@ -55,8 +55,8 @@ Both files also run as part of `bun run test`. Never a bare `bun test` — see
 |---|---|
 | `seed.ts` | The deterministic fixture graph: fixed UUIDs, fixed mat codes, a caller-driven clock. One match per interesting shape. |
 | `capture.ts` | The harness. Boots a real server, runs the ordered request plan, drives the real workers for the WebSocket events, normalizes and reports. |
-| `capture.test.js` | Completeness oracle; writes goldens under `CAPTURE_GOLDENS=1`. |
-| `contract.test.js` | The gate: byte-equality replay, plus the `models.kt` population and nullability cross-checks. |
+| `capture.test.ts` | Completeness oracle; writes goldens under `CAPTURE_GOLDENS=1`. |
+| `contract.test.ts` | The gate: byte-equality replay, plus the `models.kt` population and nullability cross-checks. |
 | `goldens/*.json` | 85 snapshots — 81 HTTP, 4 WebSocket. |
 
 ## How a golden is made deterministic

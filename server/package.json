@@ -7,7 +7,7 @@
         "dev": "bun --watch run bin/www.ts",
         "worker": "bun run bin/worker.ts",
         "test": "bun test --isolate",
-        "test:update-fixtures": "bun test/support/updateFrozen.js",
+        "test:update-fixtures": "bun test/support/updateFrozen.ts",
         "typecheck": "tsc --noEmit",
         "generate:openapi": "bun run bin/generate-openapi.ts",
         "db:migrate": "bun run bin/migrate.ts",

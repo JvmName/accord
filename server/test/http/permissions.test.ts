@@ -2,7 +2,7 @@
  * The permission rules (`src/http/permissions.ts`) over the full grid of
  *     subject (user x mat code) x scope (every kind, incl. null) x action (every known + unknown)
  * against the `permissions` snapshot fixture (grant, deny, or the thrown
- * error, per cell; see ./permissionGrid.js), then the individual rules
+ * error, per cell; see ./permissionGrid.ts), then the individual rules
  * restated case by case, grants AND denies.
  */
 import { describe, expect, it } from 'bun:test';
@@ -10,8 +10,8 @@ import type { Mat, MatCode, Match, User } from '../../src/db/types';
 import { can, type PermissionLoaders, type Subject } from '../../src/http/permissions';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const G = require('./permissionGrid');
-const F = require('../support/frozen');
+import * as G from './permissionGrid';
+import * as F from '../support/frozen';
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 const { USERS, MATS, MATCHES, MAT_CODES } = G;

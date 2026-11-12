@@ -9,7 +9,7 @@
  *
  * Classification reproduces `ApplicationServer#handleError`
  * (`lib/server/applicationServer.js:272-296`) exactly, including two quirks
- * pinned by `test/characterization/errorMapping.test.js`:
+ * pinned by `test/characterization/errorMapping.test.ts`:
  *   - F-13: classes are matched by CONSTRUCTOR IDENTITY, not `instanceof`, so a
  *     subclass of either class falls through to the generic 500 branch.
  *   - F-14: the unique-violation branch writes the raw driver message as a bare

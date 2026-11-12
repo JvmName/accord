@@ -8,9 +8,9 @@
  * every HTTP route and every WebSocket event and records the exact wire bytes.
  *
  * Two callers share it, and that sharing is the point:
- *   - `capture.test.js`  — writes `goldens/*.json` (only with CAPTURE_GOLDENS=1)
+ *   - `capture.test.ts`  — writes `goldens/*.json` (only with CAPTURE_GOLDENS=1)
  *                          and runs the completeness oracle.
- *   - `contract.test.js` — runs the same plan and asserts byte-equality with
+ *   - `contract.test.ts` — runs the same plan and asserts byte-equality with
  *                          the committed goldens. This is the migration gate.
  * Because both execute the identical ordered plan, replay determinism is
  * structural rather than hoped for.
@@ -44,7 +44,7 @@
 import * as fs   from 'fs';
 import * as path from 'path';
 
-const Http = require('../helpers/httpServer');
+import * as Http from '../helpers/httpServer';
 
 
 export const GOLDENS_DIR = path.join(__dirname, 'goldens');
@@ -948,7 +948,7 @@ export function writeGoldens(result: CaptureResult): string[] {
     }
 
     // Remove goldens for cases that no longer exist, so a deleted case cannot
-    // leave a stale file behind that contract.test.js would still replay.
+    // leave a stale file behind that contract.test.ts would still replay.
     const expected = new Set(written);
     for (const file of fs.readdirSync(GOLDENS_DIR)) {
         if (file.endsWith('.json') && !expected.has(file)) {

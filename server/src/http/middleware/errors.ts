@@ -3,7 +3,7 @@
  * `ApplicationServer#handleError` (`lib/server/applicationServer.js:272-296`).
  *
  * Branch order and matching rules are the legacy ones, pinned by
- * `test/characterization/errorMapping.test.js` and replayed against this
+ * `test/characterization/errorMapping.test.ts` and replayed against this
  * handler by `test/http/errors.test.ts`:
  *
  *   1. unique-constraint violation  -> 400 `{ errors: { field: [...], null: "<driver message>" } }` (F-14)

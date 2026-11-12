@@ -23,7 +23,7 @@ const RDojoKombatRules: Rules = {
         // Round#end closes every open vote before setting ended_at, but an
         // ended round holding a still-open vote would keep accruing score.
         // Kept as a `this` read (not a literal `undefined`) so a caller that
-        // binds `this` (test/rules/rDojoKombat.test.js uses `.call({ended_at})`)
+        // binds `this` (test/rules/rDojoKombat.test.ts uses `.call({ended_at})`)
         // behaves exactly as before.
         const endAt = (this as { ended_at?: Date | null }).ended_at;
         return scoreRidingTime(red, blue, judges, votes, pauses, endAt);

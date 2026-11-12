@@ -2,7 +2,7 @@
  * Task 12 — AUTHORIZATION PARITY of the route registry, over HTTP.
  *
  * Every row of `.ai/plans/server-ts/artifacts/authz-matrix.txt` (the task-02b
- * matrix, executable form `test/characterization/authorization.test.js`) is
+ * matrix, executable form `test/characterization/authorization.test.ts`) is
  * replayed against the NEW middleware: the real route definitions with their
  * real `authorize` specs, mounted on a test Express app over a scratch
  * in-memory Drizzle database, with STUB handlers. A first test parses the

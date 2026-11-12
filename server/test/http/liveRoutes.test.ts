@@ -17,10 +17,10 @@ import path from 'path';
 import { createDb, migrateDb, type Db } from '../../src/db';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const Http = require('../helpers/httpServer');
+import * as Http from '../helpers/httpServer';
 // Before anything opens a database connection.
 const databaseFile: string = Http.useTemporaryDatabase('accord-live-routes');
-const { ApplicationServer } = require('../../src/http/server');
+import { ApplicationServer } from '../../src/http/server';
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 const FIXTURE = path.join(__dirname, '..', 'characterization', 'fixtures', 'routeTable.txt');

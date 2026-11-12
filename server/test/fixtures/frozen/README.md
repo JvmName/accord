@@ -6,13 +6,13 @@ one, so these files also prove that the current code behaves the same way.
 
 | File | Checked by | What one record is |
 |---|---|---|
-| `seed.jsonl` | `test/services/lifecycleParity.test.js` | One row of the contract seed (`test/contract/seed.ts`), keyed `table:rowid`. |
-| `lifecycle.jsonl` | `test/services/lifecycleParity.test.js` | One lifecycle scenario (`test/services/lifecycleScenarios.js`): its outcome, the ordered writes, and the row changes. |
-| `emissions.jsonl` | `test/workers/emissionDifferential.test.js` | Part of one worker timeline (`test/workers/emissionScenarios.js`): a summary, a payload, one room's emissions, or one step's writes. |
-| `repositories.jsonl` | `test/db/repositories/differential.test.js` | The result of one read query over the seed (`differentialQueries.js`). |
-| `webSocketTier.jsonl` | `test/ws/webSocketTier.test.js` | What one Socket.IO client script observed, one handler outcome, or one lookup (`test/ws/webSocketScripts.js`). |
-| `permissions.jsonl` | `test/http/permissions.test.ts` | The grant/deny row of one subject over every scope and action (`test/http/permissionGrid.js`). |
-| `errorRendering.jsonl` | `test/http/envelope.test.ts` | The status and body rendered for one thrown error (`test/http/errorCases.js`). |
+| `seed.jsonl` | `test/services/lifecycleParity.test.ts` | One row of the contract seed (`test/contract/seed.ts`), keyed `table:rowid`. |
+| `lifecycle.jsonl` | `test/services/lifecycleParity.test.ts` | One lifecycle scenario (`test/services/lifecycleScenarios.ts`): its outcome, the ordered writes, and the row changes. |
+| `emissions.jsonl` | `test/workers/emissionDifferential.test.ts` | Part of one worker timeline (`test/workers/emissionScenarios.ts`): a summary, a payload, one room's emissions, or one step's writes. |
+| `repositories.jsonl` | `test/db/repositories/differential.test.ts` | The result of one read query over the seed (`differentialQueries.ts`). |
+| `webSocketTier.jsonl` | `test/ws/webSocketTier.test.ts` | What one Socket.IO client script observed, one handler outcome, or one lookup (`test/ws/webSocketScripts.ts`). |
+| `permissions.jsonl` | `test/http/permissions.test.ts` | The grant/deny row of one subject over every scope and action (`test/http/permissionGrid.ts`). |
+| `errorRendering.jsonl` | `test/http/envelope.test.ts` | The status and body rendered for one thrown error (`test/http/errorCases.ts`). |
 
 ## Format
 

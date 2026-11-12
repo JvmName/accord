@@ -18,7 +18,7 @@ const SERVER_ROOT = path.join(__dirname, '..', '..');
 
 /** Child: opens `file`, takes the write lock, holds it `holdMs`, commits. */
 const HOLD_LOCK = `
-const { Database } = require('bun:sqlite');
+import { Database } from 'bun:sqlite';
 const [file, holdMs] = [process.argv[1], Number(process.argv[2])];
 const db = new Database(file);
 try {
@@ -30,7 +30,7 @@ setTimeout(() => { db.exec('COMMIT'); console.log('COMMITTED'); db.close(); proc
 
 /** Child: inserts one row with the same 1000 ms busy timeout the app sets and reports how it went. */
 const INSERT_ROW = `
-const { Database } = require('bun:sqlite');
+import { Database } from 'bun:sqlite';
 const file = process.argv[1];
 const db = new Database(file);
 db.run('PRAGMA busy_timeout = 1000');

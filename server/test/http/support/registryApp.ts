@@ -26,7 +26,7 @@ import { routes as declaredRoutes } from '../../../src/http/routes';
 import type { AnyRouteDefinition } from '../../../src/http/types';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { makeClient } = require('../../helpers/httpServer');
+import { makeClient } from '../../helpers/httpServer';
 
 export type Request = (method: string, path: string, options?: { token?: string; body?: unknown; headers?: Record<string, string> }) =>
     Promise<{ status: number; body: any }>;
@@ -87,7 +87,7 @@ export async function startRegistryApp(options: {
 
 // ---------------------------------------------------------------------------
 // Fixture builders (repositories only; the legacy equivalents are the HTTP
-// calls in test/characterization/authorization.test.js#createWorld).
+// calls in test/characterization/authorization.test.ts#createWorld).
 // ---------------------------------------------------------------------------
 
 let counter = 0;

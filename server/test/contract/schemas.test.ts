@@ -6,7 +6,7 @@
  * is wrong, not the golden — the goldens are a fidelity instrument captured
  * from the unmodified server (see `00-START-HERE.md` §5).
  *
- * Unlike `contract.test.js` this file boots nothing: it reads the goldens off
+ * Unlike `contract.test.ts` this file boots nothing: it reads the goldens off
  * disk and parses them. It is therefore also the gate that keeps the Zod
  * layer honest once task 06 generates OpenAPI from it and task 12 validates
  * requests with it.

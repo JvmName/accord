@@ -8,7 +8,7 @@
  *      whose bodies come from a handler (422s, 500, success envelopes) are
  *      replayed with a stub handler returning that golden's payload, which
  *      proves the envelope/status machinery (e.g. the status-less 422).
- *   3. ERRORS: every error case in ./errorCases.js, thrown from a route
+ *   3. ERRORS: every error case in ./errorCases.ts, thrown from a route
  *      handler, must render the status and body of the `errorRendering`
  *      snapshot fixture, plus a REAL SQLite unique violation raised through
  *      Drizzle.
@@ -36,8 +36,8 @@ import {
 } from './support/registryApp';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const { ERROR_CASES } = require('./errorCases');
-const F = require('../support/frozen');
+import { ERROR_CASES } from './errorCases';
+import * as F from '../support/frozen';
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 const GOLDENS = path.join(__dirname, '..', 'contract', 'goldens');

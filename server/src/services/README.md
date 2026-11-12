@@ -37,9 +37,9 @@ Rules:
   real atomicity is a task-18 change.
 - **No WebSocket emission, no serialisation.** Workers emit; task 11 renders.
 - ES `export` like the repositories; only new code loads these, and they load
-  through `require()` under bun (`test/services/modules.test.js`).
+  through `require()` under bun (`test/services/modules.test.ts`).
 
-Parity: `test/services/lifecycleParity.test.js` runs every command against the
+Parity: `test/services/lifecycleParity.test.ts` runs every command against the
 legacy model method on a separate, identically seeded legacy-migrated DB and
 compares outcome, all rows, and a trigger-captured log of every write in
 order. Inventory, call sites and mutation proofs:

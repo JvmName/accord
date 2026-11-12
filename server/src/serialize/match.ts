@@ -15,7 +15,7 @@
  *
  * `red_score` / `blue_score` are columns but are deliberately NOT emitted:
  * `apiSafeKeys` is an explicit list that omits them. They must stay ABSENT
- * (not null), see `test/serialize/match.test.js`.
+ * (not null), see `test/serialize/match.test.ts`.
  *
  * The absent-vs-null split is what the Kotlin client's `Match.merge()`
  * (`models_ext.kt`) relies on: absent = keep cached, null = genuinely empty.

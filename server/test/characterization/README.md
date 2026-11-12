@@ -29,23 +29,23 @@ failure of the instrument.
 
 | File | Pins | Consumed by |
 |---|---|---|
-| `routeTable.test.js` | The complete set of registered `(METHOD, path)` pairs, plus the count, against `fixtures/routeTable.txt`, and cross-checked against `.ai/plans/server-ts/artifacts/route-table.txt` | `13a`, `13b`, `13c`, `15` |
-| `authorization.test.js` | `(actor role, action, resource state) → allow \| deny`, driven over real HTTP rather than through the `Authorizer` API | `12`, `15` |
-| `workers/techFallTracker.test.js` | Tech-fall detection ends the round and emits `round.tech-fall`; no-op below threshold; no double-end | `14` |
-| `workers/breakTransition.test.js` | Expired break starts the next round and emits `break.ended`; unexpired break is a no-op; an ended match never gets a fourth round | `14` |
-| `workers/roundTimer.test.js` | Elapsed-minus-pauses ≥ `max_duration` ends the round; pause intervals are excluded from elapsed time; unexpired round untouched | `14` |
-| `workers/tickIntervals.test.js` | `requeueInterval` for all four workers (250ms / 1000ms) and the `queueJob` scheduling contract | `14` |
-| `errorMapping.test.js` | The four error-class → HTTP status/envelope mappings from `src/http/middleware/errors.ts` | `12` |
-| `matCode.test.js` | `MatCode.CODE_REGEXP` word-code vs. UUID discrimination, and its effect on mat lookup in `src/http/middleware/requestState.ts` | `12` |
+| `routeTable.test.ts` | The complete set of registered `(METHOD, path)` pairs, plus the count, against `fixtures/routeTable.txt`, and cross-checked against `.ai/plans/server-ts/artifacts/route-table.txt` | `13a`, `13b`, `13c`, `15` |
+| `authorization.test.ts` | `(actor role, action, resource state) → allow \| deny`, driven over real HTTP rather than through the `Authorizer` API | `12`, `15` |
+| `workers/techFallTracker.test.ts` | Tech-fall detection ends the round and emits `round.tech-fall`; no-op below threshold; no double-end | `14` |
+| `workers/breakTransition.test.ts` | Expired break starts the next round and emits `break.ended`; unexpired break is a no-op; an ended match never gets a fourth round | `14` |
+| `workers/roundTimer.test.ts` | Elapsed-minus-pauses ≥ `max_duration` ends the round; pause intervals are excluded from elapsed time; unexpired round untouched | `14` |
+| `workers/tickIntervals.test.ts` | `requeueInterval` for all four workers (250ms / 1000ms) and the `queueJob` scheduling contract | `14` |
+| `errorMapping.test.ts` | The four error-class → HTTP status/envelope mappings from `src/http/middleware/errors.ts` | `12` |
+| `matCode.test.ts` | `MatCode.CODE_REGEXP` word-code vs. UUID discrimination, and its effect on mat lookup in `src/http/middleware/requestState.ts` | `12` |
 
 ## Deliberately out of scope
 
 Already well covered elsewhere; duplicating them buys no protection and costs
 maintenance:
 
-- consensus riding-time algorithm — `test/ridingTime.test.js`
+- consensus riding-time algorithm — `test/ridingTime.test.ts`
 - round scoring, round-end match transition, break creation — `test/services/` and `test/domain/`
-- `MatchUpdateWorker` cadence/throttle/final-update — `test/workers/emissionDifferential.test.js`
+- `MatchUpdateWorker` cadence/throttle/final-update — `test/workers/emissionDifferential.test.ts`
   (only its **tick interval**, which that file does not assert, is pinned here)
 - HTTP client — `test/http/`
 
@@ -53,6 +53,6 @@ maintenance:
 
 Run with `bun run test` (never a bare `bun test` — see `FINDINGS.md` **F-06**).
 
-`authorization.test.js` boots a real server against a throwaway SQLite file
+`authorization.test.ts` boots a real server against a throwaway SQLite file
 under `$TMPDIR` and drives it with `fetch`. It never touches
-`config/db/database.test.sqlite`; it applies the Drizzle migrations directly. See `test/helpers/httpServer.js`.
+`config/db/database.test.sqlite`; it applies the Drizzle migrations directly. See `test/helpers/httpServer.ts`.
