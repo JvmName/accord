@@ -33,7 +33,7 @@ view              GET    /mat/:matId       (by id)     creator    ALLOW 200
 view              GET    /mat/:matId       (by id)     outsider   ALLOW 200
 view              GET    /mat/:matId       (by id)     anon       ALLOW 200   [F-15] no auth on this route
 view              GET    /mat/:matId       (by code)   anon       ALLOW 200
-view              GET    /mat/:unknownUuid             creator    DENY  401   [F-16] 401, NOT 404
+view              GET    /mat/:unknownUuid             creator    404   [F-16] 404 (was 401, changed in task 18)
 
 assign +          POST   /mat/:adminCode/join          any auth   ALLOW 200
 be assigned judge POST   /mat/:adminCode/join          anon       ALLOW 200   creates an anonymous user
