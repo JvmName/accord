@@ -81,7 +81,7 @@ describe('generated OpenAPI paths', () => {
         ]);
     });
 
-    it('documents the status-less 422 (F-21) on exactly the rounds routes that return it', () => {
+    it('documents the 422 on exactly the rounds routes that return it', () => {
         const with422 = Object.entries(spec.paths).flatMap(([p, item]) =>
             Object.entries(item as Record<string, { responses: object }>)
                 .filter(([, op]) => '422' in op.responses)
@@ -91,7 +91,7 @@ describe('generated OpenAPI paths', () => {
             'POST /match/{matchId}/rounds/pause',
             'POST /match/{matchId}/rounds/resume',
         ]);
-        expect(spec.components.schemas.UnprocessableEntityEnvelope.required).toEqual(['data']);
+        expect(spec.components.schemas.UnprocessableEntityEnvelope.required).toEqual(['data', 'status']);
     });
 
     it('contains no allOf (the zod-to-openapi nullable-$ref bug, F-30)', () => {

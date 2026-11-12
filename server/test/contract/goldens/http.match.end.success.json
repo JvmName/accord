@@ -18,9 +18,9 @@
             "id": "<user:blue>",
             "name": "Blair Blue"
           },
-          "break_duration": 60,
-          "break_remaining": 60,
-          "break_started_at": "2026-01-01T12:10:00.000Z",
+          "break_duration": null,
+          "break_remaining": null,
+          "break_started_at": null,
           "creator_id": "<user:creator>",
           "ended_at": "2026-01-01T12:10:00.000Z",
           "id": "<match:toEnd>",

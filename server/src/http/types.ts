@@ -20,7 +20,6 @@ import type { DbOrTx } from '../db/repositories/internal';
 import type { Mat, MatCode, Match, Round, User } from '../db/types';
 import type { ErrorMap } from '../contract/envelope';
 import type { Rendered } from './envelope';
-import type { UniqueViolationErrors } from './errors';
 import type { ActionFor, Scope, Subject } from './permissions';
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
@@ -105,7 +104,7 @@ export interface ContextHelpers {
     /** The Drizzle database (or transaction handle) the registry was built with. */
     readonly db: DbOrTx;
     /** `renderErrors(errors, statusCode = 400)`: return it to send `{ data: { errors }, status }`. */
-    renderErrors(errors: ErrorMap | UniqueViolationErrors, statusCode?: number): Rendered;
+    renderErrors(errors: ErrorMap, statusCode?: number): Rendered;
     /** `renderNotFoundResponse()`: 404 `{ data: null, status: 'not found' }`. */
     renderNotFound(): Rendered;
     /** `renderUnauthorizedResponse()`: 401 `{ data: null, status: 'unauthorized' }`. */

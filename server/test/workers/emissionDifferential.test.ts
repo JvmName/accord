@@ -151,10 +151,11 @@ describe('emissions snapshot: src/workers emit exactly the recorded events', () 
         const tick2 = all.filter((e) => secs(allName, [e])[0] === 2000);
         expect(tick2.some((e) => e.room === `match:${E.M.timer3}` && e.job === 'matchUpdate' && e.payload.ended_at)).toBe(true);
         expect(tick2.some((e) => e.room === `match:${E.M.starter}` && e.job === 'matchUpdate' && e.payload.started_at)).toBe(true);
-        // the master-ended match: a final update with the stale break still on it.
+        // the master-ended match: a final update with no break on it (F-25.3).
         const ender = all.filter((e) => e.room === `match:${E.M.ender}` && e.payload.ended_at);
         expect(ender).toHaveLength(1);
-        expect(ender[0].payload.break_remaining).toBe(60);
+        expect(ender[0].payload.break_remaining).toBeNull();
+        expect(ender[0].payload.break_started_at).toBeNull();
     });
 
     it('a tick never needs more statements than the pre-migration implementation did (reported)', () => {

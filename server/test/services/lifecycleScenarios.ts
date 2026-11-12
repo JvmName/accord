@@ -111,7 +111,7 @@ function buildScenarios({ IDS, T0, NOW }) {
 
     scenario('startRound.afterRoundEnded', [{ op: 'startRound', match: id('match:toStartRound') }]);
     scenario('startRound.activeRound', [{ op: 'startRound', match: id('match:open') }]);
-    for (const key of ['match:notStarted', 'match:done']) scenario(`startRound.unchecked:${key}`, [{ op: 'startRound', match: id(key) }]);
+    for (const key of ['match:notStarted', 'match:done']) scenario(`startRound.refused:${key}`, [{ op: 'startRound', match: id(key) }]);
 
     const endRound = (match, opts) => [{ op: 'endRound', match: id(match), opts }];
     scenario('endRound.round1', endRound('match:toEndRound', { safe: false }));

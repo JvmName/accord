@@ -1,7 +1,7 @@
 {
   "name": "http.rounds.pause.noActiveRound.422",
   "route": "POST /match/{matchId}/rounds/pause",
-  "why": "The second status-less 422 envelope (F-21).",
+  "why": "A second 422 envelope (F-21).",
   "request": {
     "method": "POST",
     "path": "/match/<match:notStarted>/rounds/pause",
@@ -18,7 +18,8 @@
             "No active round to pause"
           ]
         }
-      }
+      },
+      "status": "unprocessable entity"
     }
   }
 }

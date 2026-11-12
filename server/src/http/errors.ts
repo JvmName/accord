@@ -47,17 +47,6 @@ export class ValidationError extends Error {
  */
 export class NotImplementedError extends Error {}
 
-/**
- * The F-14 error map, as the legacy Sequelize branch rendered it:
- * one `"<field> must be unique"` entry per field, plus (when there is a driver
- * error) the driver message as a bare string under the key `"null"`.
- *
- * The `"null"` value is a string, NOT a `string[]`, which is why the return
- * type is wider than `ErrorMap`; the Kotlin client cannot decode it (F-14,
- * scheduled for task 18).
- */
-export type UniqueViolationErrors = Record<string, string[] | string>;
-
 interface DriverError {
     code?: unknown;
     message?: unknown;
@@ -84,66 +73,27 @@ function findSqliteDriverError(err: unknown): DriverError | null {
 }
 
 /**
- * Port of the Sequelize unique-constraint branch, re-targeted at SQLite errors
- * raised through Drizzle / `bun:sqlite`.
+ * The error map for a unique-constraint violation raised through Drizzle /
+ * `bun:sqlite`: one `"<field> must be unique"` entry per violated column
+ * (`UNIQUE constraint failed: mat_codes.mat_id, mat_codes.role` gives
+ * `mat_id` and `role`). The driver message is not echoed.
  *
- * Which errors the legacy branch caught: Sequelize's SQLite dialect
- * (`sequelize/lib/dialects/sqlite/query.js#formatError`) turns EVERY
- * `SQLITE_CONSTRAINT*` error into a `SequelizeUniqueConstraintError`, except a
- * message containing `FOREIGN KEY constraint failed`. Its fields come from
- * `/columns (.*?) are/` or `/UNIQUE constraint failed: (.*)/` (each
- * `table.column` -> `column`); its item messages are `"<field> must be
- * unique"`; `err.parent` is the driver error.
- *
- * The driver message differs between drivers: the legacy `sqlite3` package
- * produced `SQLITE_CONSTRAINT: UNIQUE constraint failed: mat_codes.code`,
- * `bun:sqlite` produces `UNIQUE constraint failed: mat_codes.code` (code on a
- * separate property). The `"null"` value is rebuilt in the legacy format
- * (`SQLITE_CONSTRAINT: <message>`) so the leaked string (F-14) is
- * byte-identical to what legacy clients saw.
- *
- * An error that is literally named `SequelizeUniqueConstraintError` (with
- * Sequelize's `errors[]`/`parent` shape) is still honoured, exactly as the
- * legacy branch matched it by name; that keeps the error-mapping parity test
- * replayable verbatim against this handler.
- *
- * Returns `null` when `err` is not a unique-constraint error.
+ * Only a real unique (or primary key) violation matches; any other SQLite
+ * constraint failure (NOT NULL, CHECK, foreign key) is not a client-fixable
+ * duplicate and falls through to the generic 500 (F-78). Returns `null` when
+ * `err` is not a unique violation.
  */
-export function uniqueViolationErrors(err: unknown): UniqueViolationErrors | null {
-    if (err && typeof err === 'object' && (err as { name?: unknown }).name == 'SequelizeUniqueConstraintError') {
-        const legacy = err as { errors: Array<{ path: string; message: string }>; parent?: { message: string } };
-        const errors: UniqueViolationErrors = {};
-        for (const item of legacy.errors) {
-            errors[item.path] = (errors[item.path] as string[]) || [];
-            (errors[item.path] as string[]).push(item.message);
-        }
-        if (legacy.parent) errors['null'] = legacy.parent.message;
-        return errors;
-    }
-
+export function uniqueViolationErrors(err: unknown): ErrorMap | null {
     const driver = findSqliteDriverError(err);
     if (!driver) return null;
 
-    const message = String(driver.message ?? '');
-    if (message.includes('FOREIGN KEY constraint failed')) return null;
+    const failed = String(driver.message ?? '').match(/UNIQUE constraint failed: (.*)/)?.[1];
+    if (failed === undefined) return null;
 
-    let fields: string[] = [];
-    const columns = message.match(/columns (.*?) are/)?.[1];
-    if (columns !== undefined) {
-        fields = columns.split(', ');
-    } else {
-        const failed = message.match(/UNIQUE constraint failed: (.*)/)?.[1];
-        if (failed !== undefined) {
-            // A name without a table prefix yields `undefined`, as it always has.
-            fields = failed.split(', ').map(columnWithTable => columnWithTable.split('.')[1] as string);
-        }
+    const errors: ErrorMap = {};
+    for (const columnWithTable of failed.split(', ')) {
+        const field = columnWithTable.split('.').pop() ?? columnWithTable;
+        (errors[field] ??= []).push(`${field} must be unique`);
     }
-
-    const errors: UniqueViolationErrors = {};
-    for (const field of fields) {
-        errors[field] = (errors[field] as string[]) || [];
-        (errors[field] as string[]).push(field ? `${field} must be unique` : 'Must be unique');
-    }
-    errors['null'] = message.startsWith('SQLITE_CONSTRAINT') ? message : `SQLITE_CONSTRAINT: ${message}`;
     return errors;
 }

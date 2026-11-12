@@ -10,15 +10,12 @@
  */
 import type { Response } from 'express';
 import type { ErrorMap } from '../contract/envelope';
-import type { UniqueViolationErrors } from './errors';
 
 /**
- * `ServerController#statusText` (`serverController.js:149-162`), verbatim.
- *
- * Only 200/400/401/404/500 have text. Every other status yields `undefined`,
- * and `JSON.stringify` then DROPS the `status` key entirely: that is the F-21
- * anomaly (422 responses have no `status`, which the Kotlin client treats as a
- * `SerializationException`). Reproduced on purpose; the fix is task 18.
+ * The `status` text for a status code: 200/400/401/404/422/500. Any other
+ * code yields `undefined`, and `JSON.stringify` then DROPS the `status` key,
+ * which the Kotlin client cannot decode. 422 used to be missing (F-21); no
+ * route renders a code outside this list.
  */
 export function statusText(statusCode: number): string | undefined {
     switch (statusCode) {
@@ -30,6 +27,8 @@ export function statusText(statusCode: number): string | undefined {
             return 'unauthorized';
         case 404:
             return 'not found';
+        case 422:
+            return 'unprocessable entity';
         case 500:
             return 'server error';
     }
@@ -80,7 +79,7 @@ export function formatJSONBody(body: unknown): unknown {
  * a given status. `status` is computed from the status code exactly when the
  * body is rendered, as legacy did.
  *
- * A status with no text (422) leaves the key out of the object rather than
+ * A status with no text leaves the key out of the object rather than
  * holding `undefined`. The JSON is the same either way, but the DEV response
  * validator inspects the object and would reject an extra `status` key.
  */
@@ -104,7 +103,7 @@ export class Rendered {
 }
 
 /** `renderErrors(errors, statusCode = 400)` -> `{ data: { errors }, status }`. */
-export function renderErrors(errors: ErrorMap | UniqueViolationErrors, statusCode: number = 400): Rendered {
+export function renderErrors(errors: ErrorMap, statusCode: number = 400): Rendered {
     return new Rendered(statusCode, { errors });
 }
 

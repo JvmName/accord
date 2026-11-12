@@ -148,20 +148,19 @@ describe('startMatch', () => {
 
 
 describe('endMatch (route: POST /match/:id/end)', () => {
-    it('active round 1: match ended, round ended, and the break RE-SET on the ended match', async () => {
+    it('active round 1: the round ends first, then the match ends with NO break (F-25.3)', async () => {
         const { state } = await frozen('endMatch.round1');
         const m = rowOf(state, 'matches', IDS['match:toEnd']);
         expect(m.ended_at).not.toBeNull();
-        expect(m.break_started_at).not.toBeNull();
-        expect(m.break_duration).toBe(60);
+        expect([m.break_started_at, m.break_duration]).toEqual([null, null]);
         expect(rowOf(state, 'rounds', IDS['round:toEnd']).ended_at).not.toBeNull();
-        expect(writes(state)).toEqual(['UPDATE matches', 'UPDATE rounds', 'UPDATE matches']);
+        expect(writes(state)).toEqual(['UPDATE rounds', 'UPDATE matches']);
     });
 
-    it('active FINAL round: votes closed, pause resumed, round ended, then re-entrant end throws "This match has already ended"', async () => {
+    it('active FINAL round: votes closed, pause resumed, round ended, match ended, no error (F-54)', async () => {
         const { state, outcome } = await frozen('endMatch.finalRound');
-        expect(outcome).toEqual(fails('This match has already ended'));
-        expect(writes(state)).toEqual(['UPDATE matches', 'UPDATE riding_time_votes', 'UPDATE riding_time_votes', 'UPDATE round_pauses', 'UPDATE rounds']);
+        expect(outcome.ok).toBe(true);
+        expect(writes(state)).toEqual(['UPDATE riding_time_votes', 'UPDATE riding_time_votes', 'UPDATE round_pauses', 'UPDATE rounds', 'UPDATE matches']);
         expect(rowOf(state, 'matches', C.match).ended_at).not.toBeNull();
     });
 
@@ -202,9 +201,13 @@ describe('startRound (route: POST /match/:id/rounds)', () => {
         expect(state.audit).toEqual([]);
     });
 
-    it.each(['match:notStarted', 'match:done'])('%s: a round is created anyway (no started/ended check)', async (key) => {
-        const { state } = await frozen(`startRound.unchecked:${key}`);
-        expect(writes(state)).toEqual(['INSERT rounds']);
+    it.each([
+        ['match:notStarted', 'Cannot start a round on a match that has not started'],
+        ['match:done',       'Cannot start a round on a match that has ended'],
+    ])('%s: refused with "%s", nothing written (F-56)', async (key, message) => {
+        const { state, outcome } = await frozen(`startRound.refused:${key}`);
+        expect(outcome).toEqual(fails(message));
+        expect(state.audit).toEqual([]);
     });
 });
 

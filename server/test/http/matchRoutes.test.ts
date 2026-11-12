@@ -70,7 +70,7 @@ describe('match routes', () => {
         }
     });
 
-    it('ending the match during the final round writes the end and then answers 500', async () => {
+    it('ending the match during the final round ends it and answers 200 (F-54)', async () => {
         const { master, match } = await createMatch(1);
         expect((await request('POST', `/match/${match.id}/start`, { token: master })).status).toBe(200);
         for (let round = 1; round < 3; round++) {
@@ -79,7 +79,9 @@ describe('match routes', () => {
         }
 
         const ended = await request('POST', `/match/${match.id}/end`, { token: master });
-        expect(ended).toEqual({ status: 500, body: { data: { error: 'This match has already ended' }, status: 'server error' } });
+        expect(ended.status).toBe(200);
+        expect(ended.body.data.match.ended_at).not.toBeNull();
+        expect(ended.body.data.match.break_started_at).toBeNull();
 
         const after = (await request('GET', `/match/${match.id}`, { token: master })).body.data.match;
         expect(after.ended_at).not.toBeNull();
@@ -87,16 +89,24 @@ describe('match routes', () => {
         expect(after.rounds.every((round: { ended_at: string | null }) => round.ended_at !== null)).toBe(true);
     });
 
-    it('starting a match whose round was opened before the start answers 500 after writing the start', async () => {
+    it('refuses to open a round on a match that has not started (F-56)', async () => {
         const { master, match } = await createMatch(1);
-        expect((await request('POST', `/match/${match.id}/rounds`, { token: master })).status).toBe(200);
 
-        const started = await request('POST', `/match/${match.id}/start`, { token: master });
-        expect(started).toEqual({ status: 500, body: { data: { error: 'Cannot start a new round while there is an active round' }, status: 'server error' } });
+        const res = await request('POST', `/match/${match.id}/rounds`, { token: master });
+        expect(res).toEqual({ status: 400, body: { data: { errors: { matchId: ['Cannot start a round on a match that has not started'] } }, status: 'bad request' } });
 
         const after = (await request('GET', `/match/${match.id}`, { token: master })).body.data.match;
-        expect(after.started_at).not.toBeNull();
-        expect(after.judges).toHaveLength(1);
+        expect(after.rounds).toHaveLength(0);
+    });
+
+    it('refuses to open a round on a match that has ended (F-56)', async () => {
+        const { master, match } = await createMatch(1);
+        expect((await request('POST', `/match/${match.id}/start`, { token: master })).status).toBe(200);
+        expect((await request('POST', `/match/${match.id}/end`, { token: master })).status).toBe(200);
+
+        const res = await request('POST', `/match/${match.id}/rounds`, { token: master });
+        expect(res).toEqual({ status: 400, body: { data: { errors: { matchId: ['Cannot start a round on a match that has ended'] } }, status: 'bad request' } });
+        expect((await request('GET', `/match/${match.id}`, { token: master })).body.data.match.rounds).toHaveLength(1);
     });
 
     it('omits `judges` from round and riding-time payloads, unlike GET/start/end', async () => {

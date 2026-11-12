@@ -104,7 +104,7 @@ const taggedSchemas: z.ZodType[] = [
 // registry can produce, each the exact wire shape (see `src/http/envelope.ts`),
 // and one `responses` component per status, named as in the hand-written
 // spec (`BadRequest`, `Unauthorized`, `NotFound`, `ServerError`) plus the
-// status-less 422 (F-21).
+// 422.
 // ---------------------------------------------------------------------------
 
 const errorEnvelopes = {
@@ -138,9 +138,10 @@ const errorEnvelopes = {
     },
     422: {
         response: 'UnprocessableEntity',
-        description: 'Unprocessable Entity (F-21: the envelope has NO `status` key)',
+        description: 'Unprocessable Entity',
         schema: tagSchema('UnprocessableEntityEnvelope', z.strictObject({
             data: contract.validationErrorDataSchema,
+            status: z.literal('unprocessable entity'),
         })),
     },
     500: {
@@ -163,11 +164,10 @@ function gateStatuses(spec: AuthorizeSpec): ErrorStatus[] {
     switch (spec.scope) {
         case 'none':    return [];
         case 'newMat':  return [401];
-        case 'mat':     return [401];                 // missing mat is 401 (F-16)
+        case 'mat':     return [404];                 // public, but a missing mat is a 404 (F-16)
         case 'matCode':
             if (spec.level === 'public') return [];
-            if (spec.level === 'view')   return [401, 404];
-            return [401];                             // 'create a match': missing mat is 401
+            return [401, 404];                        // no user (or the wrong code) is 401, a missing mat is 404
         case 'match':
             return spec.level === 'judge' ? [400, 401, 404] : [401, 404];
     }

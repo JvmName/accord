@@ -260,13 +260,14 @@ describe('registration', () => {
         }
     });
 
-    it('sends request-state resolution errors to Express\'s default handler, as legacy did', async () => {
+    it('renders request-state resolution errors as the JSON 500 envelope (F-77)', async () => {
         const broken = await startRegistryApp({ routes: [(await import('../../src/http/routes/system')).getRoot] });
         try {
             broken.db.$client.close();
             const res = await fetch(`${broken.origin}/`, { headers: { 'x-api-token': 'anything' } });
             expect(res.status).toBe(500);
-            expect(res.headers.get('content-type')).toContain('text/html');
+            expect(res.headers.get('content-type')).toContain('application/json');
+            expect((await res.json() as { status: string }).status).toBe('server error');
         } finally {
             broken.close();
         }

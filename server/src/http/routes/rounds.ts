@@ -33,8 +33,8 @@ function isResultWindowOpen(match: Pick<Match, 'break_started_at' | 'ended_at'>)
 }
 
 /**
- * Adds a round even to a match that has not started or has already ended;
- * the only check is that the last round is not still open.
+ * Refused (400) for a match that has not started or has ended, and while the
+ * last round is still open.
  */
 export const postStartRound = defineRoute({
     method:    'post',

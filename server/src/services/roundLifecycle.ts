@@ -48,6 +48,7 @@ export async function isRoundPaused(db: DbOrTx, roundId: string): Promise<boolea
  *    on its own; never early at 2 wins: invariant, CLAUDE.md #10)
  *    otherwise `d = getBreakDuration(count)`; `d > 0` -> set
  *    `break_started_at = now`, `break_duration = d` on the match
+ *    (steps 6-7 are skipped with `{ transition: false }`, which `endMatch` uses)
  *
  * No guard against an already-ended round (legacy has none either; callers
  * guard, F-62). With several open pauses only the LAST is resumed (F-58).
@@ -55,7 +56,7 @@ export async function isRoundPaused(db: DbOrTx, roundId: string): Promise<boolea
  * protected the per-instance round cache; there is no cache here, so it
  * evaporates (recorded in the lifecycle inventory).
  */
-export async function finishRound(db: DbOrTx, round: Round): Promise<void> {
+export async function finishRound(db: DbOrTx, round: Round, { transition = true }: { transition?: boolean } = {}): Promise<void> {
     const ridingTimeVotes = await findOpenRoundVotes(db, round.id);
     for (const vote of ridingTimeVotes) {
         await endVote(db, vote);
@@ -70,6 +71,10 @@ export async function finishRound(db: DbOrTx, round: Round): Promise<void> {
 
     const { redScore, blueScore } = await scoreEndedRound(db, { ...round, ended_at: endedAt }, match);
     logger.info(`Round ended: match=${round.match_id} round=${round.id} red=${redScore} blue=${blueScore}`);
+
+    // `endMatch` ends its last round without the transition: the match is
+    // being ended by the caller, so no second match end and no break (F-54).
+    if (!transition) return;
 
     const allRounds = await findMatchRounds(db, match.id);
     logger.info(`Round transition: match=${round.match_id} completedRounds=${allRounds.length} maxRounds=${rules.maxRounds}`);

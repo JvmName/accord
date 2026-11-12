@@ -67,7 +67,8 @@ export async function runGates(spec: AuthorizeSpec, state: RequestState, loaders
         case 'mat':
             // MatsController#getMat: `authorize('view', this.currentMat)`.
             // Unauthenticated BY DESIGN (F-15, decision 2026-10-11). A missing
-            // mat is a null scope -> false -> 401, not 404 (F-16).
+            // mat is a 404 (F-16; it used to be a 401).
+            if (!state.currentMat) return renderNotFound();
             await assertCan(subject, 'view', { kind: 'mat', mat: state.currentMat }, loaders);
             return null;
 
@@ -81,17 +82,12 @@ export async function runGates(spec: AuthorizeSpec, state: RequestState, loaders
                     return null;
 
                 case 'view':
-                    // mat/usersController.js#authenticateRequest:
-                    //     const authenticated = super.authenticateRequest();   // NOT awaited
-                    //     if (authenticated === false) return false;             // never true: a Promise
-                    //     if (!this.currentMat) { renderNotFound; return false }
-                    // The unawaited super call starts the 401 render, but the
-                    // subclass synchronously sets statusCode 404 before that render
-                    // reads it, so a MISSING MAT wins over a missing user (probed:
-                    // anonymous + unknown code -> 404 "not found"). With a known mat
-                    // and no user the 401 is what goes out. F-74.
-                    if (!state.currentMat) return renderNotFound();
+                    // Authentication first (401), then the mat (404): an anonymous
+                    // caller gets 401 whether or not the code exists (F-74; the
+                    // legacy controller never awaited its authentication check, so
+                    // a missing mat used to win).
                     if (!state.currentUser) return renderUnauthorized();
+                    if (!state.currentMat) return renderNotFound();
                     return null;
 
                 case 'create a match':
@@ -101,8 +97,9 @@ export async function runGates(spec: AuthorizeSpec, state: RequestState, loaders
                     //     authorize('assign',         currentMat)
                     // (identical checks: the request's mat code must be the ADMIN
                     // code OF THIS MAT; membership is irrelevant). A missing mat is
-                    // a null scope -> 401.
+                    // a 404 (F-16).
                     if (!state.currentUser) return renderUnauthorized();
+                    if (!state.currentMat) return renderNotFound();
                     await assertCan(subject, 'create a match', { kind: 'mat', mat: state.currentMat }, loaders);
                     await assertCan(subject, 'assign',         { kind: 'mat', mat: state.currentMat }, loaders);
                     return null;
@@ -169,7 +166,6 @@ export function authorizeMiddleware(db: DbOrTx, spec: AuthorizeSpec) {
     const loaders = repositoryLoaders(db);
     return async function authorizeRequest(_req: Request, res: Response, next: NextFunction): Promise<void> {
         const state = getRequestState(res);
-        state.handling = true;
         let rendered: Rendered | null;
         try {
             rendered = await runGates(spec, state, loaders);

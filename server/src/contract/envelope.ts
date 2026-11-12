@@ -15,8 +15,6 @@
  *   3. bare error        `{ data: null, status: "unauthorized" | "not found" }`
  *   4. server error      `{ data: { error: "<raw message>" }, status: "server error" }`
  *
- * …plus the F-21 anomaly: 422 responses omit `status` ENTIRELY (see below).
- *
  * All wire schemas here are `strictObject`: the captured goldens are the
  * complete set of keys the server emits, and an unexpected extra key is a
  * contract change we want to see, not silently strip. (Request schemas are
@@ -24,16 +22,13 @@
  */
 import { z } from 'zod';
 
-/**
- * `ServerController#statusText` has cases for 200/400/401/404/500 only.
- * Anything else renders `undefined` — see `statusTextSchema`'s use in
- * `errorEnvelopeSchema` and F-21.
- */
+/** The status text for each status code the server renders (see `statusText` in `http/envelope.ts`). */
 export const statusTextSchema = z.enum([
     'ok',
     'bad request',
     'unauthorized',
     'not found',
+    'unprocessable entity',
     'server error',
 ]);
 export type StatusText = z.infer<typeof statusTextSchema>;
@@ -81,20 +76,12 @@ export const errorDataSchema = z.union([
 ]);
 
 /**
- * Error envelope.
- *
- * `status` is `.optional()` SOLELY because of **F-21**: `statusText` has no
- * case for 422, so `renderErrors(errors, 422)` produces `status: undefined`
- * and `JSON.stringify` drops the key altogether. Four routes can return 422
- * (`rounds/pause`, `rounds/resume`, and two branches of `rounds/result`), and
- * the Kotlin client throws a `SerializationException` on every one of them.
- *
- * This is a latent bug preserved, not endorsed — it is fixed in task 18, at
- * which point `status` here becomes required and the four 422 goldens change
- * together with the client.
+ * Error envelope. `status` is always present: the Kotlin client's
+ * `ApiResultSerializer` throws on a response without it (F-21 was a 422 that
+ * had none; it now renders `unprocessable entity`).
  */
 export const errorEnvelopeSchema = z.strictObject({
     data: errorDataSchema.nullable(),
-    status: statusTextSchema.optional(),
+    status: statusTextSchema,
 });
 export type ErrorEnvelope = z.infer<typeof errorEnvelopeSchema>;

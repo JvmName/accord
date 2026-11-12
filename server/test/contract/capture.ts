@@ -357,9 +357,8 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
                    + 'defaulting to 1 when creation omitted it.',
                    'GET', `/mat/${IDS['mat:empty']}`, { as: 'creator' });
 
-        await http('http.mat.get.unknownId.401', 'GET /mat/{matId}',
-                   'FINDINGS F-16: an unknown mat is reported as 401, not 404, because Authorizer#can '
-                   + 'returns false for a null scope. Sibling "not found" routes return 404. Pinned as-is.',
+        await http('http.mat.get.unknownId.404', 'GET /mat/{matId}',
+                   'FINDINGS F-16: an unknown mat is a 404 (it used to be a 401), like the other not-found routes.',
                    'GET', `/mat/${'11111111-2222-4333-8444-555555555555'}`, { as: 'creator' });
 
         // =====================================================================
@@ -611,9 +610,8 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
                    { as: 'creator', body: { winner: 'green' } });
 
         await http('http.rounds.result.windowClosed.422', 'PATCH /match/{matchId}/rounds/result',
-                   'FINDINGS F-21: renderErrors(…, 422) produces an envelope with NO `status` key at all, '
-                   + 'because ServerController#statusText has no 422 case. ApiResultSerializer.kt throws '
-                   + 'SerializationException on a missing status. Pinned as-is.',
+                   'FINDINGS F-21: a 422 used to render with NO `status` key, which ApiResultSerializer.kt '
+                   + 'throws on; it now renders status "unprocessable entity".',
                    'PATCH', `/match/${IDS['match:open']}/rounds/result`,
                    { as: 'creator', body: { winner: 'red', stoppage: false } });
 
@@ -650,7 +648,7 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
                    'POST', `/match/${IDS['match:toPause']}/rounds/pause`, { as: 'judgeA' });
 
         await http('http.rounds.pause.noActiveRound.422', 'POST /match/{matchId}/rounds/pause',
-                   'The second status-less 422 envelope (F-21).',
+                   'A second 422 envelope (F-21).',
                    'POST', `/match/${IDS['match:notStarted']}/rounds/pause`, { as: 'creator' });
 
         await http('http.rounds.resume.noActiveRound.422', 'POST /match/{matchId}/rounds/resume',

@@ -135,7 +135,7 @@ function rows(): Row[] {
           run: async w => req('GET', `/mat/${w.mat.id}`) },
         { matrix: 'GET /mat/:matId (by code) anon -> 200', name: 'Mat/view ALLOWS lookup by word-code', status: 200,
           run: async w => req('GET', `/mat/${w.adminCode}`) },
-        { matrix: 'GET /mat/:unknownUuid creator -> 401', name: 'Mat/view DENIES (401, not 404) an unknown mat id (F-16)', status: 401, body: UNAUTHORIZED,
+        { matrix: 'GET /mat/:unknownUuid creator -> 404', name: 'Mat/view answers 404 for an unknown mat id (F-16)', status: 404, body: NOT_FOUND,
           run: async w => req('GET', `/mat/${UNKNOWN_UUID}`, { token: token(w.creator) }) },
 
         { matrix: 'POST /mat/:adminCode/join any auth -> 200', name: 'join ALLOWS with an ADMIN code (assign + be assigned judge)', status: 200,
@@ -242,15 +242,17 @@ function rows(): Row[] {
         { matrix: null, name: 'viewers roster DENIES anonymous', status: 401, body: UNAUTHORIZED,
           run: async w => req('GET', `/mat/${w.viewerCode}/viewers`) },
         ...(['GET judges', 'GET viewers', 'DELETE join'] as const).map((r): Row => ({
-            matrix: null, name: `F-74: anonymous + unknown code on ${r} is 404 (missing mat wins over 401)`, status: 404, body: NOT_FOUND,
+            matrix: null, name: `F-74: anonymous + unknown code on ${r} is 401 (authentication comes first)`, status: 401, body: UNAUTHORIZED,
             run: async () => req(r.split(' ')[0], `/mat/no.such.code/${r.split(' ')[1]}`),
         })),
+        { matrix: null, name: 'F-74: authenticated + unknown code on GET judges is 404', status: 404, body: NOT_FOUND,
+          run: async w => req('GET', '/mat/no.such.code/judges', { token: token(w.creator) }) },
         { matrix: null, name: 'join: unknown code is 404 with an errors map (in-handler check)', status: 404,
           body: { data: { errors: { matCode: ['not found'] } }, status: 'not found' },
           run: async () => req('POST', '/mat/no.such.code/join', { body: { name: 'X' } }) },
         { matrix: null, name: 'User/assign DENIES an unknown competitor id (null scope)', status: 401, body: UNAUTHORIZED,
           run: async w => req('POST', `/mat/${w.adminCode}/matches`, { token: token(w.creator), body: { red: { id: UNKNOWN_UUID }, blue: { name: 'B' } } }) },
-        { matrix: null, name: 'create a match DENIES an unknown code (null mat scope -> 401, not 404)', status: 401, body: UNAUTHORIZED,
+        { matrix: null, name: 'create a match answers 404 for an unknown code (F-16)', status: 404, body: NOT_FOUND,
           run: async w => req('POST', '/mat/no.such.code/matches', { token: token(w.creator), body: competitors }) },
         { matrix: null, name: 'create a match DENIES another mat\'s VIEWER code supplied through the F-73 query override', status: 401, body: UNAUTHORIZED,
           run: async w => {
@@ -310,9 +312,11 @@ describe('authorization parity: the task-02b matrix against the new middleware',
 
     it('has deny rows for every match level and every mat-scope gate', () => {
         const denies = all.filter(r => r.status === 401).map(r => r.name).join('\n');
-        for (const level of ['Mat/create', 'Mat/view', 'leave', 'judges roster', 'create a match', 'User/assign', 'Match/view', 'manage', 'pause', 'judge']) {
+        // Mat/view is public on purpose (F-15): its only refusal is the 404 for a missing mat.
+        for (const level of ['Mat/create', 'leave', 'judges roster', 'create a match', 'User/assign', 'Match/view', 'manage', 'pause', 'judge']) {
             expect(denies).toContain(level);
         }
+        expect(all.filter(r => r.status === 404).map(r => r.name).join('\n')).toContain('Mat/view');
     });
 
     for (const row of all) {

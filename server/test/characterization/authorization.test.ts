@@ -175,10 +175,12 @@ describe('CHARACTERIZATION: authorization matrix (over HTTP)', () => {
         });
 
 
-        // FIDELITY: `can(action, scope)` returns false for a null scope, so a
-        // missing mat is reported as 401, not 404. See FINDINGS.md F-16.
-        it('DENIES (401, not 404) when the mat id does not exist', async () => {
-            expectDenied(await request('GET', '/mat/550e8400-e29b-41d4-a716-446655440000', { token: world.creator }));
+        // A missing mat is a 404 (F-16; it used to be reported as 401).
+        it('reports 404 when the mat id does not exist', async () => {
+            const res = await request('GET', '/mat/550e8400-e29b-41d4-a716-446655440000', { token: world.creator });
+
+            expect(res.status).toBe(404);
+            expect(res.body).toEqual({ data: null, status: 'not found' });
         });
     });
 
@@ -228,9 +230,7 @@ describe('CHARACTERIZATION: authorization matrix (over HTTP)', () => {
         });
 
 
-        // An unresolvable code yields no currentMat, which the mat-scoped
-        // UsersController reports as 404 rather than 401 — the opposite of the
-        // Mat/view case above.
+        // An unresolvable code yields no currentMat: 404 for an authenticated caller.
         it('reports 404 (not 401) for a code that resolves to no mat', async () => {
             const res = await request('GET', '/mat/no.such.code/judges', { token: world.creator });
 

@@ -9,11 +9,9 @@
  * action, health check included); only the riding-time routes also resolve
  * the current round, as only `RidingTimeVoteController` did.
  *
- * Failure semantics (also reproduced): legacy called `setupRequestState`
- * OUTSIDE `performRequest`'s try/catch, so an exception here (in practice: a
- * database failure) never reached `handleError` and was answered by Express's
- * default error handler instead of the JSON envelope. The registry keeps that
- * split (`router.ts`).
+ * An exception here (in practice: a database failure) goes through the JSON
+ * error handler like any other (F-77; legacy answered it with Express's HTML
+ * 500, which the client cannot decode).
  */
 import type { NextFunction, Request, Response } from 'express';
 import { findMatCodeByCode } from '../../db/repositories/matCodes';
@@ -38,11 +36,6 @@ export interface RequestState {
     currentMatCode: MatCode | null;
     currentMatch: Match | null;
     currentRound: Round | null;
-    /**
-     * `false` while resolving; set by the gates. Errors raised before it is set
-     * bypass the JSON error handler, as legacy `setupRequestState` errors did.
-     */
-    handling: boolean;
 }
 
 const STATE_KEY = 'accordRequestState';
@@ -120,7 +113,6 @@ export async function resolveRequestState(db: DbOrTx, req: Request, spec: Author
         currentMatCode: matCode,
         currentMatch,
         currentRound,
-        handling:       false,
     };
 }
 

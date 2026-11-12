@@ -88,15 +88,13 @@ describe('CHARACTERIZATION: error class → HTTP response', () => {
         });
 
 
-        // The branch is `err.constructor === AuthorizationError`: an exact
-        // constructor identity check, NOT instanceof. A subclass therefore
-        // falls through to the 500 branch. Pinned for fidelity.
-        it('does NOT match a SUBCLASS of AuthorizationError (falls through to 500)', async () => {
+        // The branch is `instanceof`, so a subclass is still a 401 (F-13).
+        it('matches a SUBCLASS of AuthorizationError (401, message not leaked)', async () => {
             class DerivedAuthorizationError extends AuthorizationError {}
             const { status, body } = await requestThatThrows(new DerivedAuthorizationError('nope'));
 
-            expect(status).toBe(500);
-            expect(body).toEqual({ data: { error: 'nope' }, status: 'server error' });
+            expect(status).toBe(401);
+            expect(body).toEqual({ data: null, status: 'unauthorized' });
         });
     });
 
@@ -138,61 +136,38 @@ describe('CHARACTERIZATION: error class → HTTP response', () => {
     });
 
 
-    describe('SequelizeUniqueConstraintError → 400 with per-field error arrays', () => {
-        // Matched by `err.name == 'SequelizeUniqueConstraintError'` (a string
-        // comparison), so a plain object with that name is the whole input.
-        function uniqueConstraintError({ errors, parent }: { errors?: unknown; parent?: unknown } = {}) {
-            return {
-                name:   'SequelizeUniqueConstraintError',
-                errors: errors || [{ path: 'code', message: 'code must be unique' }],
-                parent,
-            };
-        }
+    describe('SQLite unique violation → 400 with per-field error arrays', () => {
+        // The handler recognises a driver error by its `code` (SQLITE_CONSTRAINT*)
+        // and its message, so an Error carrying both is the whole input.
+        const driverError = (message: string, code = 'SQLITE_CONSTRAINT_UNIQUE') => Object.assign(new Error(message), { code });
 
-        it('responds 400 and groups messages into an array per column', async () => {
-            const { status, body } = await requestThatThrows(uniqueConstraintError({
-                errors: [
-                    { path: 'code', message: 'code must be unique' },
-                    { path: 'code', message: 'code is already taken' },
-                    { path: 'name', message: 'name must be unique' },
-                ],
-            }));
+        it('responds 400 with an array per violated column', async () => {
+            const { status, body } = await requestThatThrows(driverError('UNIQUE constraint failed: mat_codes.mat_id, mat_codes.role'));
 
             expect(status).toBe(400);
             expect(body).toEqual({
-                data: {
-                    errors: {
-                        code: ['code must be unique', 'code is already taken'],
-                        name: ['name must be unique'],
-                    },
-                },
+                data: { errors: { mat_id: ['mat_id must be unique'], role: ['role must be unique'] } },
                 status: 'bad request',
             });
         });
 
 
-        // The driver message goes under the key "null" as a raw STRING,
-        // breaking the per-field array shape every other key has. Pinned for
-        // fidelity.
-        it('adds the driver message under the literal key "null", as a bare string', async () => {
-            const { status, body } = await requestThatThrows(uniqueConstraintError({
-                errors: [{ path: 'code', message: 'code must be unique' }],
-                parent: { message: 'SQLITE_CONSTRAINT: UNIQUE constraint failed: mat_codes.code' },
-            }));
+        // F-14: the driver message used to be echoed as a bare string under the
+        // key "null", which the client cannot decode (every other value is a list).
+        it('never adds a "null" key or the driver message', async () => {
+            const { body } = await requestThatThrows(driverError('UNIQUE constraint failed: mat_codes.code'));
 
-            expect(status).toBe(400);
-            expect(body.data.errors).toEqual({
-                code:   ['code must be unique'],
-                'null': 'SQLITE_CONSTRAINT: UNIQUE constraint failed: mat_codes.code',
-            });
-            expect(Array.isArray(body.data.errors['null'])).toBe(false);
+            expect(Object.keys(body.data.errors)).toEqual(['code']);
+            expect(JSON.stringify(body)).not.toContain('SQLITE');
         });
 
 
-        it('omits the "null" key entirely when there is no parent error', async () => {
-            const { body } = await requestThatThrows(uniqueConstraintError());
+        // F-78: only a unique violation is a client-fixable duplicate.
+        it('answers other constraint failures with the generic 500', async () => {
+            const { status, body } = await requestThatThrows(driverError('NOT NULL constraint failed: users.name', 'SQLITE_CONSTRAINT_NOTNULL'));
 
-            expect(Object.keys(body.data.errors)).toEqual(['code']);
+            expect(status).toBe(500);
+            expect(body).toEqual({ data: { error: 'NOT NULL constraint failed: users.name' }, status: 'server error' });
         });
     });
 
@@ -228,7 +203,7 @@ describe('CHARACTERIZATION: error class → HTTP response', () => {
         const cases: [string, unknown, number][] = [
             ['AuthorizationError',             new AuthorizationError(),                401],
             ['ValidationError',                new ValidationError({ a: ['b'] }),       400],
-            ['SequelizeUniqueConstraintError', { name: 'SequelizeUniqueConstraintError', errors: [{ path: 'a', message: 'b' }] }, 400],
+            ['SQLite unique violation',        Object.assign(new Error('UNIQUE constraint failed: t.a'), { code: 'SQLITE_CONSTRAINT_UNIQUE' }), 400],
             ['generic Error',                  new Error('x'),                          500],
         ];
 

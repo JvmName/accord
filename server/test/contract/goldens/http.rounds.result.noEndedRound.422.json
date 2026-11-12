@@ -21,7 +21,8 @@
             "No ended round to update"
           ]
         }
-      }
+      },
+      "status": "unprocessable entity"
     }
   }
 }

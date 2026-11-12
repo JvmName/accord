@@ -285,8 +285,8 @@
               }
             }
           },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           },
           "500": {
             "$ref": "#/components/responses/ServerError"
@@ -621,6 +621,9 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           },
           "500": {
             "$ref": "#/components/responses/ServerError"
@@ -1351,7 +1354,7 @@
         }
       },
       "UnprocessableEntity": {
-        "description": "Unprocessable Entity (F-21: the envelope has NO `status` key)",
+        "description": "Unprocessable Entity",
         "content": {
           "application/json": {
             "schema": {
@@ -1973,10 +1976,17 @@
               "errors"
             ],
             "additionalProperties": false
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "unprocessable entity"
+            ]
           }
         },
         "required": [
-          "data"
+          "data",
+          "status"
         ],
         "additionalProperties": false
       },

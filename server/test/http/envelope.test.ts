@@ -48,13 +48,13 @@ const golden = (name: string) => JSON.parse(fs.readFileSync(path.join(GOLDENS, `
 // ---------------------------------------------------------------------------
 
 describe('envelope: statusText', () => {
-    it('maps exactly 200/400/401/404/500 and nothing else', () => {
-        expect([200, 400, 401, 404, 500].map(statusText)).toEqual(['ok', 'bad request', 'unauthorized', 'not found', 'server error']);
-        for (const code of [201, 204, 403, 409, 422, 503]) expect(statusText(code)).toBeUndefined();
+    it('maps exactly 200/400/401/404/422/500 and nothing else', () => {
+        expect([200, 400, 401, 404, 422, 500].map(statusText)).toEqual(['ok', 'bad request', 'unauthorized', 'not found', 'unprocessable entity', 'server error']);
+        for (const code of [201, 204, 403, 409, 503]) expect(statusText(code)).toBeUndefined();
     });
 
-    it('a 422 envelope serialises WITHOUT a status key', () => {
-        expect(JSON.stringify(envelopeFor(422, { errors: { matchId: ['x'] } }))).toBe('{"data":{"errors":{"matchId":["x"]}}}');
+    it('a 422 envelope carries status "unprocessable entity" (F-21)', () => {
+        expect(JSON.stringify(envelopeFor(422, { errors: { matchId: ['x'] } }))).toBe('{"data":{"errors":{"matchId":["x"]}},"status":"unprocessable entity"}');
     });
 });
 
@@ -149,7 +149,7 @@ const GOLDEN_CASES: GoldenCase[] = [
     { golden: 'http.rounds.result.explicitNull.400', request: async w => ({ method: 'PATCH', path: `/match/${(await createStartedMatch(app.db, w)).id}/rounds/result`, token: w.creator.api_token, body: { stoppage: false, winner: null } }) },
     { golden: 'http.rounds.result.invalidWinner.400', request: async w => ({ method: 'PATCH', path: `/match/${(await createStartedMatch(app.db, w)).id}/rounds/result`, token: w.creator.api_token, body: { winner: 'green' } }) },
     // --- produced by the registry's gates ---
-    { golden: 'http.mat.get.unknownId.401', request: async w => ({ method: 'GET', path: `/mat/${UNKNOWN}`, token: w.creator.api_token }) },
+    { golden: 'http.mat.get.unknownId.404', request: async w => ({ method: 'GET', path: `/mat/${UNKNOWN}`, token: w.creator.api_token }) },
     { golden: 'http.match.get.unknownId.404', request: async w => ({ method: 'GET', path: `/match/${UNKNOWN}`, token: w.creator.api_token }) },
     { golden: 'http.match.get.unauthenticated.401', request: async w => ({ method: 'GET', path: `/match/${(await createMatch(app.db, w)).id}` }) },
     { golden: 'http.mat.judges.unauthenticated.401', request: async w => ({ method: 'GET', path: `/mat/${w.adminCode}/judges` }) },
@@ -251,8 +251,8 @@ describe('errors: rendering of a thrown error (snapshot)', () => {
         expect(await registryRender(new NewAuthorizationError())).toEqual({ status: 401, body: { data: null, status: 'unauthorized' } });
         expect(await registryRender(new NewValidationError({ name: ['required'] })))
             .toEqual({ status: 400, body: { data: { errors: { name: ['required'] } }, status: 'bad request' } });
-        expect(recorded().get('Sequelize-shaped unique error with short messages').body)
-            .toEqual({ data: { errors: { code: ['m'], 'null': 'p' } }, status: 'bad request' });
+        expect(recorded().get('unique violation on a composite index').body)
+            .toEqual({ data: { errors: { mat_id: ['mat_id must be unique'], role: ['role must be unique'] } }, status: 'bad request' });
     });
 
     it('does not leak an AuthorizationError message', async () => {
@@ -261,7 +261,7 @@ describe('errors: rendering of a thrown error (snapshot)', () => {
 });
 
 describe('errors: a REAL SQLite unique violation through Drizzle', () => {
-    it('is detected behind DrizzleQueryError and rendered like the Sequelize branch', async () => {
+    it('is detected behind DrizzleQueryError and rendered as an array per column, without the driver message', async () => {
         const world = await createWorld(probeApp.db);
         let err: unknown;
         try {
@@ -270,15 +270,12 @@ describe('errors: a REAL SQLite unique violation through Drizzle', () => {
             err = e;
         }
         expect(err).toBeDefined();
-        expect(uniqueViolationErrors(err)).toEqual({
-            code:   ['code must be unique'],
-            'null': 'SQLITE_CONSTRAINT: UNIQUE constraint failed: mat_codes.code',
-        });
+        expect(uniqueViolationErrors(err)).toEqual({ code: ['code must be unique'] });
 
         const rendered = await registryRender(err);
         expect(rendered).toEqual({
             status: 400,
-            body: { data: { errors: { code: ['code must be unique'], 'null': 'SQLITE_CONSTRAINT: UNIQUE constraint failed: mat_codes.code' } }, status: 'bad request' },
+            body: { data: { errors: { code: ['code must be unique'] } }, status: 'bad request' },
         });
     });
 
@@ -293,12 +290,23 @@ describe('errors: a REAL SQLite unique violation through Drizzle', () => {
         expect(uniqueViolationErrors(err)).toEqual({
             mat_id: ['mat_id must be unique'],
             role:   ['role must be unique'],
-            'null': 'SQLITE_CONSTRAINT: UNIQUE constraint failed: mat_codes.mat_id, mat_codes.role',
         });
     });
 
     it('does not treat a non-constraint error as a unique violation', () => {
         expect(uniqueViolationErrors(new Error('UNIQUE constraint failed: x.y'))).toBeNull();
         expect(uniqueViolationErrors(null)).toBeNull();
+    });
+
+    it('does not treat a NOT NULL violation from the real database as a unique violation (F-78)', async () => {
+        let err: unknown;
+        try {
+            await probeApp.db.$client.run("INSERT INTO users (id, name, api_token, created_at, updated_at) VALUES ('x', NULL, 't', 'n', 'n')");
+        } catch (e) {
+            err = e;
+        }
+        expect(err).toBeDefined();
+        expect(uniqueViolationErrors(err)).toBeNull();
+        expect((await registryRender(err)).status).toBe(500);
     });
 });

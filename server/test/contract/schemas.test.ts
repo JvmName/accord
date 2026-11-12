@@ -116,10 +116,7 @@ describe('contract schemas vs. goldens', () => {
                 }
                 schema = routeSchema;
             } else {
-                // Error bodies are not route-specific. Note that the four 422
-                // goldens have NO `status` key at all (F-21) and must still
-                // parse — `errorEnvelopeSchema.status` is optional for
-                // exactly that reason.
+                // Error bodies are not route-specific.
                 schema = errorEnvelopeSchema;
             }
 
@@ -229,10 +226,12 @@ describe('contract schemas — optionality is not accidentally loose', () => {
         expect(matchSchema.safeParse({ ...wsPayload, red_competitor: { ...wsPayload.red_competitor, api_token: 'leaked' } }).success).toBe(false);
     });
 
-    it('accepts a 422 error envelope with no status key (F-21)', () => {
+    it('a 422 error envelope has the status "unprocessable entity" and is rejected without it (F-21)', () => {
         const golden = readGolden('http.rounds.pause.noActiveRound.422.json');
-        expect('status' in golden.response.body).toBe(false);
+        expect(golden.response.body.status).toBe('unprocessable entity');
         expect(errorEnvelopeSchema.safeParse(golden.response.body).success).toBe(true);
+        const { status, ...withoutStatus } = golden.response.body;
+        expect(errorEnvelopeSchema.safeParse(withoutStatus).success).toBe(false);
     });
 
     it('distinguishes the 500 `error` string from the `errors` map', () => {

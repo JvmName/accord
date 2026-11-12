@@ -18,7 +18,8 @@
             "No active round to resume"
           ]
         }
-      }
+      },
+      "status": "unprocessable entity"
     }
   }
 }
