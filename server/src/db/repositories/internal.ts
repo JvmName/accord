@@ -50,10 +50,16 @@ export function orNull<T>(row: T | undefined): T | null {
  * with a missing key fails the same way it did (callers guard today, so this
  * is unreachable in practice).
  */
-export function assertDefined(value: unknown, column: string): void {
+export function assertDefined<T>(value: T, column: string): asserts value is Exclude<T, undefined> {
     if (value === undefined) {
         throw new Error(`WHERE parameter "${column}" has invalid "undefined" value`);
     }
+}
+
+/** The row an `INSERT ... RETURNING` just wrote; the database always returns it. */
+export function inserted<T>(row: T | undefined): T {
+    if (row === undefined) throw new TypeError('Expected the insert to return its row');
+    return row;
 }
 
 /* Compile-time check (erased): the root `createDb()` handle is a `DbOrTx`. */

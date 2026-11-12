@@ -40,7 +40,7 @@ function buildScenarios({ IDS, T0, NOW }) {
     const stamps = (s) => ({ created_at: iso(s), updated_at: iso(s) });
     const id     = (key) => IDS[key] ?? key;
 
-    function addMatch(add, { matId = IDS['mat:flow'], red = IDS['user:red'], blue = IDS['user:blue'], startedAt = 100, endedAt = null, breakStartedAt = null, breakDuration = null, judges = [IDS['user:judgeA'], IDS['user:judgeB']] } = {}) {
+    function addMatch(add, { matId = IDS['mat:flow'], red = IDS['user:red'], blue = IDS['user:blue'], startedAt = 100 as number | null, endedAt = null as number | null, breakStartedAt = null as number | null, breakDuration = null as number | null, judges = [IDS['user:judgeA'], IDS['user:judgeB']] } = {}) {
         add('matches', [{
             id: C.match, creator_id: IDS['user:creator'], mat_id: matId,
             red_competitor_id: red, blue_competitor_id: blue, red_score: 0, blue_score: 0,
@@ -51,11 +51,11 @@ function buildScenarios({ IDS, T0, NOW }) {
         if (judges.length) add('judges_matches', judges.map((user_id) => ({ match_id: C.match, user_id, ...stamps(95) })));
     }
 
-    function addRound(add, roundId, { start, end = null, winner = null, stoppage = null }) {
+    function addRound(add, roundId, { start, end = null as number | null, winner = null as string | null, stoppage = null as number | boolean | null }) {
         add('rounds', [{ id: roundId, match_id: C.match, ended_at: end == null ? null : iso(end), ...stamps(start), declared_winner_id: winner, stoppage }]);
     }
 
-    function addVote(add, voteId, { round, judge, competitor, start, end = null }) {
+    function addVote(add, voteId, { round, judge, competitor, start, end = null as number | null }) {
         add('riding_time_votes', [{ id: voteId, round_id: round, judge_id: judge, competitor_id: competitor, ended_at: end == null ? null : iso(end), ...stamps(start) }]);
     }
 

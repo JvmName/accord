@@ -176,8 +176,8 @@ function loggingMiddleware(): RequestHandler {
         // as it has always behaved.
         customLogLevel: req => {
             const statusCode = (req as { statusCode?: number | null }).statusCode;
-            if (statusCode >= 500) return 'error';
-            if (statusCode >= 400) return 'warn';
+            if (statusCode != null && statusCode >= 500) return 'error';
+            if (statusCode != null && statusCode >= 400) return 'warn';
             return 'info';
         },
         serializers: {

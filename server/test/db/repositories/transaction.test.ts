@@ -98,7 +98,7 @@ describe('transaction()', () => {
     });
 
     it('serialises concurrent top-level transactions on one connection', async () => {
-        const events = [];
+        const events: any[] = [];
         const run = (label, fail) => transaction(db, async (tx) => {
             events.push(`${label}:begin`);
             await Users.insertUser(tx, { name: label });

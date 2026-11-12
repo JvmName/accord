@@ -13,7 +13,7 @@ const DB_DIR        = path.join(__dirname, '../../src/db');
 /** Every import/require specifier in a source file, with whether it is type-only. */
 function specifiers(file) {
     const src = fs.readFileSync(file, 'utf8');
-    const out = [];
+    const out: any[] = [];
     for (const m of src.matchAll(/^\s*(import\s+type\b[^;]*?|import\b[^;]*?|export\b[^;]*?)\s+from\s+['"]([^'"]+)['"]/gms)) {
         out.push({ spec: m[2], typeOnly: /^\s*(import|export)\s+type\b/.test(m[1]) });
     }
@@ -77,7 +77,8 @@ describe('assertWire / devAssertWire (opt-in runtime contract check)', () => {
         expect(() => S.assertWire('match', nulledMat)).toThrow(/wire contract violation \(match\): mat/);
         const leaky = { ...goodMatch(), red_competitor: S.serializeLeakedUser(F.USERS.red) };
         expect(() => S.assertWire('match', leaky)).toThrow(S.WireContractError);
-        expect(() => S.assertWire('leakedMatch', leaky)).toThrow(S.WireContractError); // blue/winner shapes differ
+        // `leaky` is deliberately not a LeakedMatch (only one competitor leaks), hence the cast.
+        expect(() => S.assertWire('leakedMatch', leaky as never)).toThrow(S.WireContractError); // blue/winner shapes differ
     });
 
     it('wireValidationEnabled: ACCORD_VALIDATE_WIRE=1 forces on, =0 forces off, else NODE_ENV=development', () => {

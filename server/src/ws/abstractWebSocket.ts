@@ -3,6 +3,7 @@
  * (`WebSocket`, authenticated by API token) and the worker process
  * (`WorkerWebSocket`).
  */
+import { present } from '../domain/present';
 import type { Socket } from 'socket.io';
 import type { Adapter } from 'socket.io-adapter';
 import type { Logger } from 'pino';
@@ -79,13 +80,13 @@ export class AbstractWebSocket {
     #handleRoomJoined(room: string, id: string): void {
         if (this.id == room) return;
 
-        const numConnections = this.#adapter.rooms.get(room).size;
+        const numConnections = present(this.#adapter.rooms.get(room), `room ${room}`).size; // socket.io emits join/leave before it drops an empty room
         logger.info(`Web socket joined room ${room}.${numConnections} - (${id})`);
     }
 
     #handleRoomLeft(room: string, id: string): void {
         if (this.id == room) return;
-        const numConnections = this.#adapter.rooms.get(room).size;
+        const numConnections = present(this.#adapter.rooms.get(room), `room ${room}`).size; // socket.io emits join/leave before it drops an empty room
         logger.info(`Web socket left room ${room}.${numConnections} - (${id})`);
     }
 

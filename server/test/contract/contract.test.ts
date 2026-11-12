@@ -51,8 +51,8 @@ afterAll(() => { jest.useRealTimers(); });
 
 describe('contract goldens', () => {
     it('replays every committed golden byte-for-byte', () => {
-        const mismatched = [];
-        const missing    = [];
+        const mismatched: any[] = [];
+        const missing: any[]    = [];
 
         for (const record of result.records) {
             const expected = readGolden(record.name);
@@ -132,7 +132,7 @@ function parseModelsKt(source: string) {
         const properties: ModelProperty[] = [];
         // Split the parameter list on top-level commas.
         let chunkDepth = 0, current = '';
-        const chunks = [];
+        const chunks: any[] = [];
         for (const char of params) {
             if ('<(['.includes(char)) chunkDepth++;
             if ('>)]'.includes(char)) chunkDepth--;
@@ -223,7 +223,7 @@ describe('models.kt cross-check', () => {
 
     // --- 7c: every client property populated somewhere -----------------------
     it('has every @SerialName in models.kt POPULATED in at least one golden', () => {
-        const gaps = [];
+        const gaps: any[] = [];
         let checked = 0;
         for (const [className, properties] of Object.entries(model.classes)) {
             for (const property of properties) {
@@ -239,7 +239,7 @@ describe('models.kt cross-check', () => {
     });
 
     it('has every enum value in models.kt represented in a golden', () => {
-        const gaps = [];
+        const gaps: any[] = [];
         for (const [enumName, values] of Object.entries(model.enums)) {
             for (const value of values) {
                 if (!populated.values.has(value)) gaps.push(`${enumName}.${value}`);
@@ -256,7 +256,7 @@ describe('models.kt cross-check', () => {
             'Role', 'CompetitorColor', 'RoundResultType',
         ]);
 
-        const violations = [];
+        const violations: any[] = [];
         let checks = 0;
 
         function check(className, value, where) {
@@ -283,7 +283,7 @@ describe('models.kt cross-check', () => {
                     continue;
                 }
 
-                const element = property.elementType.replace(/\?$/, '');
+                const element = property.elementType!.replace(/\?$/, '');
                 if (LEAF.has(element)) continue;
 
                 if (property.isList && Array.isArray(actual)) {

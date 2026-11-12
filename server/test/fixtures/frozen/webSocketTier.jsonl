@@ -24,7 +24,7 @@
 {"connectError":null,"connected":true,"key":"script worker socket: no match.join handler","received":[]}
 {"connectError":null,"connected":true,"key":"script worker socket: room.join works","received":["match.update:the match","round.tech-fall:the match","break.ended:the match"]}
 {"connectError":null,"connected":true,"key":"script a client relaying a worker event reaches nobody","received":["match.update:the match","round.tech-fall:the match","break.ended:the match"]}
-{"key":"handler unknown token, existing match","outcome":{"error":"TypeError","message":"null is not an object (evaluating 'this.currentUser.id')"}}
+{"key":"handler unknown token, existing match","outcome":{"error":"TypeError","message":"Expected a user to exist"}}
 {"key":"handler valid token, true","outcome":{"error":"Error","message":"Argument passed to findByPk is invalid: true"}}
 {"key":"handler valid token, object","outcome":{"error":"Error","message":"Argument passed to findByPk is invalid: [object Object]"}}
 {"key":"handler valid token, array","outcome":{"error":"Error","message":"Argument passed to findByPk is invalid: 1,2"}}

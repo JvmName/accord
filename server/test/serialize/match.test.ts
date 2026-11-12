@@ -113,8 +113,8 @@ describe('serializeMatch — optional associations: absent unless included, neve
         const out = render(F.matchGraph({ rounds }), { includeMat: true, includeMatchJudges: true, includeRounds: true });
         expect(out.mat).toEqual({ id: ID.mat, name: 'Main Mat', judge_count: 2, creator_id: ID.creator });
         expect(out.judges).toEqual([{ id: ID.judgeA, name: 'Jordan Judge' }, { id: ID.judgeB, name: 'Jamie Judge' }]);
-        expect(out.rounds.map((r) => r.id)).toEqual(rounds.map((r) => r.id));
-        expect(out.rounds.map((r) => r.result.method.type)).toEqual(['points', 'submission', 'stoppage']);
+        expect(out.rounds!.map((r) => r.id)).toEqual(rounds.map((r) => r.id));
+        expect(out.rounds!.map((r) => r.result.method.type)).toEqual(['points', 'submission', 'stoppage']);
 
         const empty = render(F.matchGraph({ judges: [], rounds: [] }), { includeMatchJudges: true, includeRounds: true });
         expect([empty.judges, empty.rounds]).toEqual([[], []]);
@@ -171,7 +171,7 @@ describe('serializeMatch — winner', () => {
             F.round({ started: 60, ended: 70, ridingTimeVotes: F.votes(ID.red, JUDGES, 65, null) }),
         ];
         expect(S.serializeMatch(F.matchGraph({ rounds }), { now: at(66) }).winner).toBeNull();        // 1s = 0 pts: tie
-        expect(S.serializeMatch(F.matchGraph({ rounds }), { now: at(80) }).winner.id).toBe(ID.red);   // 15s = 5 pts
+        expect(S.serializeMatch(F.matchGraph({ rounds }), { now: at(80) }).winner!.id).toBe(ID.red);   // 15s = 5 pts
     });
 });
 
@@ -185,7 +185,7 @@ describe('serializeLeakedMatch (F-22 — WebSocket only, delete in task 18)', ()
         expect(out.red_competitor).toEqual(leaked(USERS.red));
         expect(out.blue_competitor).toEqual(leaked(USERS.blue));
         expect(out.winner).toEqual(leaked(USERS.red));
-        expect(out.rounds.map((r) => r.result.winner)).toEqual([leaked(USERS.red), leaked(USERS.blue), leaked(USERS.red)]);
+        expect(out.rounds!.map((r) => r.result.winner)).toEqual([leaked(USERS.red), leaked(USERS.blue), leaked(USERS.red)]);
         expect(out.judges).toEqual(JUDGES.map((j) => ({ id: j.id, name: j.name })));
         expect(F.allKeys(out.mat).has('api_token')).toBe(false);
     });

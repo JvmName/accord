@@ -58,7 +58,7 @@ describe('findMatCodeByCode', () => {
     it('finds by exact code', async () => {
         const row = await MatCodes.findMatCodeByCode(db, CODE.mainAdmin);
         expect(row).toMatchObject({ mat_id: ID.matMain, code: CODE.mainAdmin, role: 'admin' });
-        expect(row.created_at).toBeInstanceOf(Date);
+        expect(row!.created_at).toBeInstanceOf(Date);
     });
 
     it('returns null when not found, including near-misses the regexp would accept', async () => {

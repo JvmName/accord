@@ -24,7 +24,7 @@ describe('findMatById / findMatByCode', () => {
     });
 
     it('findMatByCode resolves code -> mat', async () => {
-        expect((await Mats.findMatByCode(db, CODE.mainViewer)).id).toBe(ID.matMain);
+        expect((await Mats.findMatByCode(db, CODE.mainViewer))!.id).toBe(ID.matMain);
     });
 
     it('findMatByCode: unknown code -> undefined (legacy `return;`)', async () => {
@@ -106,21 +106,21 @@ describe('findMatGraph', () => {
         insertRows(db, 'matches', [match('m-2', { ...stampsAt(40) }), match('m-x', { ended_at: at(1) }), match('m-1')]);
         const graph = await Mats.findMatGraph(db, ID.matMain);
         expect(graph).toMatchObject({ id: ID.matMain, name: 'Main Mat', judge_count: 2 });
-        expect(ids(graph.judges)).toEqual([ID.judgeA, ID.judgeB]);
-        expect(graph.matCodes.map((c) => c.role)).toEqual(['admin', 'viewer']);
-        expect(ids(graph.incompleteMatches)).toEqual(['m-2', 'm-1']);
-        expect(graph.created_at).toBeInstanceOf(Date);
-        expect(graph.incompleteMatches[0].created_at).toBeInstanceOf(Date);
+        expect(ids(graph!.judges)).toEqual([ID.judgeA, ID.judgeB]);
+        expect(graph!.matCodes.map((c) => c.role)).toEqual(['admin', 'viewer']);
+        expect(ids(graph!.incompleteMatches)).toEqual(['m-2', 'm-1']);
+        expect(graph!.created_at).toBeInstanceOf(Date);
+        expect(graph!.incompleteMatches[0].created_at).toBeInstanceOf(Date);
         expect(graph).not.toHaveProperty('judgesMats');
         // same content as the single-purpose functions
-        expect(graph.judges).toEqual(await Mats.findMatJudges(db, ID.matMain));
-        expect(graph.incompleteMatches).toEqual(await Mats.findIncompleteMatchesForMat(db, ID.matMain));
+        expect(graph!.judges).toEqual(await Mats.findMatJudges(db, ID.matMain));
+        expect(graph!.incompleteMatches).toEqual(await Mats.findIncompleteMatchesForMat(db, ID.matMain));
     });
 
     it('returns null for an unknown mat, empty arrays for an empty one', async () => {
         expect(await Mats.findMatGraph(db, 'missing')).toBeNull();
         const empty = await Mats.findMatGraph(db, ID.matEmpty);
-        expect([empty.judges, empty.matCodes, empty.incompleteMatches]).toEqual([[], [], []]);
+        expect([empty!.judges, empty!.matCodes, empty!.incompleteMatches]).toEqual([[], [], []]);
     });
 });
 

@@ -128,13 +128,14 @@ export function uniqueViolationErrors(err: unknown): UniqueViolationErrors | nul
     if (message.includes('FOREIGN KEY constraint failed')) return null;
 
     let fields: string[] = [];
-    let match = message.match(/columns (.*?) are/);
-    if (match !== null && match.length >= 2) {
-        fields = match[1].split(', ');
+    const columns = message.match(/columns (.*?) are/)?.[1];
+    if (columns !== undefined) {
+        fields = columns.split(', ');
     } else {
-        match = message.match(/UNIQUE constraint failed: (.*)/);
-        if (match !== null && match.length >= 2) {
-            fields = match[1].split(', ').map(columnWithTable => columnWithTable.split('.')[1]);
+        const failed = message.match(/UNIQUE constraint failed: (.*)/)?.[1];
+        if (failed !== undefined) {
+            // A name without a table prefix yields `undefined`, as it always has.
+            fields = failed.split(', ').map(columnWithTable => columnWithTable.split('.')[1] as string);
         }
     }
 

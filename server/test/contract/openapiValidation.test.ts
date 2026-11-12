@@ -45,11 +45,11 @@ describe('OpenAPI validator: client requests', () => {
     it('validates against a document with operations, mounted at the root', () => {
         const document = generateOpenApiDocument();
         expect(document.servers).toEqual([{ url: '/', description: 'API server' }]);
-        expect(Object.keys(document.paths).length).toBeGreaterThanOrEqual(15);
+        expect(Object.keys(document.paths ?? {}).length).toBeGreaterThanOrEqual(15);
     });
 
     it('passes every success golden through unchanged (no rejection, no response error)', () => {
-        const changed = [];
+        const changed: any[] = [];
         let checked = 0;
         for (const record of result.records) {
             const golden = readGolden(record.name);

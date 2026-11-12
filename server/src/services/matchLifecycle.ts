@@ -19,6 +19,7 @@
  * Every command resolves to `undefined`, like the legacy methods; callers
  * re-read what they render.
  */
+import { present } from '../domain/present';
 import type { Match, User } from '../db/types';
 import type { DbOrTx } from '../db/repositories/internal';
 import { findMatJudges, findMatById } from '../db/repositories/mats';
@@ -53,7 +54,8 @@ export async function competitorForColor(db: DbOrTx, match: Pick<Match, 'red_com
 }
 
 function callAccessor(this: Record<string, () => Promise<User | null>>, method: string): Promise<User | null> {
-    return this[method]();
+    // An unknown colour has no accessor: the call below throws the TypeError legacy threw, which is pinned.
+    return this[method]!();
 }
 
 
@@ -75,7 +77,7 @@ export async function startMatch(db: DbOrTx, match: Pick<Match, 'id' | 'mat_id' 
 
     await updateMatch(db, match.id, { started_at: new Date() });
 
-    const mat    = await findMatById(db, match.mat_id);
+    const mat    = present(await findMatById(db, match.mat_id), 'the match\'s mat');
     const judges = await findMatJudges(db, mat.id);
     await setMatchJudges(db, match.id, judges.map((judge) => judge.id));
 

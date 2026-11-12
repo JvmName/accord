@@ -35,8 +35,8 @@ describe('reads', () => {
     });
 
     it('findOpenVoteForJudge: that judge\'s open vote in this round', async () => {
-        expect((await Votes.findOpenVoteForJudge(db, 'r1', ID.judgeA)).id).toBe('v2');
-        expect((await Votes.findOpenVoteForJudge(db, 'r2', ID.judgeA)).id).toBe('vx');
+        expect((await Votes.findOpenVoteForJudge(db, 'r1', ID.judgeA))!.id).toBe('v2');
+        expect((await Votes.findOpenVoteForJudge(db, 'r2', ID.judgeA))!.id).toBe('vx');
     });
 
     it('findOpenVoteForJudge returns UNDEFINED (not null) when none, like legacy `[0]`', async () => {
@@ -45,7 +45,7 @@ describe('reads', () => {
 
     it('findOpenVoteForJudge picks the first open one in insertion order if several exist', async () => {
         insertRows(db, 'riding_time_votes', [vote('v-later', 'r1', ID.judgeB, 100)]);
-        expect((await Votes.findOpenVoteForJudge(db, 'r1', ID.judgeB)).id).toBe('v3');
+        expect((await Votes.findOpenVoteForJudge(db, 'r1', ID.judgeB))!.id).toBe('v3');
     });
 });
 
@@ -61,13 +61,13 @@ describe('writes', () => {
     it('setVoteEnded closes it (explicit time or now); null for a missing vote', async () => {
         const row = await Votes.insertRidingTimeVote(db, { round_id: 'r1', judge_id: ID.judgeA, competitor_id: ID.blue });
         const ended = await Votes.setVoteEnded(db, row.id, at(150));
-        expect(ended.ended_at).toEqual(at(150));
-        expect(ended.created_at).toEqual(row.created_at);
+        expect(ended!.ended_at).toEqual(at(150));
+        expect(ended!.created_at).toEqual(row.created_at);
         expect(await Votes.findOpenVoteForJudge(db, 'r1', ID.judgeA)).toBeUndefined();
 
         const other = await Votes.insertRidingTimeVote(db, { round_id: 'r1', judge_id: ID.judgeB, competitor_id: ID.red });
         const before = Date.now();
-        expect((await Votes.setVoteEnded(db, other.id)).ended_at.getTime()).toBeGreaterThanOrEqual(before);
+        expect((await Votes.setVoteEnded(db, other.id))!.ended_at!.getTime()).toBeGreaterThanOrEqual(before);
         expect(await Votes.setVoteEnded(db, 'missing')).toBeNull();
     });
 });

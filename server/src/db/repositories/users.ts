@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { asc, eq, inArray } from 'drizzle-orm';
 import { users } from '../schema';
 import type { User } from '../types';
-import { assertDefined, insertStamps, orNull, type DbOrTx } from './internal';
+import { assertDefined, insertStamps, orNull, type DbOrTx, inserted } from './internal';
 
 /**
  * `User.find(id)` (Sequelize `findByPk`): the user, or `null`. A nullish id
@@ -64,5 +64,5 @@ export async function insertUser(db: DbOrTx, values: InsertUserValues): Promise<
         api_token: values.api_token || randomUUID(),
         ...insertStamps(),
     }).returning();
-    return row;
+    return inserted(row);
 }

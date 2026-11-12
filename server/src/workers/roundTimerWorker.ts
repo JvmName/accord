@@ -2,6 +2,7 @@
  * Ends any open round whose clock has run out (elapsed time minus pauses has
  * reached the round's duration), then emits `match.update`.
  */
+import { present } from '../domain/present';
 import type { Logger } from 'pino';
 import { findMatchGraph, findMatchGraphsByIds, type MatchGraph } from '../db/repositories/matches';
 import { findOpenRounds } from '../db/repositories/rounds';
@@ -24,6 +25,10 @@ export class RoundTimerWorker extends Worker {
 
     async checkRoundTimer(round: Round, graph: MatchGraph | undefined): Promise<void> {
         const label = `${graph?.id}.${round.id}`;
+        if (!graph) {
+            logger.warn(`Round ${label} has no match to time; skipping`);
+            return;
+        }
 
         const timeRemaining = this.#timeRemaining(round, graph);
         logger.debug(`Round ${label} timer: remaining=${timeRemaining}s`);
@@ -35,11 +40,12 @@ export class RoundTimerWorker extends Worker {
 
         // Rounds only: no mat and no judges in this payload.
         const ended = await findMatchGraph(this.db, graph.id);
-        this.notifyServer(EVENTS.MATCH_UPDATE, serializeLeakedMatch(ended, { includeRounds: true }));
+        this.notifyServer(EVENTS.MATCH_UPDATE, serializeLeakedMatch(present(ended, 'the match'), { includeRounds: true }));
     }
 
-    #timeRemaining(round: Round, graph: MatchGraph | undefined): number | null {
+    #timeRemaining(round: Round, graph: MatchGraph): number | null {
         const loaded = graph.rounds.find(r => r.id == round.id);
+        if (!loaded) return null; // the round vanished between the two reads; try again next tick
         return roundTimeRemaining(loaded, roundMaxDuration(graph, round), new Date());
     }
 }

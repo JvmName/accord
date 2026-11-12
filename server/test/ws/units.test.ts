@@ -80,8 +80,8 @@ describe('WebSocket', () => {
     describe('WebSocket#on', () => {
         it('calls `on` on the underlying socket with the handler bound to this socket', () => {
             const ioSocket = ioSocketDouble();
-            const socket = new WebSocket(ioSocket, { emit: jest.fn(), db: null });
-            const handler = jest.fn(function () { return this; });
+            const socket = new WebSocket(ioSocket, { emit: jest.fn(), db: null as never });
+            const handler = jest.fn(function (this: unknown) { return this; });
 
             socket.on('some.event', handler);
 
@@ -93,13 +93,13 @@ describe('WebSocket', () => {
 
     describe('WebSocket#apiToken', () => {
         it('returns the token from the socket handshake', () => {
-            expect(new WebSocket(ioSocketDouble({ apiToken: 'abc' }), { emit: jest.fn(), db: null }).apiToken).toBe('abc');
+            expect(new WebSocket(ioSocketDouble({ apiToken: 'abc' }), { emit: jest.fn(), db: null as never }).apiToken).toBe('abc');
         });
     });
 
     describe('WebSocket#id', () => {
         it('returns the socket id', () => {
-            expect(new WebSocket(ioSocketDouble(), { emit: jest.fn(), db: null }).id).toBe('socket-id');
+            expect(new WebSocket(ioSocketDouble(), { emit: jest.fn(), db: null as never }).id).toBe('socket-id');
         });
     });
 });
@@ -108,7 +108,7 @@ describe('WebSocket', () => {
 describe('WorkerWebSocket', () => {
     const relay = (event) => {
         const ioSocket = ioSocketDouble({ query: { workerToken: 'w' } });
-        const server = { emit: jest.fn(), db: null };
+        const server = { emit: jest.fn(), db: null as never };
         const socket = new WorkerWebSocket(ioSocket, server);
         socket.addEventHandlers();
         const [[, handler]] = ioSocket.on.mock.calls.filter(([e]) => e === event);
@@ -118,7 +118,7 @@ describe('WorkerWebSocket', () => {
     };
 
     it('registers the round.tech-fall, match.update and break.ended handlers', async () => {
-        const socket = new WorkerWebSocket(ioSocketDouble({ query: { workerToken: 'w' } }), { emit: jest.fn(), db: null });
+        const socket = new WorkerWebSocket(ioSocketDouble({ query: { workerToken: 'w' } }), { emit: jest.fn(), db: null as never });
         const onSpy = jest.spyOn(socket, 'on');
 
         await socket.init();
@@ -156,8 +156,8 @@ describe('WebSocketServer', () => {
 
     describe('WebSocketServer#_initWebSocket', () => {
         it('creates a client WebSocket for the socket, with this server as its host, and continues the handshake', async () => {
-            const created = [];
-            jest.spyOn(WebSocket.prototype, 'init').mockImplementation(async function () { created.push(this); });
+            const created: any[] = [];
+            jest.spyOn(WebSocket.prototype, 'init').mockImplementation(async function (this: any) { created.push(this); });
             const db = { marker: true } as never; // an opaque stand-in; the code under test only passes it on
             const server = new WebSocketServer(undefined, undefined, db);
             const ioSocket = ioSocketDouble({ apiToken: 'token' });
@@ -190,7 +190,7 @@ describe('WebSocketServer', () => {
         it('calls `on` on the socket.io server with the handler bound to this server', () => {
             const spy = jest.spyOn(IoServer.Server.prototype, 'on');
             const server = new WebSocketServer();
-            const handler = jest.fn(function () { return this; });
+            const handler = jest.fn(function (this: unknown) { return this; });
 
             server.on('some.event', handler);
 

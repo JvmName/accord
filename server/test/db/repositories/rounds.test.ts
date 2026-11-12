@@ -38,12 +38,12 @@ describe('findMatchRounds / findLastRound', () => {
             round('x', 'm2', 50),
         ]);
         expect(ids(await Rounds.findMatchRounds(db, 'm1'))).toEqual(['r1', 'r2b', 'r2a', 'r3']);
-        expect((await Rounds.findLastRound(db, 'm1')).id).toBe('r3');
+        expect((await Rounds.findLastRound(db, 'm1'))!.id).toBe('r3');
     });
 
     it('findLastRound breaks a created_at tie by the LAST inserted (last element of the sorted list)', async () => {
         insertRows(db, 'rounds', [round('first', 'm1', 100), round('second', 'm1', 100)]);
-        expect((await Rounds.findLastRound(db, 'm1')).id).toBe('second');
+        expect((await Rounds.findLastRound(db, 'm1'))!.id).toBe('second');
     });
 
     it('[] and null for a match without rounds', async () => {
@@ -74,17 +74,17 @@ describe('pauses', () => {
             { id: 'open-2', round_id: 'r1', paused_at: at(105), ...stampsAt(105) },
             { id: 'closed', round_id: 'r1', paused_at: at(120), resumed_at: at(125), ...stampsAt(120) },
         ]);
-        expect((await Rounds.findCurrentPause(db, 'r1')).id).toBe('open-2');
+        expect((await Rounds.findCurrentPause(db, 'r1'))!.id).toBe('open-2');
     });
 
     it('insertRoundPause / setPauseResumed', async () => {
         const pause = await Rounds.insertRoundPause(db, { round_id: 'r1', paused_at: at(150) });
         expect(pause).toMatchObject({ round_id: 'r1', paused_at: at(150), resumed_at: null });
-        expect((await Rounds.findCurrentPause(db, 'r1')).id).toBe(pause.id);
+        expect((await Rounds.findCurrentPause(db, 'r1'))!.id).toBe(pause.id);
 
         const resumed = await Rounds.setPauseResumed(db, pause.id, at(160));
-        expect(resumed.resumed_at).toEqual(at(160));
-        expect(resumed.updated_at.getTime()).toBeGreaterThanOrEqual(pause.updated_at.getTime());
+        expect(resumed!.resumed_at).toEqual(at(160));
+        expect(resumed!.updated_at.getTime()).toBeGreaterThanOrEqual(pause.updated_at.getTime());
         expect(await Rounds.findCurrentPause(db, 'r1')).toBeNull();
         expect(await Rounds.setPauseResumed(db, 'missing')).toBeNull();
     });
@@ -93,7 +93,7 @@ describe('pauses', () => {
         const pause = await Rounds.insertRoundPause(db, { round_id: 'r1', paused_at: at(150) });
         const before = Date.now();
         const resumed = await Rounds.setPauseResumed(db, pause.id);
-        expect(resumed.resumed_at.getTime()).toBeGreaterThanOrEqual(before);
+        expect(resumed!.resumed_at!.getTime()).toBeGreaterThanOrEqual(before);
     });
 });
 
@@ -103,15 +103,15 @@ describe('insertRound / updateRound', () => {
         const row = await Rounds.insertRound(db, { match_id: 'm1' });
         expect(row).toMatchObject({ match_id: 'm1', ended_at: null, declared_winner_id: null, stoppage: null });
         expect(row.created_at.getTime()).toBeGreaterThanOrEqual(before);
-        expect((await Rounds.findLastRound(db, 'm1')).id).toBe(row.id);
+        expect((await Rounds.findLastRound(db, 'm1'))!.id).toBe(row.id);
     });
 
     it('updateRound writes the patch and bumps updated_at', async () => {
         insertRows(db, 'rounds', [round('r1', 'm1', 100)]);
         const ended = await Rounds.updateRound(db, 'r1', { ended_at: at(160) });
-        expect(ended.ended_at).toEqual(at(160));
-        expect(ended.created_at).toEqual(at(100));
-        expect(ended.updated_at.getTime()).toBeGreaterThan(at(100).getTime());
+        expect(ended!.ended_at).toEqual(at(160));
+        expect(ended!.created_at).toEqual(at(100));
+        expect(ended!.updated_at.getTime()).toBeGreaterThan(at(100).getTime());
         expect(await Rounds.findOpenRounds(db)).toEqual([]);
 
         expect(await Rounds.updateRound(db, 'r1', { declared_winner_id: ID.red, stoppage: true }))

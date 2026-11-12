@@ -53,7 +53,7 @@ function createWorld() {
         },
         row: (table, id) => db.$client.query(`SELECT * FROM "${table}" WHERE id = ?`).get(id),
         /** `"<OP> <table>"` for every write since the world was built. */
-        writes: () => db.$client.query('SELECT tbl, op FROM zz_audit ORDER BY seq').all().map((e: { op: string; tbl: string }) => `${e.op} ${e.tbl}`),
+        writes: () => (db.$client.query('SELECT tbl, op FROM zz_audit ORDER BY seq').all() as { op: string; tbl: string }[]).map((e) => `${e.op} ${e.tbl}`),
         close: () => db.$client.close(),
     };
     db.$client.run('DELETE FROM zz_audit');

@@ -35,7 +35,7 @@ const drizzleInsert = (values) => db.insert(schema.round_pauses).values({
 }).returning().then(([row]) => row);
 
 /** A row written as raw text, the way any other writer of the file stores it. */
-function rawInsert({ id, pausedAt, resumedAt = null }) {
+function rawInsert({ id, pausedAt, resumedAt = null }: { id: string; pausedAt: Date; resumedAt?: Date | null }) {
     const now = new Date().toISOString();
     db.$client.query('INSERT INTO round_pauses (id, round_id, paused_at, resumed_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
         .run(id, 'r', pausedAt.toISOString(), resumedAt ? resumedAt.toISOString() : null, now, now);

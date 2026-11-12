@@ -8,7 +8,7 @@
         "worker": "bun run bin/worker.ts",
         "test": "bun test --isolate",
         "test:update-fixtures": "bun test/support/updateFrozen.ts",
-        "typecheck": "tsc --noEmit",
+        "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
         "generate:openapi": "bun run bin/generate-openapi.ts",
         "db:migrate": "bun run bin/migrate.ts",
         "db:generate": "bunx --bun drizzle-kit generate",

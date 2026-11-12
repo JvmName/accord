@@ -6,6 +6,7 @@
  * lookups below accept `unknown` and reproduce how the Sequelize lookups they
  * replace treated each JSON type.
  */
+import { present } from '../domain/present';
 import { inspect } from 'node:util';
 import type { Logger } from 'pino';
 import type { DbOrTx } from '../db/repositories/internal';
@@ -76,7 +77,7 @@ export class WebSocket extends AbstractWebSocket {
         }
 
         // Throws for a socket without a user, as it always has.
-        logger.info(`WS match.join: user=${this.currentUser.id} match=${matchId} socket=${this.id}`);
+        logger.info(`WS match.join: user=${present(this.currentUser, 'a user').id} match=${matchId} socket=${this.id}`);
         this.join(this.roomForMatch(matchId));
     }
 

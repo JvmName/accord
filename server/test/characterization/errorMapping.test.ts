@@ -61,7 +61,7 @@ afterAll(() => {
 
 /** Runs one request whose handler throws `err`; returns the observed HTTP status and JSON body. */
 async function requestThatThrows(err: unknown): Promise<{ status: number; body: any }> {
-    thrown = err;
+    thrown = err as null;
     calls = { json: 0, end: 0 };
     const res = await fetch(`${origin}/probe`);
     return { status: res.status, body: await res.json() as any };

@@ -35,7 +35,7 @@ function insertBase(client) {
 }
 
 function fixtures() {
-    const rows = [];
+    const rows: any[] = [];
     const add = (table, row) => rows.push([table, row]);
     const api = {
         rows,
@@ -72,7 +72,7 @@ const MU  = ['matchUpdate'];
 
 /** Steps every 250 ms from `from` to `to` (ms): the match-update job on each, every job on whole seconds. */
 function ticks(from, to, order = ALL) {
-    const steps = [];
+    const steps: any[] = [];
     for (let at = from; at <= to; at += 250) steps.push({ at, jobs: at % 1000 === 0 ? order : MU });
     return steps;
 }
@@ -288,8 +288,8 @@ function generatedLabels(known) {
  * `onPayload(event, payload)` sees every emission before it is recorded.
  */
 async function runTimeline({ client, workers, actions, onPayload }: { client: any; workers: Record<string, any>; actions: any; onPayload: any }, scenario) {
-    const emissions = [];
-    const steps = [];
+    const emissions: any[] = [];
+    const steps: any[] = [];
     let step = '';
     for (const name of Object.keys(workers)) {
         workers[name].notifyServer = (event, payload) => {
@@ -330,11 +330,11 @@ async function runTimeline({ client, workers, actions, onPayload }: { client: an
  */
 function encodeTimeline(name, { emissions, steps }, known) {
     const { labels, walk } = generatedLabels(known);
-    const payloads = [];
+    const payloads: any[] = [];
     const payloadIndex = new Map();
     const rooms = {};
-    const actions = [];
-    const rejections = [];
+    const actions: any[] = [];
+    const rejections: any[] = [];
     for (const e of walk(emissions)) {
         if (e.action) { actions.push([e.step, e.outcome]); continue; }
         if (e.rejected) { rejections.push([e.step, e.job, e.rejected]); continue; }
@@ -342,7 +342,7 @@ function encodeTimeline(name, { emissions, steps }, known) {
         if (!payloadIndex.has(text)) { payloadIndex.set(text, payloads.length); payloads.push(e.payload); }
         (rooms[e.room] ||= []).push([e.step, e.job, e.event, payloadIndex.get(text)]);
     }
-    const stepRecords = [];
+    const stepRecords: any[] = [];
     for (const s of steps) {
         D.labelGenerated(labels, known, s.audit, s.after);
         const writes  = D.auditEntries(s.audit, labels);
@@ -361,7 +361,7 @@ function encodeTimeline(name, { emissions, steps }, known) {
 function emittedFrom(records) {
     const byKey = new Map<string, any>(records.map((r) => [r.key, r]));
     const summary = records[0];
-    const list = [];
+    const list: any[] = [];
     for (const room of summary.rooms) {
         for (const [step, job, event, p] of byKey.get(`${summary.key} | ${room}`).emissions) {
             list.push({ step, job, event, room, payload: byKey.get(`${summary.key} | payload ${p}`).payload });

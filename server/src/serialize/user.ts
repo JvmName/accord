@@ -19,8 +19,9 @@ export type UserInput = Pick<User, 'id' | 'name'>;
 /** The canonical, safe user shape: `{ id, name }`. Never `api_token`. */
 export function serializeUser(user: UserInput): WireUser {
     return {
-        id:   legacyColumn(user.id),
-        name: legacyColumn(user.name),
+        // `|| null` maps an empty string to null (F-63); both columns are non-empty in practice.
+        id:   legacyColumn(user.id) as string,
+        name: legacyColumn(user.name) as string,
     };
 }
 

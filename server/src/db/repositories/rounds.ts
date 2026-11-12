@@ -5,7 +5,7 @@
 import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { round_pauses, rounds } from '../schema';
 import type { NewRound, Round, RoundPause } from '../types';
-import { insertStamps, orNull, rowid, type DbOrTx } from './internal';
+import { insertStamps, orNull, rowid, type DbOrTx, inserted } from './internal';
 
 /**
  * `Round.getOpenRounds()` (`Round.where({ended_at: null})`): every round
@@ -72,7 +72,7 @@ export type InsertRoundValues = Omit<NewRound, 'created_at' | 'updated_at'>;
  */
 export async function insertRound(db: DbOrTx, values: InsertRoundValues): Promise<Round> {
     const [row] = await db.insert(rounds).values({ ...values, ...insertStamps() }).returning();
-    return row;
+    return inserted(row);
 }
 
 export type RoundPatch = Partial<Pick<Round, 'ended_at' | 'declared_winner_id' | 'stoppage'>>;
@@ -98,7 +98,7 @@ export async function insertRoundPause(db: DbOrTx, values: { round_id: string; p
         paused_at: values.paused_at,
         ...insertStamps(),
     }).returning();
-    return row;
+    return inserted(row);
 }
 
 /**

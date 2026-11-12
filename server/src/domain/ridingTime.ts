@@ -9,12 +9,12 @@
  */
 import type { Judge, PauseInput, RidingTimeModule, RidingTimeVoteInput } from './types';
 
-type EventType = 'voteStart' | 'voteEnd' | 'pausedAt' | 'resumedAt';
-interface CalcEvent {
-    time: Date;
-    type: EventType;
-    vote?: RidingTimeVoteInput;
-}
+// This module is CommonJS (`module.exports` below), so it cannot use `import`.
+const { present }: typeof import('./present') = require('./present');
+
+type CalcEvent =
+    | { time: Date; type: 'voteStart' | 'voteEnd'; vote: RidingTimeVoteInput }
+    | { time: Date; type: 'pausedAt' | 'resumedAt' };
 
 // `Date - Date` is valid JS (both operands go through valueOf) but not valid
 // TS, so the subtractions below cast `as unknown as number`. The casts are
@@ -89,7 +89,7 @@ class RidingTimeCalculator {
             if (event.type === 'voteStart') {
                 this.#startVote(event.vote);
             } else if (event.type === 'voteEnd') {
-                this.#endVote(event.vote);
+                this.#endVote(event.vote, event.time);
             } else if (event.type === 'pausedAt') {
                 this.#handlePause(event.time);
             } else if (event.type === 'resumedAt') {
@@ -139,10 +139,10 @@ class RidingTimeCalculator {
     }
 
 
-    #endVote(vote: RidingTimeVoteInput) {
+    #endVote(vote: RidingTimeVoteInput, endedAt: Date) {
         delete this.#activeVotes[vote.judge_id];
         if (!this.controlActive && !this.#paused && this.#controlStartedAt) {
-            this.#endControlPeriod(vote.ended_at);
+            this.#endControlPeriod(endedAt);
             this.#controlStartedAt = null;
             this.#pendingControlTime = 0;
             this.#resumedAt = null;
@@ -174,7 +174,7 @@ class RidingTimeCalculator {
 
 
     #endControlPeriod(endAt: Date) {
-        const ms = endAt.getTime() - this.#controlStartedAt.getTime();
+        const ms = endAt.getTime() - present(this.#controlStartedAt, 'a started control period').getTime();
         this.#controlPeriods.push(ms / 1000);
         this.#controlStartedAt = null;
     }

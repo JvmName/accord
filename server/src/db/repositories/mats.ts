@@ -6,7 +6,7 @@ import { and, asc, eq, getTableColumns, isNull } from 'drizzle-orm';
 import { judges_mats, matches, mats, mats_viewers, users } from '../schema';
 import type { Mat, MatCode, Match, User } from '../types';
 import { findMatCodeByCode } from './matCodes';
-import { insertStamps, orNull, rowid, type DbOrTx } from './internal';
+import { insertStamps, orNull, rowid, type DbOrTx, inserted } from './internal';
 
 /** `Mat.find(id)` (`findByPk`): the mat or `null`; a nullish id yields `null` without a query. */
 export async function findMatById(db: DbOrTx, id: string | null | undefined): Promise<Mat | null> {
@@ -121,7 +121,7 @@ export async function insertMat(db: DbOrTx, values: InsertMatValues): Promise<Ma
         ...(values.judge_count === undefined ? {} : { judge_count: values.judge_count }),
         ...insertStamps(),
     }).returning();
-    return row;
+    return inserted(row);
 }
 
 /**

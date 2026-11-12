@@ -20,7 +20,7 @@ const pause = (id, resumedAt) => H.insertRaw(db.$client, 'round_pauses', [{ id, 
 
 describe('pauseRound', () => {
     it('throws "Round has not started" for a round without a start time, and writes nothing', async () => {
-        await expect(pauseRound(db, { id: 'round-1', created_at: null, ended_at: null })).rejects.toThrow('Round has not started');
+        await expect(pauseRound(db, { id: 'round-1', created_at: null as never, ended_at: null })).rejects.toThrow('Round has not started');
         expect(db.$client.query('SELECT count(*) AS n FROM zz_audit').get().n).toBe(0);
     });
 });

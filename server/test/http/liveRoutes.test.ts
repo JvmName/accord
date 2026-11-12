@@ -121,13 +121,13 @@ describe('one database file for every connection', () => {
         try {
             // eslint-disable-next-line @typescript-eslint/no-require-imports
             const Users = require('../../src/db/repositories/users');
-            const seen = await Users.findUserByApiToken(other, created.body.data.api_token);
-            expect(seen?.id).toBe(created.body.data.user.id);
+            const seen = await Users.findUserByApiToken(other, created.body!.data.api_token);
+            expect(seen?.id).toBe(created.body!.data.user.id);
 
             const outside = await Users.insertUser(other, { name: 'from another connection' });
             const viaServer = await request('POST', '/mats', { token: outside.api_token, body: { name: 'Mat' } });
             expect(viaServer.status).toBe(200);
-            expect(viaServer.body.data.mat.creator_id).toBe(outside.id);
+            expect(viaServer.body!.data.mat.creator_id).toBe(outside.id);
         } finally {
             other.$client.close();
         }

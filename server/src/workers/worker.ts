@@ -3,6 +3,7 @@
  * process's Socket.IO server as the worker, runs `performJob()` on a timer,
  * and is the only place real-time events come from.
  */
+import { present } from '../domain/present';
 import type { io as ioFunction, Socket as ClientSocket } from 'socket.io-client';
 import type { Logger } from 'pino';
 import type { z } from 'zod';
@@ -84,7 +85,7 @@ export abstract class Worker {
 
     async notifyServer<E extends SocketEvent>(event: E, msg: SocketPayload<E>): Promise<void> {
         assertSocketPayload(event, msg);
-        this.#ioClient.emit(event, msg);
+        present(this.#ioClient, 'a connected socket').emit(event, msg);
     }
 
     close(): void {
@@ -102,13 +103,16 @@ export abstract class Worker {
     }
 
     /**
-     * One tick: the job, then the next tick. A rejected `performJob()` is not
-     * caught here, so it never re-queues and surfaces as an unhandled
-     * rejection, which ends the worker process.
+     * One tick: the job, then the next tick. A job that throws is logged and
+     * the next tick is still queued, so one bad round cannot stop the worker.
      */
     async _performJob(): Promise<void> {
         if (this.#closed) return;
-        await this.performJob();
+        try {
+            await this.performJob();
+        } catch (err) {
+            logger.error(err);
+        }
         this.queueJob();
     }
 

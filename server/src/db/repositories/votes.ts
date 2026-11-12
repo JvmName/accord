@@ -6,7 +6,7 @@
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { riding_time_votes } from '../schema';
 import type { RidingTimeVote } from '../types';
-import { insertStamps, orNull, rowid, type DbOrTx } from './internal';
+import { insertStamps, orNull, rowid, type DbOrTx, inserted } from './internal';
 
 /** `round.getRidingTimeVotes()` — insertion (rowid) order, via `riding_time_votes_round_id`. */
 export async function findRoundVotes(db: DbOrTx, roundId: string): Promise<RidingTimeVote[]> {
@@ -57,7 +57,7 @@ export async function insertRidingTimeVote(
         competitor_id: values.competitor_id,
         ...insertStamps(),
     }).returning();
-    return row;
+    return inserted(row);
 }
 
 /**

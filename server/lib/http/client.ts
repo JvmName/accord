@@ -26,22 +26,22 @@ interface HttpResponse<T = any> {
 
 
 class HttpClient {
-    async get(endpoint: string, { requestParams, headers }: RequestOptions={}): Promise<HttpResponse> {
+    async get(endpoint: string, _options: RequestOptions = {}): Promise<HttpResponse> {
         return await this.#makeRequest(endpoint, "GET", arguments[1]);
     }
 
 
-    async post(endpoint: string, { body, headers }: RequestOptions={}): Promise<HttpResponse> {
+    async post(endpoint: string, _options: RequestOptions = {}): Promise<HttpResponse> {
         return await this.#makeRequest(endpoint, "POST", arguments[1]);
     }
 
 
-    async put(endpoint: string, { body, headers }: RequestOptions={}): Promise<HttpResponse> {
+    async put(endpoint: string, _options: RequestOptions = {}): Promise<HttpResponse> {
         return await this.#makeRequest(endpoint, "PUT", arguments[1]);
     }
 
 
-    async delete(endpoint: string, { requestParams, headers }: RequestOptions={}): Promise<HttpResponse> {
+    async delete(endpoint: string, _options: RequestOptions = {}): Promise<HttpResponse> {
         return await this.#makeRequest(endpoint, "DELETE", arguments[1]);
     }
 
@@ -117,7 +117,7 @@ class HttpClient {
             val.forEach(v => url.searchParams.append(paramName, v));
 
         } else if (typeof val == 'object') {
-            for (const [subParamName, subValue] of Object.entries(val)) {
+            for (const [subParamName] of Object.entries(val)) {
                 // @ts-expect-error -- `formData` is undeclared (latent bug, see FINDINGS F-31); behavior intentionally unchanged
                 this.#appendUrlRequestValue(`${paramName}[${subParamName}]`, val, formData);
             };

@@ -41,8 +41,8 @@ export class MatchUpdateWorker extends Worker {
             logger.debug(`Broadcasting match updates for ${breakMatches.length} match(es) in break`);
             const graphs = await findMatchGraphsByIds(this.db, [...currentMatchIds]);
             // One broadcast per open round, then one per match in a break.
-            for (const round of rounds)       this.#broadcast(graphs.get(round.match_id));
-            for (const match of breakMatches) this.#broadcast(graphs.get(match.id));
+            for (const round of rounds)       this.#broadcastIfPresent(graphs.get(round.match_id));
+            for (const match of breakMatches) this.#broadcastIfPresent(graphs.get(match.id));
             this.#lastBroadcastTime = now;
         }
 
@@ -56,6 +56,11 @@ export class MatchUpdateWorker extends Worker {
         }
 
         this.#previousMatchIds = currentMatchIds;
+    }
+
+    /** A match that vanished between the queries has nothing to broadcast. */
+    #broadcastIfPresent(graph: MatchGraph | undefined): void {
+        if (graph) this.#broadcast(graph);
     }
 
     #broadcast(graph: MatchGraph): void {

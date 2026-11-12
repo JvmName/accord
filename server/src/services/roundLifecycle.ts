@@ -7,7 +7,8 @@
  * caching, no WebSocket emission, no transactions (F-50), legacy behaviour
  * kept bugs included, every command resolves to `undefined`.
  */
-import type { Match, Round, RoundPause, User } from '../db/types';
+import { present } from '../domain/present';
+import type { Match, Round, RoundPause } from '../db/types';
 import type { DbOrTx } from '../db/repositories/internal';
 import { findMatchById, findMatchJudges, updateMatch } from '../db/repositories/matches';
 import { findCurrentPause, findMatchRounds, findRoundPauses, insertRoundPause, setPauseResumed, updateRound } from '../db/repositories/rounds';
@@ -62,7 +63,7 @@ export async function finishRound(db: DbOrTx, round: Round): Promise<void> {
 
     if (await isRoundPaused(db, round.id)) await resumeRound(db, round);
 
-    const match = await findMatchById(db, round.match_id);
+    const match = present(await findMatchById(db, round.match_id), 'the round\'s match');
 
     const endedAt = new Date();
     await updateRound(db, round.id, { ended_at: endedAt });
@@ -98,8 +99,8 @@ export async function finishRound(db: DbOrTx, round: Round): Promise<void> {
  * step 1 closed them, pauses after step 2.
  */
 async function scoreEndedRound(db: DbOrTx, round: Round, match: Pick<Match, 'id' | 'red_competitor_id' | 'blue_competitor_id'>) {
-    const red: User | null  = await findUserById(db, match.red_competitor_id);
-    const blue: User | null = await findUserById(db, match.blue_competitor_id);
+    const red   = present(await findUserById(db, match.red_competitor_id), 'the red competitor');
+    const blue  = present(await findUserById(db, match.blue_competitor_id), 'the blue competitor');
     const judges            = await findMatchJudges(db, match.id);
     const roundNumber       = (await findMatchRounds(db, match.id)).findIndex((r) => r.id == round.id) + 1;
 
@@ -175,7 +176,7 @@ export async function setRoundResult(db: DbOrTx, round: Round, { winner, stoppag
     let declaredWinnerId: string | null | undefined;
     let newStoppage: boolean | null;
     if (winner) {
-        const match      = await findMatchById(db, round.match_id);
+        const match      = present(await findMatchById(db, round.match_id), 'the round\'s match');
         const competitor = await competitorForColor(db, match, winner);
         // `undefined` when the competitor row is missing: Sequelize then left
         // the column out of the UPDATE (previous winner kept), and Drizzle's

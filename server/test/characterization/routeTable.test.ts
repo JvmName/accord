@@ -29,7 +29,7 @@ const CONTROLLERS_DIR = path.join(__dirname, '..', '..', 'controllers') + path.s
 
 
 function parseFixture() {
-    const entries = [];
+    const entries: any[] = [];
     for (const rawLine of fs.readFileSync(FIXTURE_PATH, 'utf8').split('\n')) {
         const line = rawLine.trimEnd();
         if (!line || line.startsWith('#')) continue;
@@ -58,7 +58,7 @@ async function bootServer({ dev }) {
 
 /** Every `METHOD /path` the server's Express app answers, sorted. Duplicates are kept. */
 function liveRoutes(server) {
-    const rows = [];
+    const rows: any[] = [];
     for (const layer of server.expressApp.router.stack) {
         if (!layer.route) continue;
         for (const method of Object.keys(layer.route.methods)) {
@@ -140,6 +140,6 @@ describe('CHARACTERIZATION: route table', () => {
 
         const total = fs.readFileSync(ARTIFACT_PATH, 'utf8').match(/^TOTAL:\s*(\d+)$/m);
         expect(total).not.toBeNull();
-        expect(Number(total[1])).toBe(23);
+        expect(Number(total![1])).toBe(23);
     });
 });

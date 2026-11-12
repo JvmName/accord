@@ -115,7 +115,7 @@ async function settle(fn) {
     try {
         return { ok: true, value: await fn() };
     } catch (err) {
-        return { ok: false, error: err?.constructor?.name, message: err?.message };
+        return { ok: false, error: err?.constructor?.name, message: (err as Error | undefined)?.message };
     }
 }
 

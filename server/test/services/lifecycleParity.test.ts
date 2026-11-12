@@ -92,7 +92,7 @@ describe('lifecycle snapshot: harness', () => {
     it('the seed equals the `seed` fixture, is non-trivial, and the audit triggers record writes', async () => {
         H.restore(db.$client, snap);
         const rows = D.dumpRows(db.$client);
-        const records = [];
+        const records: any[] = [];
         for (const t of H.TABLES) for (const { __rowid, ...row } of rows[t]) records.push({ key: `${t}:${__rowid}`, row: D.relabel(row, labels) });
         expect(records.length).toBe(seedFixture.records.size);
         for (const r of records) expect(F.asStored(r)).toEqual(seedFixture.records.get(r.key));
@@ -398,7 +398,7 @@ describe('setRoundResult (route: PATCH /match/:id/rounds/result)', () => {
         H.restore(db.$client, snap);
         setSystemTime(new Date(NOW));
         try {
-            await RoundSvc.setRoundResult(db, await Rounds.findLastRound(db, IDS['match:toStoppage']), { winner: 'blue', stoppage: 'yes' as unknown as boolean });
+            await RoundSvc.setRoundResult(db, (await Rounds.findLastRound(db, IDS['match:toStoppage']))!, { winner: 'blue', stoppage: 'yes' as unknown as boolean });
         } finally {
             setSystemTime();
         }
@@ -470,11 +470,11 @@ describe('ONE implementation, two callers: route-style and worker-style calls of
 
     it('endRound: route (findMatchById + {safe:false}) == worker (findOpenRounds -> match -> no options)', async () => {
         const key = 'match:open';
-        const route  = await stateAfter(async () => { const match = await Matches.findMatchById(db, IDS[key]); await MatchSvc.endRound(db, match.id, { safe: false }); });
+        const route  = await stateAfter(async () => { const match = await Matches.findMatchById(db, IDS[key]); await MatchSvc.endRound(db, match!.id, { safe: false }); });
         const worker = await stateAfter(async () => {
             const round = (await Rounds.findOpenRounds(db)).find((r) => r.match_id === IDS[key]);
-            const match = await Matches.findMatchById(db, round.match_id);
-            await MatchSvc.endRound(db, match.id);
+            const match = await Matches.findMatchById(db, round!.match_id);
+            await MatchSvc.endRound(db, match!.id);
         });
         expect(route.outcome).toEqual({ ok: true, value: undefined });
         expect(worker).toEqual(route);
@@ -483,16 +483,16 @@ describe('ONE implementation, two callers: route-style and worker-style calls of
 
     it('startRound: route (findMatchById) == worker (findMatchesInBreak)', async () => {
         const key = 'match:toStartRound';
-        const route  = await stateAfter(async () => { await MatchSvc.startRound(db, (await Matches.findMatchById(db, IDS[key])).id); });
-        const worker = await stateAfter(async () => { await MatchSvc.startRound(db, (await Matches.findMatchesInBreak(db)).find((m) => m.id === IDS[key]).id); });
+        const route  = await stateAfter(async () => { await MatchSvc.startRound(db, (await Matches.findMatchById(db, IDS[key]))!.id); });
+        const worker = await stateAfter(async () => { await MatchSvc.startRound(db, (await Matches.findMatchesInBreak(db)).find((m) => m.id === IDS[key])!.id); });
         expect(worker).toEqual(route);
         expect(route.state.generated).toBe(1);
     });
 
     it('endVote: ridingTime route (endRidingTime) == mat leave route (findOpenVoteForJudge + endVote)', async () => {
         const judgeId = IDS['user:judgeA'];
-        const viaRidingTime = await stateAfter(async () => { await VoteSvc.endRidingTime(db, await Rounds.findLastRound(db, IDS['match:soloJudge']), judgeId, 'red'); });
-        const viaLeave      = await stateAfter(async () => { await VoteSvc.endVote(db, await Votes.findOpenVoteForJudge(db, IDS['round:soloJudge'], judgeId)); });
+        const viaRidingTime = await stateAfter(async () => { await VoteSvc.endRidingTime(db, (await Rounds.findLastRound(db, IDS['match:soloJudge']))!, judgeId, 'red'); });
+        const viaLeave      = await stateAfter(async () => { await VoteSvc.endVote(db, (await Votes.findOpenVoteForJudge(db, IDS['round:soloJudge'], judgeId))!); });
         expect(viaLeave).toEqual(viaRidingTime);
         expect(viaRidingTime.state.audit).toHaveLength(1);
     });

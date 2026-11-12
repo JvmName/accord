@@ -42,7 +42,7 @@ export class WebSocketServer implements SocketHost {
     }
 
     close(): void {
-        this.#_ioServer.close();
+        this.#_ioServer?.close();
     }
 
     #handleWebSocketConnection(ioSocket: Socket): void {
@@ -64,16 +64,16 @@ export class WebSocketServer implements SocketHost {
     }
 
     get #ioServer(): IoServer {
-        if (!this.#_ioServer) this.#initializeIoServer();
-        return this.#_ioServer;
+        return this.#_ioServer ?? this.#initializeIoServer();
     }
 
-    #initializeIoServer(): void {
-        this.#_ioServer = new Server(this.#httpServer, {
+    #initializeIoServer(): IoServer {
+        const server = this.#_ioServer = new Server(this.#httpServer, {
             cors: { origin: this.#corsOrigin, credentials: true },
         });
 
-        this.#_ioServer.use(this._initWebSocket.bind(this));
+        server.use(this._initWebSocket.bind(this));
+        return server;
     }
 
     async _initWebSocket(ioSocket: Socket, next: Next): Promise<void> {
@@ -99,7 +99,7 @@ export class WebSocketServer implements SocketHost {
             next();
         } catch (err) {
             if (CONSTANTS.ENV != 'test') logger.error(err);
-            return next(err);
+            return next(err as Error); // socket.io's `next` takes an Error; whatever was thrown is passed on
         }
     }
 

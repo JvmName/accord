@@ -8,6 +8,8 @@ import { findUserById, insertUser } from '../../db/repositories/users';
 import type { DbOrTx } from '../../db/repositories/internal';
 import type { User } from '../../db/types';
 import { endMatch, startMatch } from '../../services/matchLifecycle';
+import { present } from '../../domain/present';
+import { AuthorizationError } from '../errors';
 import { assertLegacyModelValid } from '../legacyModelValidation';
 import { defineRoute } from '../route';
 import { FULL_MATCH, NEW_MATCH, renderMatch } from './matchPayload';
@@ -33,7 +35,8 @@ async function findCompetitorById(db: DbOrTx, id: unknown): Promise<User | null>
  * user named `name`. The new user is created even if the request is refused
  * afterwards.
  */
-async function fetchCompetitor(db: DbOrTx, competitor: LegacyCompetitor): Promise<User | null> {
+async function fetchCompetitor(db: DbOrTx, competitor: LegacyCompetitor | undefined): Promise<User | null> {
+    competitor = present(competitor, 'a competitor in the request');
     if (competitor.id) return await findCompetitorById(db, competitor.id);
 
     assertLegacyModelValid('User', [{ field: 'name', value: competitor.name, notNull: true, string: true }]);
@@ -59,6 +62,8 @@ export const postMatches = defineRoute({
 
         await ctx.authorize('assign', { kind: 'user', user: red });
         await ctx.authorize('assign', { kind: 'user', user: blue });
+        // `authorize` answers 401 for a missing user; this only narrows the types.
+        if (!red || !blue) throw new AuthorizationError();
 
         const match = await insertMatch(ctx.db, {
             mat_id:             ctx.currentMat.id,

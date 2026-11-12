@@ -25,6 +25,8 @@ export function legacyColumn<T>(value: T): T | null {
  * `null` stays `null`. A non-Date value is passed through unchanged, as the
  * legacy walker did.
  */
+export function wireTime(value: Date): string;
+export function wireTime(value: Date | null | undefined): string | null;
 export function wireTime(value: Date | null | undefined): string | null {
     if (value === null || value === undefined) return null;
     if (value instanceof Date) return value.toISOString();

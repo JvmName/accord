@@ -62,7 +62,7 @@ function rowChanges(before, after, labels) {
     for (const t of H.TABLES) {
         const old = new Map<unknown, any>(before[t].map((r) => [r.__rowid, r]));
         const now = new Map<unknown, any>(after[t].map((r) => [r.__rowid, r]));
-        const list = [];
+        const list: any[] = [];
         for (const [rowid, row] of now) {
             const { __rowid, ...values } = row;
             const prev = old.get(rowid);

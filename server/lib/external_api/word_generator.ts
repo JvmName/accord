@@ -858,9 +858,10 @@ class WordGenerator {
 
         while (picked.length < count && picked.length < WORDS.length) {
             const idx = Math.floor(Math.random() * WORDS.length);
-            if (!used.has(idx)) {
+            const entry = WORDS[idx];
+            if (entry && !used.has(idx)) {
                 used.add(idx);
-                picked.push(WORDS[idx].word.replace(/\s+/, '_'));
+                picked.push(entry.word.replace(/\s+/, '_'));
             }
         }
 

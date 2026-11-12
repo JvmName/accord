@@ -171,7 +171,7 @@ describe('Scenario B: judge blocked from joining a solo match in progress', () =
     it('renders an error containing "cannot join a solo match in progress"', async () => {
         const rendered = await addAsJudge(ctx, judge2);
         expect(rendered).not.toBeNull();
-        expect(rendered.body).toEqual({ errors: { matCode: ['cannot join a solo match in progress'] } });
+        expect(rendered!.body).toEqual({ errors: { matCode: ['cannot join a solo match in progress'] } });
     });
 
     it('does NOT add the judge to the active match', async () => {
@@ -192,7 +192,7 @@ describe('Scenario B: judge blocked from joining a solo match in progress', () =
 
     it('sets status code to 400 for the error response', async () => {
         const rendered = await addAsJudge(ctx, judge2);
-        expect(rendered.statusCode).toBe(400);
+        expect(rendered!.statusCode).toBe(400);
     });
 });
 
@@ -238,7 +238,7 @@ describe('Scenario C: judge leaves a running match', () => {
         await removeUser(ctx, judgeA, MatCodes.ROLES.ADMIN);
         const voteB = await Votes.findOpenVoteForJudge(db, round.id, judgeB.id);
         expect(voteB).toBeDefined();
-        expect(voteB.ended_at).toBeNull();
+        expect(voteB!.ended_at).toBeNull();
     });
 
     it('ends the vote before removing the judge from the match', async () => {

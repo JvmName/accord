@@ -23,7 +23,7 @@ let db;
 let snap;
 let fixture;
 const results = new Map();
-const statements = [];
+const statements: any[] = [];
 
 beforeAll(() => {
     db = H.modernDb();
@@ -101,7 +101,7 @@ describe('emissions snapshot: src/workers emit exactly the recorded events', () 
     // exercising its subject fails here.
     it('the scenarios exercise what they claim', () => {
         const at   = (name) => E.emittedFrom(results.get(name));
-        const secs = (name, list) => list.map((e) => E.SCENARIOS.find((s) => s.name === name).steps[e.step].at);
+        const secs = (name, list) => list.map((e) => E.SCENARIOS.find((s) => s.name === name)!.steps[e.step].at);
 
         // ~1 s cadence on a 250 ms tick; regular updates carry the mat, the judges and the rounds.
         const cadence = 'round in progress: match.update about once a second on a 250 ms tick';
@@ -121,15 +121,15 @@ describe('emissions snapshot: src/workers emit exactly the recorded events', () 
         expect(brk.filter((e) => e.event === 'match.update' && e.payload.break_remaining !== null).map((e) => e.payload.break_remaining))
             .toEqual([55, 54, 53, 1]);
         const ended = brk.find((e) => e.event === 'break.ended');
-        expect(ended.payload.break_remaining).toBeNull();
-        expect(ended.payload.rounds).toHaveLength(2);
-        expect(ended.payload.rounds[1].ended_at).toBeNull();
+        expect(ended!.payload.break_remaining).toBeNull();
+        expect(ended!.payload.rounds).toHaveLength(2);
+        expect(ended!.payload.rounds[1].ended_at).toBeNull();
 
         // tech fall: rounds only, no mat / judges.
         const tf = at('tech fall in round 1 (round.tech-fall, then a break)').find((e) => e.event === 'round.tech-fall');
-        expect(Object.keys(tf.payload)).not.toContain('mat');
-        expect(Object.keys(tf.payload)).not.toContain('judges');
-        expect(tf.payload.break_remaining).toBe(60);
+        expect(Object.keys(tf!.payload)).not.toContain('mat');
+        expect(Object.keys(tf!.payload)).not.toContain('judges');
+        expect(tf!.payload.break_remaining).toBe(60);
 
         // the final round: exactly one match.update after the match left the active set, then silence.
         for (const name of ['tech fall in the final round ends the match (one final match.update)',
@@ -160,7 +160,7 @@ describe('emissions snapshot: src/workers emit exactly the recorded events', () 
     it('a tick never needs more statements than the pre-migration implementation did (reported)', () => {
         const ofScenario = statements.filter((s) => s.scenario.startsWith('all at once: concurrent'));
         const sum = (job) => ofScenario.filter((s) => s.job === job).reduce((a, s) => a + s.n, 0);
-        const oneTick = (job, at) => ofScenario.find((s) => s.job === job && s.at === at).n;
+        const oneTick = (job, at) => ofScenario.find((s) => s.job === job && s.at === at)!.n;
         const report = { total: {}, tickAt5s: {}, quietTickAt5250ms: { matchUpdate: oneTick('matchUpdate', 5250) } };
         for (const job of E.ALL) {
             report.total[job] = { now: sum(job), preMigration: PRE_MIGRATION_STATEMENTS[job] };

@@ -83,7 +83,7 @@ describe('serializeMat — includes', () => {
     it('codes: {code, role} each, only when given (POST /mats)', () => {
         const codes = [{ code: 'a.b.c', role: 'admin' }, { code: 'd.e.f', role: 'viewer' }];
         const out = renderMat(F.mat(), { codes });
-        expect(out.codes).toEqual(codes);
+        expect<unknown>(out.codes).toEqual(codes);
         expect('codes' in renderMat(F.mat(), { judges: [] })).toBe(false);
     });
 
@@ -100,25 +100,25 @@ describe('serializeMat — includes', () => {
         const upcomingB      = matchOn('f12', 80, null);
         const upcomingA      = matchOn('f13', 40, null);
         const out = renderMat(F.mat(), { incompleteMatches: [laterStarted, upcomingB, earlierStarted, upcomingA] });
-        expect(out.current_match.id).toBe(earlierStarted.id);
-        expect(out.upcoming_matches.map((m) => m.id)).toEqual([upcomingA.id, upcomingB.id]);
+        expect(out.current_match!.id).toBe(earlierStarted.id);
+        expect(out.upcoming_matches!.map((m) => m.id)).toEqual([upcomingA.id, upcomingB.id]);
         // a started match that is not the first is in NEITHER list (as legacy)
-        expect([out.current_match.id, ...out.upcoming_matches.map((m) => m.id)]).not.toContain(laterStarted.id);
+        expect([out.current_match!.id, ...out.upcoming_matches!.map((m) => m.id)]).not.toContain(laterStarted.id);
     });
 
     it('equal created_at keeps the given order (stable)', () => {
         const a = matchOn('f20', 30, 100);
         const b = matchOn('f21', 30, 100);
-        expect(renderMat(F.mat(), { incompleteMatches: [b, a] }).current_match.id).toBe(b.id);
+        expect(renderMat(F.mat(), { incompleteMatches: [b, a] }).current_match!.id).toBe(b.id);
     });
 
     it('nested matches are PARTIAL payloads: no mat / judges / rounds keys, but winner and break_remaining present', () => {
         const m = F.matchGraph({ id: F.uuid('f30'), break_started_at: at(580), break_duration: 60, rounds: [F.round({ started: 20, ended: 90 })] });
         const out = renderMat(F.mat(), { incompleteMatches: [m] });
-        for (const key of ['mat', 'judges', 'rounds']) expect([key, key in out.current_match]).toEqual([key, false]);
-        expect(out.current_match.winner).toBeNull();
-        expect(out.current_match.break_remaining).toBe(40); // injected now reaches the nested match
-        expect('red_score' in out.current_match).toBe(false);
+        for (const key of ['mat', 'judges', 'rounds']) expect([key, key in out.current_match!]).toEqual([key, false]);
+        expect(out.current_match!.winner).toBeNull();
+        expect(out.current_match!.break_remaining).toBe(40); // injected now reaches the nested match
+        expect('red_score' in out.current_match!).toBe(false);
     });
 
     it('splitIncompleteMatches does not reorder its input', () => {

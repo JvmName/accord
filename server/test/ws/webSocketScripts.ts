@@ -58,13 +58,13 @@ async function boot(WebSocketServer, extraArgs: unknown[]) {
 }
 
 /** One client script: connect with `auth`/`query`, emit `actions`, then a fake worker broadcasts into the match room. */
-async function observe(origin, { auth, query, actions = [] }) {
+async function observe(origin, { auth, query, actions = [] }: { auth?: unknown; query?: unknown; actions?: any[][] }) {
     const { io } = require('socket.io-client'); // eslint-disable-line global-require
     const opts: Record<string, unknown> = { transports: ['websocket'], forceNew: true, reconnection: false };
     if (auth !== undefined) opts.auth = auth;
     if (query !== undefined) opts.query = query;
     const client = io(origin, opts);
-    const seen = { connected: false, connectError: null, received: [] };
+    const seen = { connected: false, connectError: null as string | null, received: [] as string[] };
     client.on('connect', () => { seen.connected = true; });
     client.on('connect_error', (err) => { seen.connectError = err.message; });
     for (const event of ['match.update', 'round.tech-fall', 'break.ended']) {
@@ -139,7 +139,7 @@ const named = (text) => [...NAMES].reduce((t, [id, name]) => t.split(id).join(na
  * `host` (for the handler calls), `findUser(value)` and `findMatch(value)`.
  */
 async function recordTier(tier) {
-    const records = [];
+    const records: any[] = [];
     for (const [name, script] of SCRIPTS) records.push({ key: `script ${name}`, ...(await observe(tier.origin, script as Parameters<typeof observe>[1])) });
 
     const fakeSocket = (apiToken) => ({
@@ -151,11 +151,11 @@ async function recordTier(tier) {
         const socket = new tier.WebSocket(fakeSocket(token), tier.host);
         await socket.init();
         let outcome;
-        try { await socket.handleMatchJoined(arg); outcome = { ok: true }; } catch (err) { outcome = { error: err.constructor.name, message: err.message }; }
+        try { await socket.handleMatchJoined(arg); outcome = { ok: true }; } catch (err: any) { outcome = { error: err.constructor.name, message: err.message }; }
         records.push({ key: `handler ${name}`, outcome });
     }
 
-    const lookup = async (fn) => { try { const r = await fn(); return r ? nameOf(r.id) : r === undefined ? '(undefined)' : r; } catch (err) { return `throws: ${err.message}`; } };
+    const lookup = async (fn) => { try { const r = await fn(); return r ? nameOf(r.id) : r === undefined ? '(undefined)' : r; } catch (err) { return `throws: ${(err as Error).message}`; } };
     for (const value of TOKEN_VALUES) records.push({ key: `token ${named(JSON.stringify(value))}`, user: await lookup(() => tier.findUser(value)) });
     for (const value of MATCH_VALUES) records.push({ key: `match ${named(String(JSON.stringify(value)))}`, match: await lookup(() => tier.findMatch(value)) });
     return records;

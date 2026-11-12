@@ -15,7 +15,7 @@ import { jest } from 'bun:test';
 function spyOnGetter(target, prop) {
     const original = Object.getOwnPropertyDescriptor(target, prop);
 
-    const fn = jest.fn(function () {
+    const fn = jest.fn(function (this: unknown) {
         return original && original.get ? original.get.call(this) : undefined;
     });
 

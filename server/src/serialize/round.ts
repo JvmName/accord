@@ -27,6 +27,7 @@ import type { LeakedRound, LeakedUser, Round as WireRound, User as WireUser } fr
 import type { MatchGraph, RoundWithActivity } from '../db/repositories/matches';
 import type { RoundPause, User } from '../db/types';
 import type { RoundResult, RoundScore, Rules, ScoringModule } from '../domain/types';
+import { present } from '../domain/present';
 import { serializeLeakedUser, serializeUser } from './user';
 import { resolveNow, wireTime, type ClockOptions } from './values';
 
@@ -59,8 +60,8 @@ export interface RoundOutcome extends RoundScore, RoundResult<User> {}
  * explicitly: identical for `now` = the wall clock, and injectable for tests.
  */
 export function roundOutcome(match: RoundMatchContext, round: RoundInput, now: Date): RoundOutcome {
-    const red         = match.redCompetitor;
-    const blue        = match.blueCompetitor;
+    const red         = present(match.redCompetitor, 'the red competitor');
+    const blue        = present(match.blueCompetitor, 'the blue competitor');
     const roundNumber = match.rounds.findIndex((r) => r.id == round.id) + 1;
     // `RidingTimeVote#started_at` is an alias for `created_at`.
     const votes       = round.ridingTimeVotes.map((vote) => ({ ...vote, started_at: vote.created_at }));

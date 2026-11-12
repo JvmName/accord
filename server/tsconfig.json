@@ -15,8 +15,7 @@
     "types": ["node", "bun-types"],
 
     "noEmit": true,        // bun strips types; tsc is a gate, not a build
-    "allowJs": true,       // .js and .ts coexist during migration
-    "checkJs": false,      // do NOT typecheck untouched .js
+    "allowJs": false,
 
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -24,8 +23,12 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
 
-    "strict": false,                    // flipped on in task 18
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true
   },
-  "include": ["**/*.ts", "**/*.js"],
+  "include": ["src/**/*.ts", "lib/**/*.ts", "bin/**/*.ts", "drizzle.config.ts"],
   "exclude": ["node_modules", "coverage", "public"]
 }

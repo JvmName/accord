@@ -46,7 +46,7 @@ describe('CHARACTERIZATION: RoundTimerWorker', () => {
     }
 
     /** Round 1 of a match, open since `startedSecondsAgo`, with `pauses` ([startedSecondsAgo, endedSecondsAgo | null]). */
-    function openRound(startedSecondsAgo, pauses = [], { match = MATCH, round = ROUND } = {}) {
+    function openRound(startedSecondsAgo, pauses: [number, number | null][] = [], { match = MATCH, round = ROUND } = {}) {
         world.match(match).round(round, match, { startedSecondsAgo });
         pauses.forEach(([started, ended], i) => world.pause(W.X(`${round.slice(-3)}${i}`), round, { startedSecondsAgo: started, endedSecondsAgo: ended }));
     }

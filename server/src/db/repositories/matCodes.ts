@@ -7,7 +7,7 @@
 import { asc, eq } from 'drizzle-orm';
 import { mat_codes } from '../schema';
 import type { MatCode } from '../types';
-import { assertDefined, insertStamps, orNull, type DbOrTx } from './internal';
+import { assertDefined, insertStamps, orNull, type DbOrTx, inserted } from './internal';
 
 /**
  * `MatCode.findByCode(code)`: exact, case-sensitive equality on the unique
@@ -50,5 +50,5 @@ export async function insertMatCode(db: DbOrTx, values: InsertMatCodeValues): Pr
         role:   values.role,
         ...insertStamps(),
     }).returning();
-    return row;
+    return inserted(row);
 }

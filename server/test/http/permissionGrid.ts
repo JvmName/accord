@@ -66,10 +66,10 @@ async function recordGrid(evaluate) {
         }
         return found[0];
     };
-    const subjects = [];
+    const subjects: any[] = [];
     for (const [userLabel, userId] of Object.entries(SUBJECT_USERS)) {
         for (const [codeLabel, code] of Object.entries(MAT_CODES)) {
-            const rows = [];
+            const rows: any[] = [];
             for (const scope of SCOPES) {
                 let row = '';
                 for (const action of ACTIONS) row += symbol(await evaluate(userId, code, scope, action));
@@ -85,7 +85,7 @@ async function outcome(fn) {
     try {
         return (await fn()) ? 'GRANT' : 'deny';
     } catch (err) {
-        return `THROW ${err?.constructor?.name}: ${err?.message}`;
+        return `THROW ${err?.constructor?.name}: ${(err as Error | undefined)?.message}`;
     }
 }
 
@@ -93,7 +93,7 @@ async function outcome(fn) {
 function currentRules() {
     const { can } = require('../../src/http/permissions'); // eslint-disable-line global-require
     const loaders = {
-        matchJudges: async (match) => Object.values(MATCHES).find((m) => m.id === match.id).judges.map((id) => ({ id })),
+        matchJudges: async (match) => Object.values(MATCHES).find((m) => m.id === match.id)!.judges.map((id) => ({ id })),
         matchMat:    async (match) => matById(match.mat_id),
     };
     const scopeOf = (s) => {

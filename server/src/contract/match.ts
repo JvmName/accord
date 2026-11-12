@@ -40,7 +40,7 @@ import { leakedUserSchema, userSchema } from './user';
  * instances, which is harmless over HTTP and leaks `api_token` over
  * WebSocket.
  */
-const makeMatchSchema = (competitorUser: z.ZodType, round: z.ZodType) =>
+const makeMatchSchema = <U extends z.ZodType, R extends z.ZodType>(competitorUser: U, round: R) =>
     z.strictObject({
         id: idSchema,
         creator_id: idSchema,
@@ -52,7 +52,8 @@ const makeMatchSchema = (competitorUser: z.ZodType, round: z.ZodType) =>
         winner: nullableRef(competitorUser),
 
         // Association-dependent — absent unless explicitly included.
-        mat: z.lazy(() => matSchema).optional(),
+        // Typed `unknown` to cut the Mat <-> Match inference cycle; Mat -> Match stays fully typed.
+        mat: z.lazy((): z.ZodType<unknown> => matSchema).optional(),
         // Match judges always go through `User#toApiResponse`, so they are
         // safe even on the WebSocket path.
         judges: z.array(userSchema).optional(),

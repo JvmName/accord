@@ -2,6 +2,7 @@
  * Starts the next round when a match's break has run its full duration, then
  * emits `break.ended` with the match as it is after the new round opened.
  */
+import { present } from '../domain/present';
 import type { Logger } from 'pino';
 import { findMatchGraph, findMatchesInBreak, updateMatch } from '../db/repositories/matches';
 import type { Match } from '../db/types';
@@ -25,8 +26,9 @@ export class BreakTransitionWorker extends Worker {
     }
 
     async #checkBreakExpiry(match: Match): Promise<void> {
-        const elapsed = Math.floor((Date.now() - new Date(match.break_started_at).getTime()) / 1000);
-        if (elapsed < match.break_duration) return;
+        const elapsed = Math.floor((Date.now() - new Date(present(match.break_started_at, 'the break start')).getTime()) / 1000);
+        // A break without a duration counts as already over, as it always has.
+        if (elapsed < (match.break_duration ?? 0)) return;
 
         logger.info(`Break expired for match=${match.id}, starting next round`);
 
@@ -34,6 +36,6 @@ export class BreakTransitionWorker extends Worker {
         await startRound(this.db, match.id);
 
         const fresh = await findMatchGraph(this.db, match.id);
-        this.notifyServer(EVENTS.BREAK_ENDED, serializeLeakedMatch(fresh, RENDER_OPTIONS));
+        this.notifyServer(EVENTS.BREAK_ENDED, serializeLeakedMatch(present(fresh, 'the match'), RENDER_OPTIONS));
     }
 }

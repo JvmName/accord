@@ -30,7 +30,7 @@ describe('findUserById', () => {
 
 describe('findUserByApiToken (auth lookup)', () => {
     it('finds the user owning the token', async () => {
-        expect((await Users.findUserByApiToken(db, ID.tokenCreator)).id).toBe(ID.creator);
+        expect((await Users.findUserByApiToken(db, ID.tokenCreator))!.id).toBe(ID.creator);
     });
 
     it('returns null for an unknown token', async () => {

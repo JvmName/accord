@@ -6,7 +6,7 @@
 import { and, asc, eq, getTableColumns, inArray, isNotNull, isNull, notInArray, type SQL } from 'drizzle-orm';
 import { judges_matches, matches, users } from '../schema';
 import type { Mat, Match, NewMatch, RidingTimeVote, Round, RoundPause, User } from '../types';
-import { insertStamps, orNull, rowid, type DbOrTx } from './internal';
+import { insertStamps, orNull, rowid, type DbOrTx, inserted } from './internal';
 
 /** `Match.find(id)` (`findByPk`): the match or `null`; a nullish id yields `null` without a query. */
 export async function findMatchById(db: DbOrTx, id: string | null | undefined): Promise<Match | null> {
@@ -142,7 +142,7 @@ export type InsertMatchValues = Omit<NewMatch, 'created_at' | 'updated_at'>;
  */
 export async function insertMatch(db: DbOrTx, values: InsertMatchValues): Promise<Match> {
     const [row] = await db.insert(matches).values({ ...values, ...insertStamps() }).returning();
-    return row;
+    return inserted(row);
 }
 
 export type MatchPatch = Partial<Pick<Match,

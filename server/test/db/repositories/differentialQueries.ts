@@ -50,7 +50,7 @@ const keysWith = (IDS, prefix) => Object.keys(IDS).filter((k) => k.startsWith(pr
  * return Sequelize instances or Drizzle rows; `enc` turns them into row form.
  */
 async function recordQueries({ IDS, CODES }, reader, enc) {
-    const records = [];
+    const records: any[] = [];
     for (const key of keysWith(IDS, 'match:')) {
         const g = await reader.matchGraph(IDS[key]);
         records.push({
@@ -134,9 +134,9 @@ function repositoryReader(db) {
         openRounds: () => Rounds.findOpenRounds(db),
         matchesInBreak: () => Matches.findMatchesInBreak(db),
         async matchHelpers(id, judgeIds) {
-            const rounds = [];
+            const rounds: any[] = [];
             for (const round of await Rounds.findMatchRounds(db, id)) {
-                const openVoteFor = [];
+                const openVoteFor: any[] = [];
                 for (const judgeId of judgeIds) openVoteFor.push(await Votes.findOpenVoteForJudge(db, round.id, judgeId));
                 rounds.push({ round, openVotes: await Votes.findOpenRoundVotes(db, round.id), currentPause: await Rounds.findCurrentPause(db, round.id), openVoteFor });
             }

@@ -10,12 +10,12 @@ const { calculateRidingTime } = require('../../src/domain/ridingTime');
 
 const T = (sec) => new Date(Date.UTC(2026, 0, 1, 10, 0, sec));
 const judges = (n) => Array.from({ length: n }, (_, i) => ({ id: `judge-${i + 1}` }));
-const vote = (judge, startSec, endSec = null) => ({
+const vote = (judge, startSec, endSec: number | null = null) => ({
     judge_id:   judge.id,
     started_at: T(startSec),
     ended_at:   endSec === null ? null : T(endSec),
 });
-const pause = (pausedSec, resumedSec = null) => ({
+const pause = (pausedSec, resumedSec: number | null = null) => ({
     paused_at:  T(pausedSec),
     resumed_at: resumedSec === null ? null : T(resumedSec),
 });

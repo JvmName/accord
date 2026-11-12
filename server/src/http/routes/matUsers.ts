@@ -137,7 +137,10 @@ export const postMatJoin = defineRoute({
     openapi:   { description: 'Join a mat as a viewer or judge using a mat code', body: joinMatRequestSchema, errors: [400, 404] },
     handler: async ctx => {
         const matCode = ctx.currentMatCode;
-        if (!matCode) return ctx.renderErrors({ matCode: ['not found'] }, 404);
+        const mat     = ctx.currentMat;
+        // A code whose mat row is gone is as unknown as a code that does not exist.
+        if (!matCode || !mat) return ctx.renderErrors({ matCode: ['not found'] }, 404);
+        const membership = { ...ctx, currentMat: mat };
 
         let user = ctx.currentUser;
         if (!user) {
@@ -149,12 +152,12 @@ export const postMatJoin = defineRoute({
         }
 
         const refused = matCode.role == MatCodes.ROLES.ADMIN
-            ? await addAsJudge(ctx, user)
-            : await addAsViewer(ctx, user);
+            ? await addAsJudge(membership, user)
+            : await addAsViewer(membership, user);
         if (refused) return refused;
 
-        const judges = await findMatJudges(ctx.db, ctx.currentMat.id);
-        return { mat: serializeMat(ctx.currentMat, { judges }), user: serializeUser(user), api_token: user.api_token };
+        const judges = await findMatJudges(ctx.db, mat.id);
+        return { mat: serializeMat(mat, { judges }), user: serializeUser(user), api_token: user.api_token };
     },
 });
 

@@ -35,7 +35,7 @@ const SUITES = {
     async seed() {
         const { db, rows, labels } = await seededDb();
         db.$client.close();
-        const records = [];
+        const records: any[] = [];
         for (const t of H.TABLES) for (const { __rowid, ...row } of rows[t]) records.push({ key: `${t}:${__rowid}`, row: D.relabel(row, labels) });
         return records;
     },
@@ -45,7 +45,7 @@ const SUITES = {
         const { db, seedModule, labels } = await seededDb();
         const snapshot = H.snapshot(db.$client);
         const stepsImpl = LS.modernSteps(db);
-        const records = [];
+        const records: any[] = [];
         for (const scenario of Object.values(LS.buildScenarios(seedModule).scenarios)) {
             records.push((await LS.runScenario({ client: db.$client, snapshot, labels, stepsImpl }, scenario)).record);
         }
@@ -58,7 +58,7 @@ const SUITES = {
         const db = H.modernDb();
         E.insertBase(db.$client);
         const snapshot = H.snapshot(db.$client);
-        const records = [];
+        const records: any[] = [];
         for (const scenario of E.SCENARIOS) {
             const known = E.loadScenario(db.$client, snapshot, scenario);
             const timeline = await E.runTimeline({ client: db.$client, workers: E.modernWorkers(db), actions: E.modernActions(db) }, scenario);
@@ -110,7 +110,7 @@ const SUITES = {
         });
         const app = await startRegistryApp({ routes: [probe] });
         try {
-            const records = [];
+            const records: any[] = [];
             for (const c of ERROR_CASES) {
                 thrown = c.make({ AuthorizationError, ValidationError });
                 const res = await fetch(`${app.origin}/__probe`);

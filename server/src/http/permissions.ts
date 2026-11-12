@@ -20,6 +20,7 @@
  * repositories (`findMatchJudges`, `findMatById`) via `PermissionLoaders`,
  * which tests may replace.
  */
+import { present } from '../domain/present';
 import { findMatchJudges } from '../db/repositories/matches';
 import { findMatById } from '../db/repositories/mats';
 import type { DbOrTx } from '../db/repositories/internal';
@@ -128,7 +129,7 @@ async function matchPermission(subject: Subject, action: string, scope: Match, l
         }
         case 'manage': {
             const mat = await loaders.matchMat(scope);
-            return subject.user?.id === mat.creator_id;
+            return subject.user?.id === present(mat, 'the match\'s mat').creator_id;
         }
         case 'pause':
             return await matchPermission(subject, 'manage', scope, loaders) || await matchPermission(subject, 'judge', scope, loaders);

@@ -70,14 +70,14 @@ describe('Worker', () => {
             worker.close();
         });
 
-        // Not caught: a rejected job never re-queues, and the rejection escapes
-        // the timer callback, which ends the worker process.
-        it('lets a rejection escape and does not re-queue', async () => {
+        // A throwing job is logged and the next tick is still queued.
+        it('logs a rejection and still re-queues', async () => {
             const worker = new Probe('t');
             worker.performJob.mockRejectedValue(new Error('db down'));
             const queue = jest.spyOn(worker, 'queueJob');
-            await expect(worker._performJob()).rejects.toThrow('db down');
-            expect(queue).not.toHaveBeenCalled();
+            await expect(worker._performJob()).resolves.toBeUndefined();
+            expect(queue).toHaveBeenCalledTimes(1);
+            worker.close();
         });
 
         it('does nothing once closed', async () => {

@@ -93,24 +93,24 @@ describe('findMatchGraph / findMatchGraphsByIds (hot path)', () => {
 
     it('loads mat, competitors, judges, rounds -> votes/pauses with legacy orderings', async () => {
         const g = await Matches.findMatchGraph(db, 'm1');
-        expect(g.id).toBe('m1');
-        expect(g.started_at).toEqual(at(100));
-        expect(g.mat.id).toBe(ID.matMain);
-        expect(g.redCompetitor.id).toBe(ID.red);
-        expect(g.blueCompetitor.name).toBe('Blair Blue');
-        expect(ids(g.judges)).toEqual([ID.judgeA, ID.judgeB]);
-        expect(ids(g.rounds)).toEqual(['r1', 'r2']);
-        expect(ids(g.rounds[0].ridingTimeVotes)).toEqual(['v2', 'v1']);
-        expect(g.rounds[0]).toMatchObject({ ended_at: at(160), declared_winner_id: ID.red, stoppage: false });
-        expect(ids(g.rounds[1].pauses)).toEqual(['p1']);
-        expect(g.rounds[1].pauses[0].paused_at).toEqual(at(220));
+        expect(g!.id).toBe('m1');
+        expect(g!.started_at).toEqual(at(100));
+        expect(g!.mat!.id).toBe(ID.matMain);
+        expect(g!.redCompetitor!.id).toBe(ID.red);
+        expect(g!.blueCompetitor!.name).toBe('Blair Blue');
+        expect(ids(g!.judges)).toEqual([ID.judgeA, ID.judgeB]);
+        expect(ids(g!.rounds)).toEqual(['r1', 'r2']);
+        expect(ids(g!.rounds[0].ridingTimeVotes)).toEqual(['v2', 'v1']);
+        expect(g!.rounds[0]).toMatchObject({ ended_at: at(160), declared_winner_id: ID.red, stoppage: false });
+        expect(ids(g!.rounds[1].pauses)).toEqual(['p1']);
+        expect(g!.rounds[1].pauses[0].paused_at).toEqual(at(220));
         expect(g).not.toHaveProperty('judgesMatches');
     });
 
     it('agrees with the single-purpose functions', async () => {
         const g = await Matches.findMatchGraph(db, 'm1');
-        const { mat, redCompetitor, blueCompetitor, judges, rounds, ...row } = g;
-        expect(row).toEqual(await Matches.findMatchById(db, 'm1'));
+        const { mat, redCompetitor, blueCompetitor, judges, rounds, ...row } = g!;
+        expect<unknown>(row).toEqual(await Matches.findMatchById(db, 'm1'));
         expect(judges).toEqual(await Matches.findMatchJudges(db, 'm1'));
         expect(rounds.map(({ ridingTimeVotes, pauses, ...r }) => r)).toEqual(await Rounds.findMatchRounds(db, 'm1'));
         for (const r of rounds) {
@@ -121,17 +121,17 @@ describe('findMatchGraph / findMatchGraphsByIds (hot path)', () => {
 
     it('missing related rows become null / []', async () => {
         const g = await Matches.findMatchGraph(db, 'm2');
-        expect(g.redCompetitor).toBeNull();
-        expect(g.blueCompetitor.id).toBe(ID.blue);
-        expect(g.judges).toEqual([]);
-        expect(g.rounds).toEqual([]);
+        expect(g!.redCompetitor).toBeNull();
+        expect(g!.blueCompetitor!.id).toBe(ID.blue);
+        expect(g!.judges).toEqual([]);
+        expect(g!.rounds).toEqual([]);
         expect(await Matches.findMatchGraph(db, 'missing')).toBeNull();
     });
 
     it('findMatchGraphsByIds: one query, keyed by id, missing ids absent, duplicates fine', async () => {
         const graphs = await Matches.findMatchGraphsByIds(db, ['m2', 'm1', 'missing', 'm1']);
         expect([...graphs.keys()].sort()).toEqual(['m1', 'm2']);
-        expect(graphs.get('m1')).toEqual(await Matches.findMatchGraph(db, 'm1'));
+        expect<unknown>(graphs.get('m1')).toEqual(await Matches.findMatchGraph(db, 'm1'));
         expect((await Matches.findMatchGraphsByIds(db, [])).size).toBe(0);
     });
 });
@@ -149,8 +149,8 @@ describe('writes', () => {
     it('updateMatch writes the patch, bumps updated_at, can null columns, null when missing', async () => {
         insertRows(db, 'matches', [match('m1')]);
         const started = await Matches.updateMatch(db, 'm1', { started_at: at(30) });
-        expect(started.started_at).toEqual(at(30));
-        expect(started.updated_at.getTime()).toBeGreaterThan(at(20).getTime());
+        expect(started!.started_at).toEqual(at(30));
+        expect(started!.updated_at.getTime()).toBeGreaterThan(at(20).getTime());
 
         await Matches.updateMatch(db, 'm1', { break_started_at: at(40), break_duration: 60 });
         expect((await Matches.findMatchesInBreak(db)).map((m) => m.id)).toEqual(['m1']);

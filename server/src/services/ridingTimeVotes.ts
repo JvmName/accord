@@ -7,6 +7,7 @@
  * `src/services/README.md` and `.ai/plans/server-ts/artifacts/lifecycle-inventory.md`.
  * Every function resolves to `undefined`, like the legacy methods.
  */
+import { present } from '../domain/present';
 import type { RidingTimeVote, Round } from '../db/types';
 import type { DbOrTx } from '../db/repositories/internal';
 import { assertDefined } from '../db/repositories/internal';
@@ -41,8 +42,8 @@ export async function startRidingTime(db: DbOrTx, round: Pick<Round, 'id' | 'mat
     const activeVote = await findOpenVoteForJudge(db, round.id, judgeId);
     if (activeVote) throw new Error(`Riding time is already active`);
 
-    const match      = await findMatchById(db, round.match_id);
-    const competitor = await competitorForColor(db, match, riderColor);
+    const match      = present(await findMatchById(db, round.match_id), 'the round\'s match');
+    const competitor = present(await competitorForColor(db, match, riderColor), 'the rider');
     await insertRidingTimeVote(db, {
         competitor_id: competitor.id,
         judge_id:      judgeId,
@@ -55,7 +56,7 @@ export async function startRidingTime(db: DbOrTx, round: Pick<Round, 'id' | 'mat
  * in the round, whatever its competitor. `riderColor` is accepted and IGNORED,
  * exactly as legacy (FINDINGS F-55).
  */
-export async function endRidingTime(db: DbOrTx, round: Pick<Round, 'id'>, judgeId: string, riderColor?: string): Promise<void> {
+export async function endRidingTime(db: DbOrTx, round: Pick<Round, 'id'>, judgeId: string, _riderColor?: string): Promise<void> {
     assertDefined(judgeId, 'judge_id');
     const activeVote = await findOpenVoteForJudge(db, round.id, judgeId);
     if (!activeVote) throw new Error(`Riding time is not active`);

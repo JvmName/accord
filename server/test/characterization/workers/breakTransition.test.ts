@@ -176,7 +176,7 @@ describe('CHARACTERIZATION: BreakTransitionWorker', () => {
             expect(payload.id).toBe(id);
             expect(payload.rounds).toHaveLength(2);
             expect(payload.rounds[1].id).toBe(roundsOf(id)[1].id);
-            expect(payload).toEqual(serializeLeakedMatch(await findMatchGraph(world.db, id), { includeMat: true, includeMatchJudges: true, includeRounds: true }));
+            expect(payload).toEqual(serializeLeakedMatch((await findMatchGraph(world.db, id))!, { includeMat: true, includeMatchJudges: true, includeRounds: true }));
         });
 
 

@@ -48,9 +48,9 @@ export function generateAsyncApiDocument(): Record<string, unknown> {
 
     for (const event of webSocketEvents) {
         const message = { name: event.name, description: event.description, payload: event.payload };
-        channels[event.name] ??= {};
+        const channel = (channels[event.name] ??= {});
         // The server subscribes to what clients send and publishes what it emits.
-        channels[event.name][event.direction === 'client->server' ? 'subscribe' : 'publish'] = { message };
+        channel[event.direction === 'client->server' ? 'subscribe' : 'publish'] = { message };
     }
 
     return {

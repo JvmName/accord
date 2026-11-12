@@ -1,0 +1,14 @@
+{
+  // The tests are checked with everything in `strict` except `noImplicitAny`
+  // (~1,600 untyped callback and helper parameters) and the three optional
+  // flags below, which flag test scaffolding (unused fixtures, array indexing
+  // in assertions) rather than anything in the code under test.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["src/**/*.ts", "lib/**/*.ts", "bin/**/*.ts", "test/**/*.ts"]
+}

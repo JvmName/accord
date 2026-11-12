@@ -77,7 +77,7 @@ async function startServer({ timeoutMs = 10000, serverOptions = {} } = {}) {
             const res = await fetch(`${origin}/system/healthCheck`);
             if (res.ok) break;
         } catch (err) {
-            if (Date.now() > deadline) throw new Error(`server did not come up on ${origin}: ${err.message}`);
+            if (Date.now() > deadline) throw new Error(`server did not come up on ${origin}: ${(err as Error).message}`);
         }
         if (Date.now() > deadline) throw new Error(`server did not come up on ${origin}`);
         await new Promise(r => setTimeout(r, 25));
@@ -104,7 +104,7 @@ function makeClient(origin: string) {
         const res  = await fetch(`${origin}${routePath}`, init);
         const text = await res.text();
 
-        let parsed = null;
+        let parsed: any = null; // whatever JSON (or text) the route answered
         if (text) { try { parsed = JSON.parse(text); } catch { parsed = text; } }
 
         return { status: res.status, body: parsed };

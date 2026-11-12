@@ -61,7 +61,7 @@ let seedModule;
 let server;
 let statics;
 let NOW;
-const results = { http: [], ws: [] };
+const results: { http: any[]; ws: any[] } = { http: [], ws: [] };
 
 async function matchGraph(id) {
     const graph = await Matches.findMatchGraph(db, id);
@@ -85,7 +85,7 @@ const MATCH_ROUND = { includeMat: true, includeRounds: true }; // `includeJudges
 const RENDERERS = {
     'POST /users': async (live) => {
         const user = await Users.findUserById(db, live.data.user.id);
-        return { user: S.serializeUser(user), api_token: user.api_token };
+        return { user: S.serializeUser(user!), api_token: user!.api_token };
     },
     'POST /mats': async (live) => {
         const g = await matGraph(live.data.mat.id);
@@ -94,13 +94,13 @@ const RENDERERS = {
     'GET /mat/{matId}': async (live) => {
         const g = await matGraph(live.data.mat.id);
         const graphs = await Matches.findMatchGraphsByIds(db, g.incompleteMatches.map((m) => m.id));
-        const incompleteMatches = g.incompleteMatches.map((m) => graphs.get(m.id));
+        const incompleteMatches = g.incompleteMatches.map((m) => graphs.get(m.id)!);
         return { mat: S.serializeMat(g, { judges: g.judges, incompleteMatches, now: NOW }) };
     },
     'POST /mat/{matCode}/join': async (live) => {
         const g    = await matGraph(live.data.mat.id);
         const user = await Users.findUserById(db, live.data.user.id);
-        return { mat: S.serializeMat(g, { judges: g.judges, now: NOW }), user: S.serializeUser(user), api_token: user.api_token };
+        return { mat: S.serializeMat(g, { judges: g.judges, now: NOW }), user: S.serializeUser(user!), api_token: user!.api_token };
     },
     'DELETE /mat/{matCode}/join': async (live) => {
         const g = await matGraph(live.data.mat.id);
@@ -108,11 +108,11 @@ const RENDERERS = {
     },
     'GET /mat/{matCode}/judges': async (_live, code) => {
         const mat = await Mats.findMatByCode(db, code);
-        return { judges: S.serializeUsers(await Mats.findMatJudges(db, mat.id)) };
+        return { judges: S.serializeUsers(await Mats.findMatJudges(db, mat!.id)) };
     },
     'GET /mat/{matCode}/viewers': async (_live, code) => {
         const mat = await Mats.findMatByCode(db, code);
-        return { viewers: S.serializeUsers(await Mats.findMatViewers(db, mat.id)) };
+        return { viewers: S.serializeUsers(await Mats.findMatViewers(db, mat!.id)) };
     },
     'POST /mat/{matCode}/matches': async (live) =>
         ({ match: S.serializeMatch(await matchGraph(live.data.match.id), { includeMat: true, now: NOW }) }),
@@ -161,7 +161,7 @@ async function replayHttp(origin) {
             goldenStatus: golden.response.status,
             // Replay fidelity: the live body, normalised by the copied normaliser, IS the golden.
             liveMatchesGolden: canonical(normalizeHttp(routePath, requestBody, live)) === canonical(golden.response.body),
-            rendered: null,
+            rendered: null as null | { schemaOk: boolean; schemaErr: string[] | null; actual: string; expected: string },
         };
 
         const render = RENDERERS[golden.route];
@@ -198,7 +198,7 @@ async function replayWebSocket(port) {
     ];
     for (const [name, key, WorkerCls, event, options] of plan) {
         const matchId = IDS[key];
-        const emitted = [];
+        const emitted: any[] = [];
         const worker  = new WorkerCls('contract-capture-worker', { port, host: '127.0.0.1', db });
         worker.notifyServer = (ev, payload) => emitted.push({ event: ev, payload: JSON.parse(JSON.stringify(payload)) });
         await worker.performJob();
@@ -219,7 +219,7 @@ async function replayWebSocket(port) {
         results.ws.push({
             name,
             workerEmitted:     Boolean(workerEvent),
-            liveMatchesGolden: Boolean(workerEvent) && canonical(normalizeWs(workerEvent.payload)) === canonical(golden.payload),
+            liveMatchesGolden: Boolean(workerEvent) && canonical(normalizeWs(workerEvent!.payload)) === canonical(golden.payload),
             schemaOk:          schema.success,
             actual:            canonical(normalizeWs(JSON.parse(JSON.stringify(payload)))),
             expected:          canonical(golden.payload),
