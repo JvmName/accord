@@ -1,13 +1,10 @@
 /**
- * Request-state resolution (server-ts task 12): the replacement for
- * `ServerController#setupRequestState` (`#initCurrentUser`, `#initCurrentMat`,
- * `#initCurrentMatch`) and `RidingTimeVoteController#initCurrentRound`.
+ * Request-state resolution: the current user, mat, mat code, match and (for
+ * the riding-time routes) open round of a request.
  *
- * Reproduced exactly, including what it reads from: the legacy MERGED
- * parameter bag (path < body < query, F-73), NOT the path alone. Every route
- * resolves state the same way (legacy ran `setupRequestState` for every
- * action, health check included); only the riding-time routes also resolve
- * the current round, as only `RidingTimeVoteController` did.
+ * Resources are resolved from the PATH parameters only (F-73); a body or
+ * query key of the same name no longer replaces them. Every route resolves
+ * state the same way, the health check included.
  *
  * An exception here (in practice: a database failure) goes through the JSON
  * error handler like any other (F-77; legacy answered it with Express's HTML
@@ -22,15 +19,12 @@ import { findUserByApiToken } from '../../db/repositories/users';
 import type { DbOrTx } from '../../db/repositories/internal';
 import type { Mat, MatCode, Match, Round, User } from '../../db/types';
 import type { MatCodeModule } from '../../domain/types';
-import { buildLegacyInput } from '../legacyInput';
 import type { AuthorizeSpec } from '../types';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const MatCodes: MatCodeModule = require('../../domain/matCode');
 
 export interface RequestState {
-    /** The legacy merged parameter bag (`ServerController#params`), built once. */
-    readonly input: Record<string, unknown>;
     currentUser: User | null;
     currentMat: Mat | null;
     currentMatCode: MatCode | null;
@@ -54,25 +48,24 @@ async function resolveUser(db: DbOrTx, req: Request): Promise<User | null> {
 }
 
 /**
- * `#initCurrentMat`, including the `MatCode.CODE_REGEXP`-vs-UUID
- * discrimination (serverController.js:315). The regexp is the UNANCHORED
- * legacy one from `src/domain/matCode.ts` (F-12).
+ * The mat of a request: `:matCode` names a mat code; `:matId` names a mat id,
+ * or a mat code when it has the shape of one (`MatCode.CODE_REGEXP`).
  */
-async function resolveMat(db: DbOrTx, input: Record<string, unknown>): Promise<{ mat: Mat | null; matCode: MatCode | null }> {
+async function resolveMat(db: DbOrTx, params: Record<string, string | undefined>): Promise<{ mat: Mat | null; matCode: MatCode | null }> {
     let mat: Mat | null = null;
     let matCode: MatCode | null = null;
 
-    let code = input.matCode;
-    if (!code && input.matId) {
-        if (MatCodes.CODE_REGEXP.test(input.matId as string)) {
-            code = input.matId;
+    let code = params.matCode;
+    if (!code && params.matId) {
+        if (MatCodes.CODE_REGEXP.test(params.matId)) {
+            code = params.matId;
         } else {
-            mat = await findMatById(db, input.matId as string);
+            mat = await findMatById(db, params.matId);
         }
     }
 
     if (code) {
-        matCode = await findMatCodeByCode(db, code as string);
+        matCode = await findMatCodeByCode(db, code);
         if (matCode) {
             mat = await findMatById(db, matCode.mat_id);
         }
@@ -81,10 +74,10 @@ async function resolveMat(db: DbOrTx, input: Record<string, unknown>): Promise<{
     return { mat, matCode };
 }
 
-/** `#initCurrentMatch`: only when the bag carries a `matchId`. */
-async function resolveMatch(db: DbOrTx, input: Record<string, unknown>): Promise<Match | null> {
-    if (!input.matchId) return null;
-    return await findMatchById(db, input.matchId as string);
+/** The match of a request: only when the path has a `:matchId`. */
+async function resolveMatch(db: DbOrTx, params: Record<string, string | undefined>): Promise<Match | null> {
+    if (!params.matchId) return null;
+    return await findMatchById(db, params.matchId);
 }
 
 /**
@@ -100,14 +93,13 @@ async function resolveOpenRound(db: DbOrTx, match: Match | null): Promise<Round 
 }
 
 export async function resolveRequestState(db: DbOrTx, req: Request, spec: AuthorizeSpec): Promise<RequestState> {
-    const input       = buildLegacyInput(req);
-    const currentUser = await resolveUser(db, req);
-    const { mat, matCode } = await resolveMat(db, input);
-    const currentMatch = await resolveMatch(db, input);
+    const params       = (req.params ?? {}) as Record<string, string | undefined>;
+    const currentUser  = await resolveUser(db, req);
+    const { mat, matCode } = await resolveMat(db, params);
+    const currentMatch = await resolveMatch(db, params);
     const currentRound = 'round' in spec && spec.round === 'open' ? await resolveOpenRound(db, currentMatch) : null;
 
     return {
-        input,
         currentUser,
         currentMat:     mat,
         currentMatCode: matCode,

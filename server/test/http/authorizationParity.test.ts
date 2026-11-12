@@ -254,15 +254,14 @@ function rows(): Row[] {
           run: async w => req('POST', `/mat/${w.adminCode}/matches`, { token: token(w.creator), body: { red: { id: UNKNOWN_UUID }, blue: { name: 'B' } } }) },
         { matrix: null, name: 'create a match answers 404 for an unknown code (F-16)', status: 404, body: NOT_FOUND,
           run: async w => req('POST', '/mat/no.such.code/matches', { token: token(w.creator), body: competitors }) },
-        { matrix: null, name: 'create a match DENIES another mat\'s VIEWER code supplied through the F-73 query override', status: 401, body: UNAUTHORIZED,
+        { matrix: null, name: 'F-73: a query matCode is ignored (admin path + another mat\'s viewer code in the query -> allowed)', status: 200,
           run: async w => {
               const other = await createWorld(app.db);
-              // path: this mat's ADMIN code; the query overrides matCode with the other mat's VIEWER code
               return req('POST', `/mat/${w.adminCode}/matches?matCode=${other.viewerCode}`, { token: token(w.creator), body: competitors });
           } },
-        { matrix: null, name: 'F-73: a query matCode OVERRIDES the path code (viewer path + admin query -> allowed)', status: 200,
+        { matrix: null, name: 'F-73: a query matCode does not replace the path code (viewer path + admin query -> denied)', status: 401, body: UNAUTHORIZED,
           run: async w => req('POST', `/mat/${w.viewerCode}/matches?matCode=${w.adminCode}`, { token: token(w.creator), body: competitors }) },
-        { matrix: null, name: 'F-73: a body matCode OVERRIDES the path code (admin path + viewer body -> denied)', status: 401, body: UNAUTHORIZED,
+        { matrix: null, name: 'F-73: a body matCode is ignored (admin path + viewer code in the body -> allowed)', status: 200,
           run: async w => req('POST', `/mat/${w.adminCode}/matches`, { token: token(w.creator), body: { ...competitors, matCode: w.viewerCode } }) },
         { matrix: null, name: 'Mat/create: authorization runs BEFORE validation (anonymous + no name -> 401)', status: 401, body: UNAUTHORIZED,
           run: async () => req('POST', '/mats', { body: {} }) },

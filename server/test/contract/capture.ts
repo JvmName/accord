@@ -313,10 +313,9 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
         // =====================================================================
         // POST /mats
         // =====================================================================
-        await http('http.users.create.objectName.500', 'POST /users',
-                   'The generic 500 branch of ApplicationServer#handleError: NOT an `errors` map but '
-                   + '{data:{error:"<raw message>"},status:"server error"}. ApiResultSerializer.kt has a '
-                   + 'separate `error` branch for exactly this shape. Note it leaks the raw driver message.',
+        await http('http.users.create.objectName.400', 'POST /users',
+                   'A name that is not a string is a validation error (F-75); it used to get past the '
+                   + 'presence check and fail at the insert with a 500.',
                    'POST', '/users', { body: { name: { nested: true } } });
 
         await http('http.mats.create.success', 'POST /mats',
@@ -445,8 +444,8 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
                    { as: 'creator', body: { red: { id: IDS['user:red'] }, blue: { id: IDS['user:blue'] } } });
 
         await http('http.matches.create.missingCompetitors.400', 'POST /mat/{matCode}/matches',
-                   'Four error keys in one envelope (red.id, red.name, blue.id, blue.name) — the '
-                   + 'multi-key case for Map<String,List<String>>.',
+                   'Two error keys in one envelope (red, blue) — the multi-key case for '
+                   + 'Map<String,List<String>>.',
                    'POST', `/mat/${CODES['code:main-admin']}/matches`, { as: 'creator', body: {} });
 
         await http('http.matches.create.viewerCode.401', 'POST /mat/{matCode}/matches',
@@ -587,12 +586,10 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
                    'PATCH', `/match/${IDS['match:toStoppage']}/rounds/result`,
                    { as: 'creator', body: { winner: 'blue', stoppage: true } });
 
-        await http('http.rounds.result.explicitNull.400', 'PATCH /match/{matchId}/rounds/result',
-                   'FINDINGS F-24: an EXPLICIT `winner: null` is REJECTED with 400. The validation '
-                   + 'enum is [undefined, "red", "blue"], so only an OMITTED winner clears a result, '
-                   + 'even though README/CLAUDE.md document the body as {winner: "red"|"blue"|null}. '
-                   + 'The Kotlin client is unaffected only because kotlinx.serialization omits '
-                   + 'default-valued nulls (encodeDefaults is false).',
+        await http('http.rounds.result.explicitNull', 'PATCH /match/{matchId}/rounds/result',
+                   'FINDINGS F-24: an EXPLICIT `winner: null` clears the result, like an omitted '
+                   + 'winner (it used to be rejected with 400). The Kotlin client omits the null '
+                   + '(encodeDefaults is false), so it never sends this shape.',
                    'PATCH', `/match/${IDS['match:toClearResult']}/rounds/result`,
                    { as: 'creator', body: { winner: null, stoppage: false } });
 

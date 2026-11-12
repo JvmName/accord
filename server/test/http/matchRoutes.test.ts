@@ -44,30 +44,38 @@ beforeAll(async () => {
 afterAll(() => booted?.server.close());
 
 describe('match routes', () => {
-    it('answers 500 for a competitor id that is neither a string nor a number, after creating a competitor given by name', async () => {
+    const userCount = () => booted.server.db.$client.query('SELECT count(*) AS n FROM users').get().n;
+
+    it('answers 400 for a competitor id that is not a UUID string, and creates nobody (F-91)', async () => {
         const { master, adminCode } = await createMatch(1);
-        const usersBefore = booted.server.db.$client.query('SELECT count(*) AS n FROM users').get().n;
+        const usersBefore = userCount();
 
-        for (const [red, blue, message] of [
-            [{ id: true }, { name: 'B' }, 'Argument passed to findByPk is invalid: true'],
-            [{ id: { a: 1 } }, { name: 'B' }, 'Argument passed to findByPk is invalid: [object Object]'],
-            [{ id: [1, 2] }, { name: 'B' }, 'Argument passed to findByPk is invalid: 1,2'],
-            [{ name: 'Created anyway' }, { id: true }, 'Argument passed to findByPk is invalid: true'],
-        ] as const) {
-            const res = await request('POST', `/mat/${adminCode}/matches`, { token: master, body: { red, blue } });
-            expect(res).toEqual({ status: 500, body: { data: { error: message }, status: 'server error' } });
+        for (const [color, id] of [['red', true], ['red', { a: 1 }], ['red', [1, 2]], ['red', 5], ['blue', 'not-a-uuid']] as const) {
+            const body = color === 'red' ? { red: { id }, blue: { name: 'B' } } : { red: { name: 'R' }, blue: { id } };
+            const res = await request('POST', `/mat/${adminCode}/matches`, { token: master, body });
+            expect(res).toEqual({ status: 400, body: { data: { errors: { [`${color}.id`]: ['must be a UUID'] } }, status: 'bad request' } });
         }
-
-        const usersAfter = booted.server.db.$client.query('SELECT count(*) AS n FROM users').get().n;
-        expect(usersAfter - usersBefore).toBe(1);
+        expect(userCount()).toBe(usersBefore);
     });
 
-    it('answers 401 for an unknown or numeric competitor id', async () => {
+    it('answers 401 for an unknown competitor id, and creates nobody even when the other competitor is new (F-91)', async () => {
         const { master, adminCode } = await createMatch(1);
-        for (const red of [{ id: UNKNOWN_ID }, { id: 5 }]) {
-            const res = await request('POST', `/mat/${adminCode}/matches`, { token: master, body: { red, blue: { name: 'B' } } });
+        const usersBefore = userCount();
+
+        for (const body of [
+            { red: { id: UNKNOWN_ID }, blue: { name: 'B' } },
+            { red: { name: 'Created before the refusal' }, blue: { id: UNKNOWN_ID } },
+        ]) {
+            const res = await request('POST', `/mat/${adminCode}/matches`, { token: master, body });
             expect(res).toEqual({ status: 401, body: { data: null, status: 'unauthorized' } });
         }
+        expect(userCount()).toBe(usersBefore);
+    });
+
+    it('treats a blank competitor name as missing', async () => {
+        const { master, adminCode } = await createMatch(1);
+        const res = await request('POST', `/mat/${adminCode}/matches`, { token: master, body: { red: { name: '' }, blue: { name: 'B' } } });
+        expect(res).toEqual({ status: 400, body: { data: { errors: { red: ['id or name required'] } }, status: 'bad request' } });
     });
 
     it('ending the match during the final round ends it and answers 200 (F-54)', async () => {

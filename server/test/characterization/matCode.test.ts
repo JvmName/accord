@@ -7,10 +7,9 @@
  * silently misroutes every mat lookup, so both the regexp itself and the
  * branch it drives are pinned.
  *
- * NOTE (fidelity, not correctness): the regexp is UNANCHORED and built from
- * `\w`, so it matches anywhere in the string and accepts underscores and
- * digits. Both properties are asserted below because they are current
- * behavior, not because they are desirable.
+ * NOTE: the regexp is anchored (F-12; it used to match a dotted triple
+ * anywhere in the string) and built from `\w`, so it accepts underscores and
+ * digits.
  *
  * The branch is observed on a real database with decoys: a mat whose id is
  * the code string itself, and a mat code whose code is the UUID string, so a
@@ -58,8 +57,8 @@ describe('CHARACTERIZATION: CODE_REGEXP', () => {
     const CODE_REGEXP = MatCodes.CODE_REGEXP;
 
     describe('the regexp itself', () => {
-        it('is exactly /\\w+\\.\\w+\\.\\w+/', () => {
-            expect(CODE_REGEXP.source).toBe('\\w+\\.\\w+\\.\\w+');
+        it('is exactly /^\\w+\\.\\w+\\.\\w+$/', () => {
+            expect(CODE_REGEXP.source).toBe('^\\w+\\.\\w+\\.\\w+$');
             expect(CODE_REGEXP.flags).toBe('');
         });
 
@@ -87,10 +86,10 @@ describe('CHARACTERIZATION: CODE_REGEXP', () => {
         });
 
 
-        it('is unanchored, so it matches a code embedded in a longer string', () => {
-            // Current behavior, asserted for fidelity — not an endorsement.
-            expect(CODE_REGEXP.test('!!morning.coffee.bicycle!!')).toBe(true);
-            expect(CODE_REGEXP.test('a.b.c.d.e')).toBe(true);
+        it('is anchored, so it does not match a code embedded in a longer string (F-12)', () => {
+            expect(CODE_REGEXP.test('!!morning.coffee.bicycle!!')).toBe(false);
+            expect(CODE_REGEXP.test('a.b.c.d.e')).toBe(false);
+            expect(CODE_REGEXP.test('a.b.c\n')).toBe(false);
         });
 
 

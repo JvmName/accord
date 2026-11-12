@@ -9,12 +9,11 @@
 import type { MatCodeModule } from './types';
 
 /**
- * EXACTLY the legacy `MatCode.CODE_REGEXP`. It is UNANCHORED (FINDINGS F-12):
- * it matches a dotted word triple anywhere in the string
- * (`'!!a.b.c!!'`, `'a.b.c.d'`, `'1.2.3'`, `'_._._'` all match). Do not anchor
- * it here: anchoring is a behaviour change reserved for task 18.
+ * A mat code is exactly three dotted word runs (`morning.coffee.bicycle`).
+ * Anchored (F-12): it used to match a dotted triple anywhere in the string
+ * (`'!!a.b.c!!'`, `'a.b.c.d'`), which routed a malformed id to the code lookup.
  */
-const CODE_REGEXP = /\w+\.\w+\.\w+/;
+const CODE_REGEXP = /^\w+\.\w+\.\w+$/;
 
 const ROLES = { ADMIN: 'admin', VIEWER: 'viewer' } as const;
 

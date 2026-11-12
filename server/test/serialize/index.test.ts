@@ -101,11 +101,9 @@ describe('assertWire / devAssertWire (opt-in runtime contract check)', () => {
         }
     });
 
-    it('wireTime / legacyColumn helpers', () => {
+    it('wireTime helper', () => {
         expect(S.wireTime(F.at(0))).toBe('2026-01-01T12:00:00.000Z');
         expect(S.wireTime(null)).toBeNull();
         expect(S.wireTime(undefined)).toBeNull();
-        expect([0, '', null, undefined, false].map(S.legacyColumn)).toEqual([null, null, null, null, null]);
-        expect([1, 'x'].map(S.legacyColumn)).toEqual([1, 'x']);
     });
 });

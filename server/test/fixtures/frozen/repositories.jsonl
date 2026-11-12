@@ -81,4 +81,4 @@
 {"key":"code yankee.zulu.anchor","mat":"mats:5","matCode":"mat_codes:9"}
 {"key":"code beacon.cobalt.dynamo","mat":"mats:5","matCode":"mat_codes:10"}
 {"key":"code no.such.code","mat":{"$undefined":true},"matCode":null}
-{"flags":"","key":"CODE_REGEXP","source":"\\w+\\.\\w+\\.\\w+"}
+{"flags":"","key":"CODE_REGEXP","source":"^\\w+\\.\\w+\\.\\w+$"}

@@ -95,7 +95,7 @@ describe('generated openapi.json components vs. goldens', () => {
 
         expect(failures).toEqual([]);
         // Guards against a silently vacuous sweep (route table drift).
-        expect(checked).toBe(41); // 37 HTTP 200s with a component + 4 WebSocket
+        expect(checked).toBe(42); // 38 HTTP 200s with a component + 4 WebSocket
     });
 
     it('accepts a null winner and rejects a non-user winner (F-30 regression)', () => {

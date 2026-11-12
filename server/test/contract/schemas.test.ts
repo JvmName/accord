@@ -277,25 +277,27 @@ describe('contract request schemas', () => {
         expect(failures).toEqual([]);
     });
 
-    it('rejects an explicit winner: null on PATCH /rounds/result (F-24)', () => {
-        // The server 400s on this exact body — `http.rounds.result.explicitNull.400`.
-        const body = readGolden('http.rounds.result.explicitNull.400.json').request.body;
+    it('accepts an explicit winner: null on PATCH /rounds/result, like an omitted winner (F-24)', () => {
+        const body = readGolden('http.rounds.result.explicitNull.json').request.body;
         expect(body).toEqual({ stoppage: false, winner: null });
-        expect(endRoundRequestSchema.safeParse(body).success).toBe(false);
-
-        // …while an OMITTED winner is the documented way to clear a result.
+        expect(endRoundRequestSchema.safeParse(body).success).toBe(true);
         expect(endRoundRequestSchema.safeParse({ stoppage: false }).success).toBe(true);
+        expect(endRoundRequestSchema.safeParse({ winner: 'green' }).success).toBe(false);
     });
 
     it('requires one of id/name on a competitor', () => {
-        expect(competitorRequestSchema.safeParse({ id: 'u1' }).success).toBe(true);
+        expect(competitorRequestSchema.safeParse({ id: '00000000-0000-4000-8000-000000000001' }).success).toBe(true);
         expect(competitorRequestSchema.safeParse({ name: 'Fresh Red' }).success).toBe(true);
         expect(competitorRequestSchema.safeParse({}).success).toBe(false);
+        expect(competitorRequestSchema.safeParse({ name: '' }).success).toBe(false);
+        expect(competitorRequestSchema.safeParse({ id: 'u1' }).success).toBe(false);   // ids are UUIDs (F-91)
     });
 
     it('treats judge_count as optional on mat creation', () => {
         expect(createMatRequestSchema.safeParse({ name: 'No Judge Count' }).success).toBe(true);
         expect(createMatRequestSchema.safeParse({ judge_count: 3 }).success).toBe(false);
+        expect(createMatRequestSchema.safeParse({ name: 'M', judge_count: 0 }).success).toBe(false);
+        expect(createMatRequestSchema.safeParse({ name: 'M', judge_count: 1.5 }).success).toBe(false);
     });
 
     it('ignores unknown request keys, as the server does', () => {

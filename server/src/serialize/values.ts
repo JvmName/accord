@@ -1,22 +1,6 @@
 /**
- * Shared value helpers for the serialization layer (server-ts task 11).
- *
- * These reproduce, explicitly, the two generic steps the legacy stack applied
- * reflectively to every rendered value. See
- * `.ai/plans/server-ts/artifacts/serialize-inventory.md`.
+ * Shared value helpers for the serialization layer.
  */
-
-/**
- * `BaseRecord#toApiResponse` copies each `apiSafeKeys` column as
- * `this[key] || null` (`lib/activeRecord/baseRecord.js:194-199`). ANY falsy
- * value therefore renders as `null`, not only a missing one: `judge_count: 0`,
- * `break_duration: 0` and `name: ''` all become `null` on the wire. Preserved
- * deliberately (FINDINGS F-63); use this for every column-backed key and
- * nothing else (computed keys like `break_remaining` keep their zeroes).
- */
-export function legacyColumn<T>(value: T): T | null {
-    return value || null;
-}
 
 /**
  * `ServerController#_formatJSONBody` renders a `Date` as `toISOString()`

@@ -26,7 +26,7 @@ import type { Mat } from '../db/types';
 import { serializeMatch } from './match';
 import { serializeMatCode, type MatCodeInput } from './matCode';
 import { serializeUser, type UserInput } from './user';
-import { legacyColumn, resolveNow, type ClockOptions } from './values';
+import { resolveNow, type ClockOptions } from './values';
 
 export type MatInput = Pick<Mat, 'id' | 'name' | 'judge_count' | 'creator_id'>;
 
@@ -58,10 +58,10 @@ export function splitIncompleteMatches(matches: readonly MatchGraph[]): { curren
 
 export function serializeMat(mat: MatInput, options: MatRenderOptions = {}): WireMat {
     const response: Record<string, unknown> = {
-        id:          legacyColumn(mat.id),
-        name:        legacyColumn(mat.name),
-        judge_count: legacyColumn(mat.judge_count),
-        creator_id:  legacyColumn(mat.creator_id),
+        id:          mat.id,
+        name:        mat.name,
+        judge_count: mat.judge_count,
+        creator_id:  mat.creator_id,
     };
 
     if (options.judges !== undefined) response.judges = options.judges.map((judge) => serializeUser(judge));

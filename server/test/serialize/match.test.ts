@@ -66,9 +66,9 @@ describe('serializeMatch — base field set', () => {
         expect('red_competitor' in out).toBe(true);
     });
 
-    it('legacy `|| null` on columns: break_duration 0 renders null (F-63)', () => {
+    it('renders the stored columns: break_duration 0 stays 0 (F-63); a zero-length break has nothing remaining', () => {
         const out = render(F.matchGraph({ break_started_at: at(590), break_duration: 0 }));
-        expect(out.break_duration).toBeNull();
+        expect(out.break_duration).toBe(0);
         expect(out.break_remaining).toBeNull();
         expect(out.break_started_at).toBe(iso(590));
     });

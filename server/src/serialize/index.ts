@@ -31,7 +31,7 @@ export { matchBreakRemaining, matchWinner, serializeMatch } from './match';
 export type { MatchInput, MatchRenderOptions } from './match';
 export { currentPause, roundMaxDuration, roundOutcome, roundTimeRemaining, serializeRound } from './round';
 export type { RoundInput, RoundMatchContext, RoundOutcome } from './round';
-export { legacyColumn, resolveNow, wireTime } from './values';
+export { resolveNow, wireTime } from './values';
 export type { ClockOptions } from './values';
 
 

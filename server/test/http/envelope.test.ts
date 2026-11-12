@@ -103,13 +103,6 @@ stubFromGolden('http.rounds.result.windowClosed.422', 'PATCH /match/:matchId/rou
     (async (ctx: any) => ctx.renderErrors({ matchId: ['Round result can only be set during the break or at match end'] }, 422)) as AnyRouteDefinition['handler']);
 stubFromGolden('http.match.end.alreadyEnded.400', 'POST /match/:matchId/end',
     (async (ctx: any) => ctx.renderErrors({ matchId: ['this match has already ended'] })) as AnyRouteDefinition['handler']);
-stubFromGolden('http.users.create.objectName.500', 'POST /users',
-    // The handler is reached ONLY because the runtime schema lets an object
-    // `name` through (presence check only); the insert then fails.
-    (async (ctx: any) => {
-        if (typeof ctx.body.name === 'object') throw new Error('string violation: name cannot be an array or an object');
-        return {};
-    }) as AnyRouteDefinition['handler']);
 stubFromGolden('http.mat.join.unknownCode.404', 'POST /mat/:matCode/join',
     (async (ctx: any) => (ctx.currentMatCode ? {} : ctx.renderErrors({ matCode: ['not found'] }, 404))) as AnyRouteDefinition['handler']);
 stubFromGolden('http.match.get.openRound', 'GET /match/:matchId',
@@ -143,10 +136,10 @@ const UNKNOWN = '550e8400-e29b-41d4-a716-446655440000';
 const GOLDEN_CASES: GoldenCase[] = [
     // --- produced by the registry's validation ---
     { golden: 'http.users.create.missingName.400', request: async () => ({ method: 'POST', path: '/users', body: {} }) },
+    { golden: 'http.users.create.objectName.400', request: async () => ({ method: 'POST', path: '/users', body: { name: { nested: true } } }) },
     { golden: 'http.mats.create.missingName.400', request: async w => ({ method: 'POST', path: '/mats', token: w.creator.api_token, body: {} }) },
     { golden: 'http.matches.create.missingCompetitors.400', request: async w => ({ method: 'POST', path: `/mat/${w.adminCode}/matches`, token: w.creator.api_token, body: {} }) },
     { golden: 'http.ridingTime.start.invalidRider.400', request: async w => ({ method: 'POST', path: `/match/${(await createStartedMatch(app.db, w)).id}/ridingTime`, token: w.judge.api_token, body: { rider: 'purple' } }) },
-    { golden: 'http.rounds.result.explicitNull.400', request: async w => ({ method: 'PATCH', path: `/match/${(await createStartedMatch(app.db, w)).id}/rounds/result`, token: w.creator.api_token, body: { stoppage: false, winner: null } }) },
     { golden: 'http.rounds.result.invalidWinner.400', request: async w => ({ method: 'PATCH', path: `/match/${(await createStartedMatch(app.db, w)).id}/rounds/result`, token: w.creator.api_token, body: { winner: 'green' } }) },
     // --- produced by the registry's gates ---
     { golden: 'http.mat.get.unknownId.404', request: async w => ({ method: 'GET', path: `/mat/${UNKNOWN}`, token: w.creator.api_token }) },
@@ -171,7 +164,6 @@ const GOLDEN_CASES: GoldenCase[] = [
     { golden: 'http.rounds.pause.noActiveRound.422', request: async w => ({ method: 'POST', path: `/match/${(await createMatch(app.db, w)).id}/rounds/pause`, token: w.creator.api_token }) },
     { golden: 'http.rounds.result.windowClosed.422', request: async w => ({ method: 'PATCH', path: `/match/${(await createStartedMatch(app.db, w)).id}/rounds/result`, token: w.creator.api_token, body: { stoppage: false, winner: 'red' } }) },
     { golden: 'http.match.end.alreadyEnded.400', request: async w => ({ method: 'POST', path: `/match/${(await createStartedMatch(app.db, w)).id}/end`, token: w.creator.api_token }) },
-    { golden: 'http.users.create.objectName.500', request: async () => ({ method: 'POST', path: '/users', body: { name: { nested: true } } }) },
     { golden: 'http.mat.join.unknownCode.404', request: async () => ({ method: 'POST', path: '/mat/no.such.code/join', body: { name: 'X' } }) },
     { golden: 'http.match.get.openRound', request: async w => ({ method: 'GET', path: `/match/${(await createStartedMatch(app.db, w)).id}`, token: w.creator.api_token }) },
 ];
@@ -191,8 +183,7 @@ describe('envelope: contract goldens replayed through the registry', () => {
     it('replays the request bodies the goldens sent (not look-alikes)', () => {
         // Bodies that matter to validation must be the golden's own request body.
         const sent = (name: string) => golden(name).request.body;
-        expect(sent('http.users.create.objectName.500')).toEqual({ name: { nested: true } });
-        expect(sent('http.rounds.result.explicitNull.400')).toEqual({ stoppage: false, winner: null });
+        expect(sent('http.users.create.objectName.400')).toEqual({ name: { nested: true } });
         expect(sent('http.ridingTime.start.invalidRider.400')).toEqual({ rider: 'purple' });
         expect(sent('http.matches.create.missingCompetitors.400')).toEqual({});
     });

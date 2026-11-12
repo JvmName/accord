@@ -1699,7 +1699,8 @@
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
@@ -1710,10 +1711,12 @@
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
           "judge_count": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": 1
           }
         },
         "required": [
@@ -1732,7 +1735,8 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
           },
           "name": {
             "type": "string"
@@ -1758,7 +1762,14 @@
         "type": "object",
         "properties": {
           "winner": {
-            "$ref": "#/components/schemas/CompetitorColor"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompetitorColor"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "stoppage": {
             "type": "boolean"

@@ -24,7 +24,6 @@ import type { MatCodeModule } from '../../domain/types';
 import { serializeMat, serializeUser, serializeUsers } from '../../serialize';
 import { endVote } from '../../services/ridingTimeVotes';
 import type { Rendered } from '../envelope';
-import { assertLegacyModelValid } from '../legacyModelValidation';
 import type { Subject } from '../permissions';
 import { defineRoute } from '../route';
 import type { ContextHelpers } from '../types';
@@ -144,11 +143,8 @@ export const postMatJoin = defineRoute({
 
         let user = ctx.currentUser;
         if (!user) {
-            const name = ctx.body.name || 'Anonymous';
-            assertLegacyModelValid('User', [{ field: 'name', value: name, notNull: true, string: true }]);
-            const created = await insertUser(ctx.db, { name: name as string });
-            // Rendered with the name as sent (a number stays a number), not the stored text.
-            user = { ...created, name: name as string };
+            // A blank or missing name joins as Anonymous.
+            user = await insertUser(ctx.db, { name: ctx.body.name || 'Anonymous' });
         }
 
         const refused = matCode.role == MatCodes.ROLES.ADMIN

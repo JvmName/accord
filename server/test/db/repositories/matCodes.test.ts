@@ -26,9 +26,9 @@ describe('module format (require() smoke test)', () => {
     });
 });
 
-describe('CODE_REGEXP (preserved exactly, FINDINGS F-12)', () => {
-    it('is byte-for-byte the legacy MatCode.CODE_REGEXP', () => {
-        expect(matCode.CODE_REGEXP.source).toBe('\\w+\\.\\w+\\.\\w+');
+describe('CODE_REGEXP (anchored, FINDINGS F-12)', () => {
+    it('is exactly three dotted word runs', () => {
+        expect(matCode.CODE_REGEXP.source).toBe('^\\w+\\.\\w+\\.\\w+$');
         expect(matCode.CODE_REGEXP.flags).toBe('');
     });
 
@@ -37,9 +37,9 @@ describe('CODE_REGEXP (preserved exactly, FINDINGS F-12)', () => {
         expect(matCode.isMatCode(ID.matMain)).toBe(false);
     });
 
-    it('QUIRK: is unanchored, so a dotted triple ANYWHERE matches', () => {
-        expect(matCode.isMatCode('!!morning.coffee.bicycle!!')).toBe(true);
-        expect(matCode.isMatCode('a.b.c.d.e')).toBe(true);
+    it('does not match a dotted triple embedded in a longer string', () => {
+        expect(matCode.isMatCode('!!morning.coffee.bicycle!!')).toBe(false);
+        expect(matCode.isMatCode('a.b.c.d.e')).toBe(false);
         expect(matCode.isMatCode('1.2.3')).toBe(true);
         expect(matCode.isMatCode('_._._')).toBe(true);
         expect(matCode.isMatCode('a.b')).toBe(false);

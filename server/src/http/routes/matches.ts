@@ -5,48 +5,22 @@ import { routeResponses } from '../../contract/responses';
 import { createMatchRequestSchema } from '../../contract/requests';
 import { insertMatch } from '../../db/repositories/matches';
 import { findUserById, insertUser } from '../../db/repositories/users';
-import type { DbOrTx } from '../../db/repositories/internal';
-import type { User } from '../../db/types';
 import { endMatch, startMatch } from '../../services/matchLifecycle';
+import type { User } from '../../db/types';
 import { present } from '../../domain/present';
-import { AuthorizationError } from '../errors';
-import { assertLegacyModelValid } from '../legacyModelValidation';
 import { defineRoute } from '../route';
 import { FULL_MATCH, NEW_MATCH, renderMatch } from './matchPayload';
-import { createMatchBody, matCodeParams, matchIdParams, type LegacyCompetitor } from './requests';
+import { createMatchBody, matCodeParams, matchIdParams } from './requests';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { logger } = require('../../../lib/logger');
 
 /**
- * Looks a competitor up by id the way the legacy model lookup did: a string or
- * number is looked up (a number never matches a UUID), any other truthy value
- * (`true`, an object, an array) is refused with a 500 carrying this message.
- */
-async function findCompetitorById(db: DbOrTx, id: unknown): Promise<User | null> {
-    if (typeof id !== 'string' && typeof id !== 'number') {
-        throw new Error(`Argument passed to findByPk is invalid: ${id}`);
-    }
-    return await findUserById(db, id as string);
-}
-
-/**
- * An existing user when `id` is given (`null` if unknown), otherwise a new
- * user named `name`. The new user is created even if the request is refused
- * afterwards.
- */
-async function fetchCompetitor(db: DbOrTx, competitor: LegacyCompetitor | undefined): Promise<User | null> {
-    competitor = present(competitor, 'a competitor in the request');
-    if (competitor.id) return await findCompetitorById(db, competitor.id);
-
-    assertLegacyModelValid('User', [{ field: 'name', value: competitor.name, notNull: true, string: true }]);
-    return await insertUser(db, { name: competitor.name as string });
-}
-
-/**
  * Needs a user holding THIS mat's admin code; mat membership does not matter.
- * Each competitor is an existing user (`id`) or a new one (`name`); an
- * unknown id answers 401 after both competitors were looked up or created.
+ * Each competitor is an existing user (`id`) or a new one (`name`). Existing
+ * users are looked up and authorized first (an unknown id answers 401), and
+ * new users are created only once both competitors are accepted, so a refused
+ * request leaves no user behind (F-91).
  */
 export const postMatches = defineRoute({
     method:    'post',
@@ -57,13 +31,15 @@ export const postMatches = defineRoute({
     tags:      ['matches'],
     openapi:   { description: 'Create a new match on a mat', body: createMatchRequestSchema },
     handler: async ctx => {
-        const red  = await fetchCompetitor(ctx.db, ctx.body.red);
-        const blue = await fetchCompetitor(ctx.db, ctx.body.blue);
-
-        await ctx.authorize('assign', { kind: 'user', user: red });
-        await ctx.authorize('assign', { kind: 'user', user: blue });
-        // `authorize` answers 401 for a missing user; this only narrows the types.
-        if (!red || !blue) throw new AuthorizationError();
+        const found = { red: null as User | null, blue: null as User | null };
+        for (const color of ['red', 'blue'] as const) {
+            const { id } = ctx.body[color];
+            if (!id) continue;
+            found[color] = await findUserById(ctx.db, id);
+            await ctx.authorize('assign', { kind: 'user', user: found[color] });
+        }
+        const red  = found.red  ?? await insertUser(ctx.db, { name: present(ctx.body.red.name, 'the red competitor name') });
+        const blue = found.blue ?? await insertUser(ctx.db, { name: present(ctx.body.blue.name, 'the blue competitor name') });
 
         const match = await insertMatch(ctx.db, {
             mat_id:             ctx.currentMat.id,

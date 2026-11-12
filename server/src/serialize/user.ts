@@ -11,7 +11,6 @@
  */
 import type { User as WireUser } from '../contract/user';
 import type { User } from '../db/types';
-import { legacyColumn } from './values';
 
 /** The columns the safe user shape reads. A full `users` row satisfies it. */
 export type UserInput = Pick<User, 'id' | 'name'>;
@@ -19,9 +18,8 @@ export type UserInput = Pick<User, 'id' | 'name'>;
 /** The canonical, safe user shape: `{ id, name }`. Never `api_token`. */
 export function serializeUser(user: UserInput): WireUser {
     return {
-        // `|| null` maps an empty string to null (F-63); both columns are non-empty in practice.
-        id:   legacyColumn(user.id) as string,
-        name: legacyColumn(user.name) as string,
+        id:   user.id,
+        name: user.name,
     };
 }
 

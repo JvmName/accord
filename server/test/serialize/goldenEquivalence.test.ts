@@ -265,7 +265,7 @@ describe('GOLDEN EQUIVALENCE: src/serialize over Drizzle rows == the committed g
             .filter((r) => r.goldenStatus === 200 && !['GET /', 'GET /system/healthCheck'].includes(r.route))
             .map((r) => r.name).sort();
         expect(rendered).toEqual(entitySuccess);
-        expect(rendered.length).toBe(37);
+        expect(rendered.length).toBe(38);
     });
 
     it('every rendered payload parses through its route envelope schema', () => {

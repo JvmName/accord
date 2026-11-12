@@ -1,7 +1,7 @@
 {
   "name": "http.matches.create.missingCompetitors.400",
   "route": "POST /mat/{matCode}/matches",
-  "why": "Four error keys in one envelope (red.id, red.name, blue.id, blue.name) — the multi-key case for Map<String,List<String>>.",
+  "why": "Two error keys in one envelope (red, blue) — the multi-key case for Map<String,List<String>>.",
   "request": {
     "method": "POST",
     "path": "/mat/<code:main-admin>/matches",
@@ -14,17 +14,11 @@
     "body": {
       "data": {
         "errors": {
-          "blue.id": [
-            "blue.id or blue.name required"
+          "blue": [
+            "required"
           ],
-          "blue.name": [
-            "blue.id or blue.name required"
-          ],
-          "red.id": [
-            "red.id or red.name required"
-          ],
-          "red.name": [
-            "red.id or red.name required"
+          "red": [
+            "required"
           ]
         }
       },

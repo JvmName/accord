@@ -1,32 +1,21 @@
 /**
- * Request validation (server-ts task 12): Zod replaces the legacy
- * `validateParameters` DSL (`serverController.js:224-294`).
+ * Request validation: Zod schemas for the path parameters, the query and the
+ * body, each parsed from its own part of the request (F-73: a body or query
+ * key can no longer stand in for a path parameter, and string values are not
+ * JSON-decoded).
  *
- * The OUTPUT is the legacy one, byte for byte: a `ValidationError` carrying
- * `{ "<dotted.path>": ["<message>", ...] }`, rendered by the error handler as
- * `400 { data: { errors }, status: 'bad request' }`, the shape
- * `ApiResult.Error(Map<String, List<String>>)` decodes. Keys are the issue path
- * joined with `.` (legacy `valueForParameterName` addressed nested values as
- * `red.id`); messages are whatever the route's schema sets, which is why the
- * runtime schemas in `routes/requests.ts` carry the legacy message strings.
+ * A failure is a `ValidationError` carrying `{ "<dotted.path>": ["<message>", ...] }`,
+ * rendered by the error handler as `400 { data: { errors }, status: 'bad
+ * request' }`, the shape `ApiResult.Error(Map<String, List<String>>)` decodes.
+ * Object schemas strip unknown keys, so each part yields exactly its declared keys.
  *
- * What is validated, and against what:
- *   - `query` and `body` schemas parse the legacy MERGED bag (F-73), because
- *     legacy validations read `this.params` (path < body < query). Object
- *     schemas strip unknown keys, so each yields exactly its declared keys.
- *   - `params` parses the PATH parameters (`req.params`), which Express always
- *     yields as strings. State resolution (not `ctx.params`) honours the legacy
- *     override; see `requestState.ts`.
- *
- * Validation runs AFTER the authorization gates, as every legacy action called
- * `authorize()` before `validateParameters()` (probed: `POST /mats` without a
- * user and without a name answers 401, not 400).
+ * Validation runs AFTER the authorization gates (`POST /mats` without a user
+ * and without a name answers 401, not 400).
  */
 import type { NextFunction, Request, Response } from 'express';
 import type { z } from 'zod';
 import type { ErrorMap } from '../../contract/envelope';
 import { ValidationError } from '../errors';
-import { getRequestState } from './requestState';
 
 export interface ParsedRequest {
     params: unknown;
@@ -52,13 +41,12 @@ function collect(schema: z.ZodType, value: unknown, errors: ErrorMap): { ok: tru
  */
 export function validateRequest(
     schemas: { params: z.ZodType; query: z.ZodType; body: z.ZodType },
-    pathParams: unknown,
-    input: Record<string, unknown>,
+    req: { params?: unknown; query?: unknown; body?: unknown },
 ): ParsedRequest {
     const errors: ErrorMap = {};
-    const params = collect(schemas.params, { ...(pathParams as object) }, errors);
-    const body   = collect(schemas.body, input, errors);
-    const query  = collect(schemas.query, input, errors);
+    const params = collect(schemas.params, { ...(req.params as object) }, errors);
+    const body   = collect(schemas.body, req.body ?? {}, errors);
+    const query  = collect(schemas.query, req.query ?? {}, errors);
 
     if (Object.keys(errors).length || !params.ok || !body.ok || !query.ok) {
         throw new ValidationError(errors);
@@ -78,7 +66,7 @@ export function getParsedRequest(res: Response): ParsedRequest {
 export function validateMiddleware(schemas: { params: z.ZodType; query: z.ZodType; body: z.ZodType }) {
     return function validate(req: Request, res: Response, next: NextFunction): void {
         try {
-            res.locals[PARSED_KEY] = validateRequest(schemas, req.params, getRequestState(res).input);
+            res.locals[PARSED_KEY] = validateRequest(schemas, req);
         } catch (err) {
             next(err);
             return;

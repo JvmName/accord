@@ -15,7 +15,6 @@ import type { matchSchema } from '../../src/contract/match';
 import type { Mat, MatCode, Match, Round, User } from '../../src/db/types';
 import { defineRoute, noInput, notImplemented } from '../../src/http/route';
 import { createUserBody, matchIdParams, startRidingTimeBody } from '../../src/http/routes/requests';
-import { buildLegacyInput, processedRequestDataValue } from '../../src/http/legacyInput';
 import { validateRequest } from '../../src/http/middleware/validate';
 import { ValidationError } from '../../src/http/errors';
 import type { AnyRouteDefinition } from '../../src/http/types';
@@ -85,8 +84,7 @@ export const samplePublicRoute = defineRoute({
     tags:      ['sample'],
     handler:   async ctx => {
         assertType<Equals<typeof ctx.currentUser, User | null>>();
-        // `name` passed a PRESENCE check only (any truthy value), not a string check.
-        assertType<Equals<typeof ctx.body.name, string | number | boolean | Record<string, unknown> | unknown[]>>();
+        assertType<Equals<typeof ctx.body.name, string>>();
         // @ts-expect-error a public route has no currentMatch
         void ctx.currentMatch;
         return {};
@@ -137,43 +135,25 @@ describe('type inference', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Legacy input bag (F-73) and validation
+// Validation
 // ---------------------------------------------------------------------------
 
-describe('legacy input bag (ServerController#params, F-73)', () => {
-    it('merges path < body < query', () => {
-        expect(buildLegacyInput({ params: { matchId: 'path' }, body: { matchId: 'body', a: 1 }, query: { matchId: 'query' } }))
-            .toEqual({ matchId: 'query', a: 1 });
-        expect(buildLegacyInput({ params: { matCode: 'path' }, body: { matCode: 'body' } })).toEqual({ matCode: 'body' });
-    });
-
-    it('JSON-decodes top-level strings that hold an object or array, and nothing else', () => {
-        expect(processedRequestDataValue('{"a":1}')).toEqual({ a: 1 });
-        expect(processedRequestDataValue('[1]')).toEqual([1]);
-        expect(processedRequestDataValue('5')).toBe('5');
-        expect(processedRequestDataValue('null')).toBe('null');
-        expect(processedRequestDataValue('not json')).toBe('not json');
-        expect(processedRequestDataValue(5)).toBe(5);
-        expect(buildLegacyInput({ params: { p: '{"x":1}' }, body: { b: '{"y":2}' }, query: { q: '{"z":3}' } }))
-            .toEqual({ p: '{"x":1}', b: { y: 2 }, q: { z: 3 } }); // path params are NOT decoded
-    });
-
-    it('tolerates missing body/query', () => {
-        expect(buildLegacyInput({ params: { a: 'b' } })).toEqual({ a: 'b' });
-    });
-});
-
-describe('validation (legacy error envelope from Zod issues)', () => {
+describe('validation (error envelope from Zod issues)', () => {
     const schemas = { params: matchIdParams, query: noInput, body: startRidingTimeBody };
 
-    it('parses params from the PATH and body from the merged bag', () => {
-        expect(validateRequest(schemas, { matchId: 'm1' }, { matchId: 'override', rider: 'red' }))
+    it('parses params from the path, the body from the body and the query from the query', () => {
+        expect(validateRequest(schemas, { params: { matchId: 'm1' }, body: { rider: 'red' }, query: { matchId: 'override' } }))
             .toEqual({ params: { matchId: 'm1' }, query: {}, body: { rider: 'red' } });
     });
 
-    it('throws ValidationError with legacy keys and messages', () => {
+    it('treats a missing body as empty', () => {
+        expect(() => validateRequest(schemas, { params: { matchId: 'm1' } })).toThrow(ValidationError);
+        expect(validateRequest({ params: matchIdParams, query: noInput, body: noInput }, { params: { matchId: 'm1' } }).body).toEqual({});
+    });
+
+    it('throws ValidationError with the issue paths and messages', () => {
         let err: unknown;
-        try { validateRequest(schemas, { matchId: 'm1' }, {}); } catch (e) { err = e; }
+        try { validateRequest(schemas, { params: { matchId: 'm1' }, body: {} }); } catch (e) { err = e; }
         expect(err).toBeInstanceOf(ValidationError);
         expect((err as ValidationError).errors).toEqual({ rider: ['must be one of [red, blue]'] });
     });
@@ -274,30 +254,38 @@ describe('registration', () => {
     });
 });
 
-describe('request parts reaching the handler (F-73 fidelity)', () => {
-    it('validates the body from the merged bag: a query value overrides the body', async () => {
+describe('request parts reaching the handler (F-73)', () => {
+    it('validates the body from the body: a query value does not replace it', async () => {
         const res = await app.request('POST', '/users?name=fromQuery', { body: { name: 'fromBody' } });
         expect(res.status).toBe(200);
-        expect(seen['POST /users']).toEqual({ params: {}, query: {}, body: { name: 'fromQuery' } });
+        expect(seen['POST /users']).toEqual({ params: {}, query: {}, body: { name: 'fromBody' } });
     });
 
-    it('JSON-decodes a string body value before validation (legacy: object name -> 500 later)', async () => {
-        await app.request('POST', '/users', { body: { name: '{"a":1}' } });
-        expect(seen['POST /users']).toEqual({ params: {}, query: {}, body: { name: { a: 1 } } });
+    it('does not JSON-decode a string body value', async () => {
+        const res = await app.request('POST', '/users', { body: { name: '{"a":1}' } });
+        expect(res.status).toBe(200);
+        expect(seen['POST /users']).toEqual({ params: {}, query: {}, body: { name: '{"a":1}' } });
     });
 
-    it('rejects a falsy name with the legacy presence message', async () => {
-        for (const name of ['', 0, false, null]) {
-            expect(await app.request('POST', '/users', { body: { name } }))
+    it('rejects a missing or empty name as required and any other non-string as a type error', async () => {
+        for (const body of [{}, { name: '' }]) {
+            expect(await app.request('POST', '/users', { body }))
                 .toEqual({ status: 400, body: { data: { errors: { name: ['required'] } }, status: 'bad request' } });
+        }
+        for (const name of [0, false, null, 5, true, {}, ['x']]) {
+            expect(await app.request('POST', '/users', { body: { name } }))
+                .toEqual({ status: 400, body: { data: { errors: { name: ['must be a string'] } }, status: 'bad request' } });
         }
     });
 
-    it('takes ctx.params from the path even when the bag overrides it', async () => {
+    it('takes ctx.params from the path and the body from the body, whatever the query says', async () => {
         const world = await createWorld(app.db);
         const match = await createStartedMatch(app.db, world);
-        const res = await app.request('POST', `/match/${match.id}/ridingTime?rider=red`, { token: world.judge.api_token, body: { rider: 'purple' } });
-        expect(res.status).toBe(200); // query `rider` wins over the invalid body value, as in legacy
+        const res = await app.request('POST', `/match/${match.id}/ridingTime?rider=red&matchId=other`, { token: world.judge.api_token, body: { rider: 'purple' } });
+        expect(res).toEqual({ status: 400, body: { data: { errors: { rider: ['must be one of [red, blue]'] } }, status: 'bad request' } });
+
+        const ok = await app.request('POST', `/match/${match.id}/ridingTime?matchId=other`, { token: world.judge.api_token, body: { rider: 'red' } });
+        expect(ok.status).toBe(200);
         expect(seen['POST /match/:matchId/ridingTime']).toEqual({ params: { matchId: match.id }, query: {}, body: { rider: 'red' } });
     });
 
@@ -311,7 +299,7 @@ describe('request parts reaching the handler (F-73 fidelity)', () => {
         expect((await app.request('DELETE', `/match/${match.id}/ridingTime`, { token: world.judge.api_token })).status).toBe(200);
     });
 
-    it('parses urlencoded and text/plain JSON bodies like the legacy app', async () => {
+    it('still parses urlencoded and text/plain JSON bodies', async () => {
         const form = await fetch(`${app.origin}/users`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'name=Formy' });
         expect(form.status).toBe(200);
         expect(seen['POST /users']).toEqual({ params: {}, query: {}, body: { name: 'Formy' } });

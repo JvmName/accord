@@ -35,7 +35,7 @@ import type { Competitor, Rules, ScoringModule } from '../domain/types';
 import { serializeMat } from './mat';
 import { roundOutcome, serializeRound } from './round';
 import { serializeNullableUser, serializeUser } from './user';
-import { legacyColumn, resolveNow, wireTime, type ClockOptions } from './values';
+import { resolveNow, wireTime, type ClockOptions } from './values';
 
 const { RDojoKombatRules }: { RDojoKombatRules: Rules } = require('../domain/rules');
 const { getMatchWinner }: ScoringModule                 = require('../domain/scoring');
@@ -95,13 +95,13 @@ function renderMatch<U, R>(match: MatchInput,
     const now = resolveNow(options);
 
     const response: Record<string, unknown> = {
-        creator_id:       legacyColumn(match.creator_id),
-        id:               legacyColumn(match.id),
-        mat_id:           legacyColumn(match.mat_id),
-        started_at:       wireTime(legacyColumn(match.started_at)),
-        ended_at:         wireTime(legacyColumn(match.ended_at)),
-        break_started_at: wireTime(legacyColumn(match.break_started_at)),
-        break_duration:   legacyColumn(match.break_duration),
+        creator_id:       match.creator_id,
+        id:               match.id,
+        mat_id:           match.mat_id,
+        started_at:       wireTime(match.started_at),
+        ended_at:         wireTime(match.ended_at),
+        break_started_at: wireTime(match.break_started_at),
+        break_duration:   match.break_duration,
         red_competitor:   renderNullableUser(match.redCompetitor),
         blue_competitor:  renderNullableUser(match.blueCompetitor),
         winner:           renderNullableUser(matchWinner(match, now)),

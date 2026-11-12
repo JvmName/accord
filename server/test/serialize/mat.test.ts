@@ -29,8 +29,8 @@ describe('serializeUser / serializeUsers', () => {
         expect(userSchema.safeParse(out).success).toBe(true);
     });
 
-    it('legacy `|| null`: an empty name renders null (F-63)', () => {
-        expect(S.serializeUser({ ...USERS.red, name: '' }).name).toBeNull();
+    it('renders the stored value, even an empty name (F-63)', () => {
+        expect(S.serializeUser({ ...USERS.red, name: '' }).name).toBe('');
     });
 
     it('serializeNullableUser: null for a missing row; serializeUsers keeps order', () => {
@@ -59,8 +59,8 @@ describe('serializeMat — base keys', () => {
         }
     });
 
-    it('legacy `|| null`: judge_count 0 renders null (F-63); null stays null', () => {
-        expect(renderMat(F.mat({ judge_count: 0 })).judge_count).toBeNull();
+    it('renders the stored judge_count: 0 stays 0 (F-63); null stays null', () => {
+        expect(renderMat(F.mat({ judge_count: 0 })).judge_count).toBe(0);
         expect(renderMat(F.mat({ judge_count: null })).judge_count).toBeNull();
     });
 });

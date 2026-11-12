@@ -83,11 +83,11 @@ describe('generateOpenApiDocument', () => {
         expect(schemas.Match.properties.break_remaining.type).toEqual(['integer', 'null']);
     });
 
-    it('models EndRoundRequest.winner as optional, not nullable (F-24)', () => {
+    it('models EndRoundRequest.winner as optional and nullable (F-24)', () => {
         const schemas = generateOpenApiDocument().components?.schemas as Record<string, any>;
         expect(schemas.EndRoundRequest.required ?? []).not.toContain('winner');
-        expect(schemas.EndRoundRequest.properties.winner).toEqual({
-            $ref: '#/components/schemas/CompetitorColor',
-        });
+        const winner = JSON.stringify(schemas.EndRoundRequest.properties.winner);
+        expect(winner).toContain('#/components/schemas/CompetitorColor');
+        expect(winner).toContain('"null"');
     });
 });
