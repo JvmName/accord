@@ -53,11 +53,8 @@ export interface RoundOutcome extends RoundScore, RoundResult<User> {}
 /**
  * The legacy `#collectResultsData` for one round, from already-loaded rows.
  *
- * `now` closes still-open control periods. Legacy called
- * `rules.scoreRound(...)` with `this` = the rules object, so the calculator's
- * `endAt` was `undefined` and fell back to `new Date()` at call time
- * (FINDINGS F-33). Binding `this.ended_at = now` passes that same instant
- * explicitly: identical for `now` = the wall clock, and injectable for tests.
+ * An open control period closes at the round's `ended_at`, or at `now` while
+ * the round is open. `now` is injectable for tests.
  */
 export function roundOutcome(match: RoundMatchContext, round: RoundInput, now: Date): RoundOutcome {
     const red         = present(match.redCompetitor, 'the red competitor');
@@ -66,7 +63,7 @@ export function roundOutcome(match: RoundMatchContext, round: RoundInput, now: D
     // `RidingTimeVote#started_at` is an alias for `created_at`.
     const votes       = round.ridingTimeVotes.map((vote) => ({ ...vote, started_at: vote.created_at }));
 
-    const score: RoundScore = rules.scoreRound.call({ ended_at: now }, red, blue, match.judges, votes, round.pauses);
+    const score: RoundScore = rules.scoreRound(red, blue, match.judges, votes, round.pauses, round.ended_at ?? now);
     const { winner, method } = getRoundResult(rules, red, blue, score.redScore, score.blueScore, roundNumber, {
         ended:              Boolean(round.ended_at),
         declared_winner_id: round.declared_winner_id,

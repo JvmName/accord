@@ -1245,7 +1245,7 @@
         "tags": [
           "match/ridingTime"
         ],
-        "description": "End the riding time clock for the specified rider in the current round.",
+        "description": "End the judge's open riding time clock in the current round. `rider` is ignored; it is still accepted for older clients.",
         "parameters": [
           {
             "schema": {

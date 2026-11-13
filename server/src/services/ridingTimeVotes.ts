@@ -51,12 +51,8 @@ export async function startRidingTime(db: DbOrTx, round: Pick<Round, 'id' | 'mat
     });
 }
 
-/**
- * `Round#endRidingTime(judge, riderColor)`: ends the judge's FIRST open vote
- * in the round, whatever its competitor. `riderColor` is accepted and IGNORED,
- * exactly as legacy (FINDINGS F-55).
- */
-export async function endRidingTime(db: DbOrTx, round: Pick<Round, 'id'>, judgeId: string, _riderColor?: string): Promise<void> {
+/** `Round#endRidingTime(judge)`: ends the judge's FIRST open vote in the round, whatever its competitor. */
+export async function endRidingTime(db: DbOrTx, round: Pick<Round, 'id'>, judgeId: string): Promise<void> {
     assertDefined(judgeId, 'judge_id');
     const activeVote = await findOpenVoteForJudge(db, round.id, judgeId);
     if (!activeVote) throw new Error(`Riding time is not active`);

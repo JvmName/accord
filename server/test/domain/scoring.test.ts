@@ -145,7 +145,14 @@ describe('scoreRidingTime / RDojoKombatRules.scoreRound', () => {
         expect(pure).toEqual({ redScore: 2, blueScore: 0 });  // 8s - 2s paused = 6s → 2
     });
 
-    it('scoreRound does not use any round end time: an open vote is closed at "now" (F-33)', () => {
+    it('closes an open vote at the round end time it is given, not at "now"', () => {
+        const openVote = { judge_id: 'j1', competitor_id: red.id, started_at: T(0), ended_at: null };
+        const judge    = [{ id: 'j1' }];
+        expect(RDojoKombatRules.scoreRound(red, blue, judge, [openVote], [], T(9))).toEqual({ redScore: 3, blueScore: 0 });
+        expect(getRoundScore(RDojoKombatRules, red, blue, judge, [openVote], [], T(9))).toEqual({ redScore: 3, blueScore: 0 });
+    });
+
+    it('closes an open vote at "now" when no end time is given', () => {
         const openVote = { judge_id: 'j1', competitor_id: red.id, started_at: T(0), ended_at: null };
         const before       = Math.floor((Date.now() - T(0).getTime()) / 1000 / 3);
         const { redScore } = RDojoKombatRules.scoreRound(red, blue, [{ id: 'j1' }], [openVote]);

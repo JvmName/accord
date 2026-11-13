@@ -80,9 +80,8 @@ export interface RoundResult<C extends Competitor> {
  * `RDojoKombatRules` exactly, so a future ruleset is typechecked against it
  * rather than duck-typed.
  *
- * Note on `scoreRound`: the implementation in `RDojoKombatRules` reads
- * `this.ended_at` (always undefined when called as `rules.scoreRound(...)`).
- * See FINDINGS.md F-33.
+ * `scoreRound`'s `endAt` is where a still-open control period is closed;
+ * omitted means now.
  */
 export interface Rules {
     readonly maxRounds: number;
@@ -93,7 +92,8 @@ export interface Rules {
                                      blue: C,
                                      judges: readonly Judge[],
                                      votes: readonly ScoredVoteInput[],
-                                     pauses?: readonly PauseInput[]): RoundScore;
+                                     pauses?: readonly PauseInput[],
+                                     endAt?: Date | null): RoundScore;
 
     /** Break (seconds) after the round with 1-based index `roundIndex`; 0 = none. */
     getBreakDuration(roundIndex: number): number;
@@ -147,7 +147,8 @@ export interface ScoringModule {
                                         blue: C,
                                         judges: readonly Judge[],
                                         votes: readonly ScoredVoteInput[],
-                                        pauses?: readonly PauseInput[]): RoundScore;
+                                        pauses?: readonly PauseInput[],
+                                        endAt?: Date | null): RoundScore;
 
     getRoundResult<C extends Competitor>(rules: Rules,
                                          red: C,

@@ -494,7 +494,7 @@ describe('ONE implementation, two callers: route-style and worker-style calls of
 
     it('endVote: ridingTime route (endRidingTime) == mat leave route (findOpenVoteForJudge + endVote)', async () => {
         const judgeId = IDS['user:judgeA'];
-        const viaRidingTime = await stateAfter(async () => { await VoteSvc.endRidingTime(db, (await Rounds.findLastRound(db, IDS['match:soloJudge']))!, judgeId, 'red'); });
+        const viaRidingTime = await stateAfter(async () => { await VoteSvc.endRidingTime(db, (await Rounds.findLastRound(db, IDS['match:soloJudge']))!, judgeId); });
         const viaLeave      = await stateAfter(async () => { await VoteSvc.endVote(db, (await Votes.findOpenVoteForJudge(db, IDS['round:soloJudge'], judgeId))!); });
         expect(viaLeave).toEqual(viaRidingTime);
         expect(viaRidingTime.state.audit).toHaveLength(1);

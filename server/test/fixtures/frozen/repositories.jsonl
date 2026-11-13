@@ -22,27 +22,27 @@
 {"blueCompetitor":"users:8","judges":["users:2"],"key":"matchGraph match:soloJudge","mat":"mats:5","match":"matches:21","redCompetitor":"users:7","rounds":[{"pauses":[],"ridingTimeVotes":["riding_time_votes:9"],"round":"rounds:19"}]}
 {"key":"openRounds","rows":["rounds:4","rounds:5","rounds:9","rounds:11","rounds:15","rounds:16","rounds:17","rounds:19"]}
 {"key":"matchesInBreak","rows":["matches:4","matches:10","matches:12","matches:13","matches:14","matches:19","matches:20"]}
-{"judges":["users:2","users:3"],"key":"matchHelpers match:done","lastRound":"rounds:3","rounds":[{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:1"},{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:2"},{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:3"}]}
-{"judges":["users:2","users:3"],"key":"matchHelpers match:techfall","lastRound":"rounds:7","rounds":[{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:7"}]}
-{"judges":["users:2","users:3"],"key":"matchHelpers match:tie","lastRound":"rounds:8","rounds":[{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:8"}]}
+{"judges":["users:2","users:3"],"key":"matchHelpers match:done","lastRound":"rounds:3","rounds":[{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:1"},{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:2"},{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:3"}]}
+{"judges":["users:2","users:3"],"key":"matchHelpers match:techfall","lastRound":"rounds:7","rounds":[{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:7"}]}
+{"judges":["users:2","users:3"],"key":"matchHelpers match:tie","lastRound":"rounds:8","rounds":[{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:8"}]}
 {"judges":["users:2","users:3"],"key":"matchHelpers match:open","lastRound":"rounds:4","rounds":[{"currentPause":null,"openVoteFor":["riding_time_votes:3","riding_time_votes:4"],"openVotes":["riding_time_votes:3","riding_time_votes:4"],"round":"rounds:4"}]}
-{"judges":["users:2","users:3"],"key":"matchHelpers match:paused","lastRound":"rounds:5","rounds":[{"currentPause":"round_pauses:2","openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:5"}]}
-{"judges":["users:2","users:3"],"key":"matchHelpers match:break","lastRound":"rounds:6","rounds":[{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:6"}]}
+{"judges":["users:2","users:3"],"key":"matchHelpers match:paused","lastRound":"rounds:5","rounds":[{"currentPause":"round_pauses:2","openVoteFor":[null,null],"openVotes":[],"round":"rounds:5"}]}
+{"judges":["users:2","users:3"],"key":"matchHelpers match:break","lastRound":"rounds:6","rounds":[{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:6"}]}
 {"judges":[],"key":"matchHelpers match:upcoming","lastRound":null,"rounds":[]}
 {"judges":[],"key":"matchHelpers match:toStart","lastRound":null,"rounds":[]}
-{"judges":["users:2","users:3"],"key":"matchHelpers match:toEnd","lastRound":"rounds:9","rounds":[{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:9"}]}
-{"judges":["users:2","users:3"],"key":"matchHelpers match:toStartRound","lastRound":"rounds:10","rounds":[{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:10"}]}
-{"judges":["users:2","users:3"],"key":"matchHelpers match:toEndRound","lastRound":"rounds:11","rounds":[{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:11"}]}
-{"judges":["users:2","users:3"],"key":"matchHelpers match:toSubmission","lastRound":"rounds:12","rounds":[{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:12"}]}
-{"judges":["users:2","users:3"],"key":"matchHelpers match:toStoppage","lastRound":"rounds:13","rounds":[{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:13"}]}
-{"judges":["users:2","users:3"],"key":"matchHelpers match:toClearResult","lastRound":"rounds:14","rounds":[{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:14"}]}
-{"judges":["users:2","users:3"],"key":"matchHelpers match:toPause","lastRound":"rounds:15","rounds":[{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:15"}]}
-{"judges":["users:2","users:3"],"key":"matchHelpers match:toVote","lastRound":"rounds:16","rounds":[{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:16"}]}
+{"judges":["users:2","users:3"],"key":"matchHelpers match:toEnd","lastRound":"rounds:9","rounds":[{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:9"}]}
+{"judges":["users:2","users:3"],"key":"matchHelpers match:toStartRound","lastRound":"rounds:10","rounds":[{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:10"}]}
+{"judges":["users:2","users:3"],"key":"matchHelpers match:toEndRound","lastRound":"rounds:11","rounds":[{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:11"}]}
+{"judges":["users:2","users:3"],"key":"matchHelpers match:toSubmission","lastRound":"rounds:12","rounds":[{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:12"}]}
+{"judges":["users:2","users:3"],"key":"matchHelpers match:toStoppage","lastRound":"rounds:13","rounds":[{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:13"}]}
+{"judges":["users:2","users:3"],"key":"matchHelpers match:toClearResult","lastRound":"rounds:14","rounds":[{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:14"}]}
+{"judges":["users:2","users:3"],"key":"matchHelpers match:toPause","lastRound":"rounds:15","rounds":[{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:15"}]}
+{"judges":["users:2","users:3"],"key":"matchHelpers match:toVote","lastRound":"rounds:16","rounds":[{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:16"}]}
 {"judges":[],"key":"matchHelpers match:notStarted","lastRound":null,"rounds":[]}
-{"judges":["users:2","users:3"],"key":"matchHelpers match:wsTechFall","lastRound":"rounds:17","rounds":[{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:17"}]}
-{"judges":["users:2","users:3"],"key":"matchHelpers match:wsBreakEnded","lastRound":"rounds:18","rounds":[{"currentPause":null,"openVoteFor":[{"$undefined":true},{"$undefined":true}],"openVotes":[],"round":"rounds:18"}]}
+{"judges":["users:2","users:3"],"key":"matchHelpers match:wsTechFall","lastRound":"rounds:17","rounds":[{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:17"}]}
+{"judges":["users:2","users:3"],"key":"matchHelpers match:wsBreakEnded","lastRound":"rounds:18","rounds":[{"currentPause":null,"openVoteFor":[null,null],"openVotes":[],"round":"rounds:18"}]}
 {"judges":["users:2","users:3"],"key":"matchHelpers match:breakNoRounds","lastRound":null,"rounds":[]}
-{"judges":["users:2"],"key":"matchHelpers match:soloJudge","lastRound":"rounds:19","rounds":[{"currentPause":null,"openVoteFor":["riding_time_votes:9",{"$undefined":true}],"openVotes":["riding_time_votes:9"],"round":"rounds:19"}]}
+{"judges":["users:2"],"key":"matchHelpers match:soloJudge","lastRound":"rounds:19","rounds":[{"currentPause":null,"openVoteFor":["riding_time_votes:9",null],"openVotes":["riding_time_votes:9"],"round":"rounds:19"}]}
 {"codes":["mat_codes:1","mat_codes:2"],"incompleteMatches":["matches:2","matches:3","matches:4","matches:5","matches:6","matches:7"],"judges":["users:2","users:3"],"key":"mat mat:main","mat":"mats:1","nonViewerFiltered":[],"viewerFiltered":["users:4"],"viewers":["users:4"]}
 {"codes":["mat_codes:3","mat_codes:4"],"incompleteMatches":[],"judges":[],"key":"mat mat:empty","mat":"mats:2","nonViewerFiltered":[],"viewerFiltered":[],"viewers":[]}
 {"codes":["mat_codes:5","mat_codes:6"],"incompleteMatches":["matches:8","matches:9","matches:10","matches:11","matches:12","matches:13","matches:14","matches:15","matches:16","matches:17","matches:18","matches:19","matches:20"],"judges":["users:2","users:3"],"key":"mat mat:flow","mat":"mats:3","nonViewerFiltered":[],"viewerFiltered":[],"viewers":[]}
@@ -80,5 +80,5 @@
 {"key":"code victor.whiskey.xray","mat":"mats:4","matCode":"mat_codes:8"}
 {"key":"code yankee.zulu.anchor","mat":"mats:5","matCode":"mat_codes:9"}
 {"key":"code beacon.cobalt.dynamo","mat":"mats:5","matCode":"mat_codes:10"}
-{"key":"code no.such.code","mat":{"$undefined":true},"matCode":null}
+{"key":"code no.such.code","mat":null,"matCode":null}
 {"flags":"","key":"CODE_REGEXP","source":"^\\w+\\.\\w+\\.\\w+$"}

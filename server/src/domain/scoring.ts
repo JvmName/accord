@@ -129,17 +129,15 @@ function getMatchWinner<C extends Competitor>(endedRoundWinners: ReadonlyArray<C
 }
 
 
-/**
- * Thin wrapper: score a round under `rules`. Calls `rules.scoreRound(...)` as a
- * method so `this` is the rules object, exactly as `Round#getScore` did.
- */
+/** Thin wrapper: score a round under `rules`. */
 function getRoundScore<C extends Competitor>(rules: Rules,
                                              red: C,
                                              blue: C,
                                              judges: readonly Judge[],
                                              votes: readonly ScoredVoteInput[],
-                                             pauses?: readonly PauseInput[]): RoundScore {
-    return rules.scoreRound(red, blue, judges, votes, pauses);
+                                             pauses?: readonly PauseInput[],
+                                             endAt?: Date | null): RoundScore {
+    return rules.scoreRound(red, blue, judges, votes, pauses, endAt);
 }
 
 

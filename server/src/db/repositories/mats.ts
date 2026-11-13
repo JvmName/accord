@@ -14,16 +14,10 @@ export async function findMatById(db: DbOrTx, id: string | null | undefined): Pr
     return orNull(await db.query.mats.findFirst({ where: eq(mats.id, id) }));
 }
 
-/**
- * `Mat.findByCode(code)`, preserved exactly, including its two different
- * "not found" values:
- *  - no such code             -> `undefined` (legacy `if (!code) return;`)
- *  - code whose mat is gone   -> `null`      (legacy `code.getMat()`)
- * (`ServerController#initCurrentMat` inlines the same two steps itself.)
- */
-export async function findMatByCode(db: DbOrTx, code: string | null | undefined): Promise<Mat | null | undefined> {
+/** `Mat.findByCode(code)`: the mat behind a code, or `null` for an unknown code or a code whose mat is gone. */
+export async function findMatByCode(db: DbOrTx, code: string | null | undefined): Promise<Mat | null> {
     const matCode = await findMatCodeByCode(db, code);
-    if (!matCode) return undefined;
+    if (!matCode) return null;
     return await findMatById(db, matCode.mat_id);
 }
 

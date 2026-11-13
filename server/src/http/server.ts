@@ -168,18 +168,17 @@ export class ApplicationServer {
     }
 }
 
+/** The level a finished request is logged at: server errors `error`, client errors `warn`. */
+export function requestLogLevel(res: { statusCode: number }, err?: Error): 'error' | 'warn' | 'info' {
+    if (err || res.statusCode >= 500) return 'error';
+    if (res.statusCode >= 400) return 'warn';
+    return 'info';
+}
+
 function loggingMiddleware(): RequestHandler {
     return pinoHttp({
         logger,
-        // pino-http passes (req, res, err), so this reads the REQUEST's
-        // statusCode, which is always null: every request logs at info. Kept
-        // as it has always behaved.
-        customLogLevel: req => {
-            const statusCode = (req as { statusCode?: number | null }).statusCode;
-            if (statusCode != null && statusCode >= 500) return 'error';
-            if (statusCode != null && statusCode >= 400) return 'warn';
-            return 'info';
-        },
+        customLogLevel: (_req, res, err) => requestLogLevel(res, err),
         serializers: {
             req: req => `Request: ${req.method} ${req.url}`,
             res: res => `statusCode=${res.statusCode}, responseTime=${res.get('X-Response-Time')}`,

@@ -164,14 +164,15 @@ describe('serializeMatch — winner', () => {
             .toEqual({ id: ID.blue, name: 'Renamed' });
     });
 
-    it('scored winners use the injected now (open votes on an ended round, F-33)', () => {
+    it('scored winners stop an open vote on an ended round at its ended_at, whatever now is', () => {
         const rounds = [
             F.round({ started: 20, ended: 30, declaredWinnerId: ID.blue }),
             F.round({ started: 40, ended: 50, declaredWinnerId: ID.red }),
             F.round({ started: 60, ended: 70, ridingTimeVotes: F.votes(ID.red, JUDGES, 65, null) }),
         ];
-        expect(S.serializeMatch(F.matchGraph({ rounds }), { now: at(66) }).winner).toBeNull();        // 1s = 0 pts: tie
-        expect(S.serializeMatch(F.matchGraph({ rounds }), { now: at(80) }).winner!.id).toBe(ID.red);   // 15s = 5 pts
+        // 65s to 70s is 1 pt for red, which decides the match 2-1.
+        expect(S.serializeMatch(F.matchGraph({ rounds }), { now: at(66) }).winner!.id).toBe(ID.red);
+        expect(S.serializeMatch(F.matchGraph({ rounds }), { now: at(80) }).winner!.id).toBe(ID.red);
     });
 });
 

@@ -168,10 +168,10 @@ describe('RDojoKombatRules.determineWinner — edge cases', () => {
 describe('RDojoKombatRules.scoreRound', () => {
     const judges = [{ id: 'judge-1' }];
 
-    // Helper: call scoreRound with a bound ended_at so open vote periods resolve
+    // Helper: call scoreRound with an explicit endAt so open vote periods resolve
     // to a deterministic timestamp rather than "now"
     function scoreRound(votes, endedAt) {
-        return RDojoKombatRules.scoreRound.call({ ended_at: endedAt }, red, blue, judges, votes);
+        return RDojoKombatRules.scoreRound(red, blue, judges, votes, [], endedAt);
     }
 
     // Helper: build a completed vote (has an ended_at)

@@ -8,20 +8,18 @@
  * kept bugs included, every command resolves to `undefined`.
  */
 import { present } from '../domain/present';
-import type { Match, Round, RoundPause } from '../db/types';
+import type { Round, RoundPause } from '../db/types';
 import type { DbOrTx } from '../db/repositories/internal';
-import { findMatchById, findMatchJudges, updateMatch } from '../db/repositories/matches';
-import { findCurrentPause, findMatchRounds, findRoundPauses, insertRoundPause, setPauseResumed, updateRound } from '../db/repositories/rounds';
-import { findUserById } from '../db/repositories/users';
-import { findOpenRoundVotes, findRoundVotes } from '../db/repositories/votes';
-import type { Rules, ScoringModule } from '../domain/types';
+import { findMatchById, updateMatch } from '../db/repositories/matches';
+import { findCurrentPause, findMatchRounds, insertRoundPause, setPauseResumed, updateRound } from '../db/repositories/rounds';
+import { findOpenRoundVotes } from '../db/repositories/votes';
+import type { Rules } from '../domain/types';
 import { competitorForColor, endMatch } from './matchLifecycle';
 import { endVote } from './ridingTimeVotes';
 import type { Logger } from 'pino';
 
 // CommonJS modules (`module.exports`), typed at the require, as src/domain does.
 const { RDojoKombatRules }: { RDojoKombatRules: Rules } = require('../domain/rules');
-const { getRoundScore, getRoundResult }: ScoringModule  = require('../domain/scoring');
 const { logger }: { logger: Logger }                    = require('../../lib/logger');
 
 /** `Match#rules` / `Round#rules`: the only ruleset. */
@@ -42,17 +40,16 @@ export async function isRoundPaused(db: DbOrTx, roundId: string): Promise<boolea
  * 2. if the round is paused, `resumeRound` (closes the open pause)
  * 3. load the match
  * 4. `ended_at = now`
- * 5. score the round (only for the `Round ended` log line, as legacy)
- * 6. count the match's rounds
- * 7. count == `maxRounds` -> `endMatch(match)` (the ONLY place a match ends
+ * 5. count the match's rounds
+ * 6. count == `maxRounds` -> `endMatch(match)` (the ONLY place a match ends
  *    on its own; never early at 2 wins: invariant, CLAUDE.md #10)
  *    otherwise `d = getBreakDuration(count)`; `d > 0` -> set
  *    `break_started_at = now`, `break_duration = d` on the match
- *    (steps 6-7 are skipped with `{ transition: false }`, which `endMatch` uses)
+ *    (steps 5-6 are skipped with `{ transition: false }`, which `endMatch` uses)
  *
  * No guard against an already-ended round (legacy has none either; callers
  * guard, F-62). With several open pauses only the LAST is resumed (F-58).
- * Step 5 is log-only work kept for parity (F-60). The legacy `match.clearCachedAssociation('rounds')` after the break
+ * The legacy `match.clearCachedAssociation('rounds')` after the break
  * protected the per-instance round cache; there is no cache here, so it
  * evaporates (recorded in the lifecycle inventory).
  */
@@ -69,8 +66,7 @@ export async function finishRound(db: DbOrTx, round: Round, { transition = true 
     const endedAt = new Date();
     await updateRound(db, round.id, { ended_at: endedAt });
 
-    const { redScore, blueScore } = await scoreEndedRound(db, { ...round, ended_at: endedAt }, match);
-    logger.info(`Round ended: match=${round.match_id} round=${round.id} red=${redScore} blue=${blueScore}`);
+    logger.info(`Round ended: match=${round.match_id} round=${round.id}`);
 
     // `endMatch` ends its last round without the transition: the match is
     // being ended by the caller, so no second match end and no break (F-54).
@@ -94,33 +90,6 @@ export async function finishRound(db: DbOrTx, round: Round, { transition = true 
         }
     }
 }
-
-/**
- * What legacy `Round#collectResultsData` computes when `Round#end` asks for
- * the scores: competitors, match judges, the round's number, the score, and
- * the round result. Only the scores are used (for the log); the result is
- * still derived because it can throw (a missing competitor with a declared
- * winner), and legacy would throw at this point too. Votes are read AFTER
- * step 1 closed them, pauses after step 2.
- */
-async function scoreEndedRound(db: DbOrTx, round: Round, match: Pick<Match, 'id' | 'red_competitor_id' | 'blue_competitor_id'>) {
-    const red   = present(await findUserById(db, match.red_competitor_id), 'the red competitor');
-    const blue  = present(await findUserById(db, match.blue_competitor_id), 'the blue competitor');
-    const judges            = await findMatchJudges(db, match.id);
-    const roundNumber       = (await findMatchRounds(db, match.id)).findIndex((r) => r.id == round.id) + 1;
-
-    const votes  = (await findRoundVotes(db, round.id)).map((vote) => ({ ...vote, started_at: vote.created_at }));
-    const pauses = await findRoundPauses(db, round.id);
-
-    const { redScore, blueScore } = getRoundScore(rules, red, blue, judges, votes, pauses);
-    getRoundResult(rules, red, blue, redScore, blueScore, roundNumber, {
-        ended:              Boolean(round.ended_at),
-        declared_winner_id: round.declared_winner_id,
-        stoppage:           round.stoppage,
-    });
-    return { redScore, blueScore };
-}
-
 
 /**
  * `Round#pause()`. Preconditions in legacy order:
@@ -169,11 +138,7 @@ export interface RoundResultInput {
  * (left UNCHANGED when the competitor row is missing), `stoppage = stoppage`;
  * winner falsy -> both `null` (a null result is a legitimate persisted state).
  *
- * Sequelize skipped the UPDATE (and so did not bump `updated_at`) when no
- * attribute changed. That is reproduced (FINDINGS F-57): unchanged means
- * `declared_winner_id` equal AND `stoppage` null on both sides (Sequelize
- * compared the new value with the raw stored `0/1/null`, so any boolean
- * counts as a change).
+ * Always writes, so a save that changes nothing still bumps `updated_at`.
  */
 export async function setRoundResult(db: DbOrTx, round: Round, { winner, stoppage = false }: RoundResultInput = {}): Promise<void> {
     if (!round.ended_at) throw new Error('Cannot set result on a round that has not ended');
@@ -183,19 +148,13 @@ export async function setRoundResult(db: DbOrTx, round: Round, { winner, stoppag
     if (winner) {
         const match      = present(await findMatchById(db, round.match_id), 'the round\'s match');
         const competitor = await competitorForColor(db, match, winner);
-        // `undefined` when the competitor row is missing: Sequelize then left
-        // the column out of the UPDATE (previous winner kept), and Drizzle's
-        // `.set()` skips undefined keys the same way (FINDINGS F-57).
+        // `undefined` when the competitor row is missing: `.set()` skips it, so the previous winner stays.
         declaredWinnerId = competitor?.id;
         newStoppage      = stoppage;
     } else {
         declaredWinnerId = null;
         newStoppage      = null;
     }
-
-    const unchanged = declaredWinnerId === round.declared_winner_id
-        && newStoppage === null && round.stoppage === null;
-    if (unchanged) return;
 
     await updateRound(db, round.id, { declared_winner_id: declaredWinnerId, stoppage: newStoppage });
 }

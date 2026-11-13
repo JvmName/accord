@@ -39,8 +39,8 @@ describe('reads', () => {
         expect((await Votes.findOpenVoteForJudge(db, 'r2', ID.judgeA))!.id).toBe('vx');
     });
 
-    it('findOpenVoteForJudge returns UNDEFINED (not null) when none, like legacy `[0]`', async () => {
-        expect(await Votes.findOpenVoteForJudge(db, 'r2', ID.judgeB)).toBeUndefined();
+    it('findOpenVoteForJudge returns null when none', async () => {
+        expect(await Votes.findOpenVoteForJudge(db, 'r2', ID.judgeB)).toBeNull();
     });
 
     it('findOpenVoteForJudge picks the first open one in insertion order if several exist', async () => {
@@ -63,7 +63,7 @@ describe('writes', () => {
         const ended = await Votes.setVoteEnded(db, row.id, at(150));
         expect(ended!.ended_at).toEqual(at(150));
         expect(ended!.created_at).toEqual(row.created_at);
-        expect(await Votes.findOpenVoteForJudge(db, 'r1', ID.judgeA)).toBeUndefined();
+        expect(await Votes.findOpenVoteForJudge(db, 'r1', ID.judgeA)).toBeNull();
 
         const other = await Votes.insertRidingTimeVote(db, { round_id: 'r1', judge_id: ID.judgeB, competitor_id: ID.red });
         const before = Date.now();

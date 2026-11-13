@@ -102,7 +102,7 @@ describe('repositories snapshot: reads over the seeded contract graph', () => {
         expectRecords('userById ');
         expectRecords('code ');
         expect(fixture.records.get('userByApiToken nope').user).toBeNull();
-        expect(fixture.records.get('code no.such.code').mat).toEqual(F.UNDEFINED);
+        expect(fixture.records.get('code no.such.code').mat).toBeNull();
         expectRecords('CODE_REGEXP');
     });
 });

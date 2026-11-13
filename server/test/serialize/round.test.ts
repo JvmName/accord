@@ -127,10 +127,10 @@ describe('serializeRound — clock-dependent fields use the injected `now`', () 
         expect(render(rounds, 0, at(600)).score[ID.blue]).toBe(33);
     });
 
-    it('F-33 pinned: an ENDED round still holding an open vote keeps accruing against now', () => {
+    it('an ENDED round still holding an open vote stops accruing at its ended_at', () => {
         const rounds = [F.round({ started: 20, ended: 90, ridingTimeVotes: F.votes(ID.red, JUDGES, 25, null) })];
-        expect(render(rounds, 0, at(85)).score[ID.red]).toBe(20);
-        expect(render(rounds, 0, at(145)).score[ID.red]).toBe(40);
+        expect(render(rounds, 0, at(145)).score[ID.red]).toBe(21);
+        expect(render(rounds, 0, at(600)).score[ID.red]).toBe(21);
     });
 
     it('time_remaining: max_duration minus elapsed, net of RESUMED pauses; null once ended', () => {

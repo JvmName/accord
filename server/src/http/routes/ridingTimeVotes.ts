@@ -43,9 +43,8 @@ export const postStartRidingTime = defineRoute({
 });
 
 /**
- * Ends the judge's open vote in the round, whichever competitor it is for:
- * `rider` is accepted and ignored. Installed clients still send it, so it
- * must keep being accepted.
+ * Ends the judge's open vote in the round, whichever competitor it is for.
+ * `rider` is accepted and ignored: installed clients still send it.
  */
 export const deleteEndRidingTime = defineRoute({
     method:    'delete',
@@ -55,19 +54,18 @@ export const deleteEndRidingTime = defineRoute({
     response:  routeResponses['DELETE /match/{matchId}/ridingTime'],
     tags:      ['match/ridingTime'],
     openapi:   {
-        description: 'End the riding time clock for the specified rider in the current round.',
+        description: 'End the judge\'s open riding time clock in the current round. `rider` is ignored; it is still accepted for older clients.',
         query:       z.object({ rider: competitorColorSchema.optional() }),
     },
     handler: async ctx => {
         const round = ctx.currentRound;
-        const rider = ctx.query.rider;
         try {
-            await endRidingTime(ctx.db, round, ctx.currentUser.id, rider as string | undefined);
+            await endRidingTime(ctx.db, round, ctx.currentUser.id);
         } catch (err) {
             return ctx.renderErrors({ matchId: [(err as Error).message] });
         }
 
-        logger.info(`Vote ended: judge=${ctx.currentUser.id} rider=${rider} match=${ctx.currentMatch.id} round=${round.id}`);
+        logger.info(`Vote ended: judge=${ctx.currentUser.id} match=${ctx.currentMatch.id} round=${round.id}`);
         return { match: await renderMatch(ctx.db, ctx.currentMatch.id, MATCH_WITHOUT_JUDGES) };
     },
 });

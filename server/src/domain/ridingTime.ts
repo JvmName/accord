@@ -157,20 +157,6 @@ class RidingTimeCalculator {
     get controlPeriods() { return this.#controlPeriods; }
     get controlActive() { return this.numVotes >= this.#voteThreshold }
     get numVotes()      { return Object.values(this.#activeVotes).length }
-    // Unused (no caller anywhere). `Math.MIN_VALUE` does not exist (it is
-    // `Number.MIN_VALUE`), so an open vote sorts as NaN. Dead code, preserved
-    // as-is — see FINDINGS.md F-35.
-    get activeVotes()   {
-        const activeVotes = Object.values(this.#activeVotes);
-        activeVotes.sort((vote1,vote2) => {
-            // @ts-expect-error -- Math.MIN_VALUE is undefined at runtime (F-35)
-            const val1 = vote1.ended_at || Math.MIN_VALUE;
-            // @ts-expect-error -- Math.MIN_VALUE is undefined at runtime (F-35)
-            const val2 = vote2.ended_at || Math.MIN_VALUE;
-            return (val1 as unknown as number) - (val2 as unknown as number);
-        });
-        return activeVotes
-    }
 
 
     #endControlPeriod(endAt: Date) {

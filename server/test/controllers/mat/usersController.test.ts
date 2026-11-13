@@ -229,7 +229,7 @@ describe('Scenario C: judge leaves a running match', () => {
 
     it("auto-ends judge A's open riding time vote", async () => {
         await removeUser(ctx, judgeA, MatCodes.ROLES.ADMIN);
-        expect(await Votes.findOpenVoteForJudge(db, round.id, judgeA.id)).toBeUndefined();
+        expect(await Votes.findOpenVoteForJudge(db, round.id, judgeA.id)).toBeNull();
         const [voteA] = (await Votes.findRoundVotes(db, round.id)).filter(v => v.judge_id === judgeA.id);
         expect(voteA.ended_at).not.toBeNull();
     });

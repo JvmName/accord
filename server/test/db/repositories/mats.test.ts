@@ -27,11 +27,11 @@ describe('findMatById / findMatByCode', () => {
         expect((await Mats.findMatByCode(db, CODE.mainViewer))!.id).toBe(ID.matMain);
     });
 
-    it('findMatByCode: unknown code -> undefined (legacy `return;`)', async () => {
-        expect(await Mats.findMatByCode(db, 'no.such.code')).toBeUndefined();
+    it('findMatByCode: unknown code -> null', async () => {
+        expect(await Mats.findMatByCode(db, 'no.such.code')).toBeNull();
     });
 
-    it('findMatByCode: code whose mat row is gone -> null (legacy code.getMat())', async () => {
+    it('findMatByCode: code whose mat row is gone -> null', async () => {
         insertRows(db, 'mat_codes', [{ id: 'orphan', mat_id: 'gone', code: 'orphan.code.here', role: 'admin', ...stampsAt(1) }]);
         expect(await Mats.findMatByCode(db, 'orphan.code.here')).toBeNull();
     });

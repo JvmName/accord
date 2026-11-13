@@ -89,9 +89,7 @@ function, or -> task 10b) is
   `findMatGraph`. A worker tick that cost ~127 queries on the contract seed
   costs 3 (F-49). If profiling ever shows a need, add an explicit
   request-scoped cache then.
-- **Legacy semantics kept:** `null` vs `undefined` exactly as the models
-  returned them (`findMatByCode` -> `undefined` for an unknown code,
-  `findOpenVoteForJudge` -> `undefined`, everything else `null`); lookups
+- **Legacy semantics kept:** a missing row is `null` everywhere; lookups
   passed `undefined` throw like Sequelize's `where`; ordering reproduces the
   implicit legacy order explicitly (F-48); creates set
   `created_at = updated_at = now`, updates bump `updated_at`; join-table adds

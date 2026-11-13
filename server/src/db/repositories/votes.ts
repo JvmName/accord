@@ -26,11 +26,10 @@ export async function findOpenRoundVotes(db: DbOrTx, roundId: string): Promise<R
 
 /**
  * `round.currentRidingTimeVoteForJudge(judge)`: the first open vote of that
- * judge in the round, in insertion order. NOTE: returns `undefined` (not
- * `null`) when there is none, exactly like the legacy `(await ...)[0]`.
+ * judge in the round, in insertion order, or `null` when there is none.
  */
-export async function findOpenVoteForJudge(db: DbOrTx, roundId: string, judgeId: string): Promise<RidingTimeVote | undefined> {
-    return await db.query.riding_time_votes.findFirst({
+export async function findOpenVoteForJudge(db: DbOrTx, roundId: string, judgeId: string): Promise<RidingTimeVote | null> {
+    const vote = await db.query.riding_time_votes.findFirst({
         where: and(
             eq(riding_time_votes.round_id, roundId),
             eq(riding_time_votes.judge_id, judgeId),
@@ -38,6 +37,7 @@ export async function findOpenVoteForJudge(db: DbOrTx, roundId: string, judgeId:
         ),
         orderBy: [asc(rowid)],
     });
+    return vote ?? null;
 }
 
 

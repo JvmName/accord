@@ -239,7 +239,7 @@ function modernSteps(db) {
         resume:    async (s) => { await RoundSvc.resumeRound(db, await lastRound(s.match)); },
         setResult: async (s) => { await RoundSvc.setRoundResult(db, await lastRound(s.match), { winner: s.winner, stoppage: s.stoppage }); },
         startRidingTime: async (s) => { await VoteSvc.startRidingTime(db, await lastRound(s.match), s.judge, s.rider); },
-        endRidingTime:   async (s) => { await VoteSvc.endRidingTime(db, await lastRound(s.match), s.judge, s.rider); },
+        endRidingTime:   async (s) => { await VoteSvc.endRidingTime(db, await lastRound(s.match), s.judge); },
         endVote: async (s) => { await VoteSvc.endVote(db, await Votes.findOpenVoteForJudge(db, (await lastRound(s.match)).id, s.judge)); },
     };
 }

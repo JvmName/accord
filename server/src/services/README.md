@@ -15,7 +15,7 @@ handlers and the worker jobs in `src/workers` call them.
 | `finishRound(db, round)` | `Round#end` | `endRound` only |
 | `pauseRound(db, round)` / `resumeRound(db, round)` | `Round#pause` / `#resume` | `POST .../rounds/pause` / `resume`; `finishRound` |
 | `setRoundResult(db, round, { winner, stoppage })` | `Round#setResult` | `PATCH .../rounds/result` |
-| `startRidingTime(db, round, judgeId, rider)` / `endRidingTime(...)` | `Round#startRidingTime` / `#endRidingTime` | `POST` / `DELETE /match/:id/ridingTime` |
+| `startRidingTime(db, round, judgeId, rider)` / `endRidingTime(db, round, judgeId)` | `Round#startRidingTime` / `#endRidingTime` | `POST` / `DELETE /match/:id/ridingTime` |
 | `endVote(db, vote)` | `RidingTimeVote#end` | `endRidingTime`, `finishRound`, mat leave (`usersController.js:153`) |
 | `competitorForColor(db, match, color)`, `isRoundPaused(db, roundId)` | supporting reads | the commands above |
 
