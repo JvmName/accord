@@ -23,8 +23,7 @@ import { freePort } from '../helpers/httpServer';
 
 
 const FIXTURE_PATH    = path.join(__dirname, 'fixtures', 'routeTable.txt');
-const ARTIFACT_PATH   = path.join(__dirname, '..', '..', '..',
-                                  '.ai', 'plans', 'server-ts', 'artifacts', 'route-table.txt');
+const ARTIFACT_PATH   = path.join(__dirname, '..', 'fixtures', 'route-table.txt');
 const CONTROLLERS_DIR = path.join(__dirname, '..', '..', 'controllers') + path.sep;
 
 

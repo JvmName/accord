@@ -68,7 +68,7 @@ describe('contract goldens', () => {
         expect(onDisk.filter(f => !captured.has(f))).toEqual([]);
     });
 
-    it('leaves no route from artifacts/route-table.txt uncovered', () => {
+    it('leaves no route from fixtures/route-table.txt uncovered', () => {
         expect(buildCoverageReport(result).uncovered).toEqual([]);
     });
 });

@@ -1,7 +1,7 @@
 /**
  * AUTHORIZATION of the route registry, over HTTP.
  *
- * Every row of `.ai/plans/server-ts/artifacts/authz-matrix.txt` (the
+ * Every row of `test/fixtures/authz-matrix.txt` (the
  * authorization matrix; executable form `test/characterization/authorization.test.ts`)
  * is replayed against the real route definitions with their real `authorize`
  * specs, mounted on a test Express app over a scratch in-memory Drizzle
@@ -37,7 +37,7 @@ import {
     type World,
 } from './support/registryApp';
 
-const MATRIX = path.join(__dirname, '..', '..', '..', '.ai', 'plans', 'server-ts', 'artifacts', 'authz-matrix.txt');
+const MATRIX = path.join(__dirname, '..', 'fixtures', 'authz-matrix.txt');
 const UNAUTHORIZED = { data: null, status: 'unauthorized' };
 const NOT_FOUND    = { data: null, status: 'not found' };
 const UNKNOWN_UUID = '550e8400-e29b-41d4-a716-446655440000';
@@ -300,7 +300,7 @@ function rows(): Row[] {
 describe('authorization parity: the matrix against the new middleware', () => {
     const all = rows();
 
-    it('covers exactly the rows of artifacts/authz-matrix.txt (as a multiset)', () => {
+    it('covers exactly the rows of fixtures/authz-matrix.txt (as a multiset)', () => {
         const covered = all.map(r => r.matrix).filter((m): m is string => m !== null).sort();
         expect(covered).toEqual(parseMatrix());
         expect(covered.length).toBe(53);

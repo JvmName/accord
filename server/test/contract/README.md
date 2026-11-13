@@ -2,15 +2,12 @@
 
 **These files are the API's contract of record.** They are byte-exact snapshots
 of every HTTP response and every WebSocket payload this server produces,
-captured against the implementation as it stood at the start of the TypeScript
-migration (`.ai/plans/server-ts/`, task 04).
+captured from the running server.
 
 The Kotlin client in `app/shared/src/commonMain/kotlin/dev/jvmname/accord/network/`
 consumes these exact bytes — field names, nesting, `null` vs absent, enum
-spellings, computed numbers. The migration replaces the ORM (task 11) and the
-entire routing layer (tasks 13a–13c), and neither rewrite is visible to the
-existing unit tests, which test internals. These goldens are what stands between
-those rewrites and a silently broken client.
+spellings, computed numbers. The unit tests exercise internals; these goldens
+are what stands between a refactor and a silently broken client.
 
 ## Changing a golden
 
@@ -25,11 +22,8 @@ intended, it is an **API change**, and it needs:
 2. a corresponding update to `models.kt` / `AccordClient.kt` / `SocketClient.kt`,
 3. a reviewer looking at the golden diff, not just the test result.
 
-These are **fidelity** instruments, not correctness ones. They encode current
-behaviour *including its bugs* — see `F-11`, `F-14`, `F-15`, `F-16`, `F-20`
-through `F-25` in `.ai/plans/server-ts/FINDINGS.md`, several of which are
-visible right here in the goldens. That is intentional. Task 18 is the only
-place behaviour is allowed to change.
+A golden records what the server does, so a diff is a behavior change: read it
+entry by entry.
 
 ## Running
 
@@ -46,8 +40,8 @@ bun test --isolate --coverage test/contract/capture.test.ts
 CAPTURE_GOLDENS=1 bun test --isolate test/contract/capture.test.ts
 ```
 
-Both files also run as part of `bun run test`. Never a bare `bun test` — see
-`FINDINGS.md` F-06.
+Both files also run as part of `bun run test`. Never a bare `bun test`: it skips
+`--isolate` (see `CLAUDE.md`).
 
 ## Files
 
@@ -57,16 +51,15 @@ Both files also run as part of `bun run test`. Never a bare `bun test` — see
 | `capture.ts` | The harness. Boots a real server, runs the ordered request plan, drives the real workers for the WebSocket events, normalizes and reports. |
 | `capture.test.ts` | Completeness oracle; writes goldens under `CAPTURE_GOLDENS=1`. |
 | `contract.test.ts` | The gate: byte-equality replay, plus the `models.kt` population and nullability cross-checks. |
-| `goldens/*.json` | 85 snapshots — 81 HTTP, 4 WebSocket. |
+| `goldens/*.json` | One snapshot per HTTP case and WebSocket event. |
 
 ## How a golden is made deterministic
 
 The wall clock is **frozen** for the whole run and every fixture has a fixed
 primary key. That is what lets the goldens assert real timestamps, real
 `time_remaining`, real `break_remaining` and real riding-time `score` values
-literally, instead of masking them behind placeholders — mutation **M6** in
-`artifacts/mutation-log.txt` (changing the score divisor from 3 to 4) is caught
-only because of this.
+literally, instead of masking them behind placeholders. A change to the score
+divisor (3 to 4) is caught only because of this.
 
 Only identifiers the server invents *during* the run are placeholdered, and
 positionally: `<uuid:1>` for a new user id, `<code:1>` for a generated mat code.
@@ -88,12 +81,5 @@ there while every other payload carries them.
 `GET /docs`, `GET /docs.json` and `GET /async-docs.json` are registered only
 when `NODE_ENV === 'development'`. The goldens record what production serves —
 a 404 — and not the DEV bodies. `/docs.json` is the *generated* OpenAPI spec
-which task 06 replaces on purpose, so byte-locking it would create a gate a
-later task is required to break. The harness prints this decision on every run.
-
-## Evidence
-
-- `.ai/plans/server-ts/artifacts/coverage-capture.txt` — the completeness oracle
-  run, and the six branches it caught that the route checklist could not.
-- `.ai/plans/server-ts/artifacts/mutation-log.txt` — seven deliberate server
-  mutations, each confirmed to make this gate fail, each reverted.
+which changes whenever a route or schema does, so byte-locking it would fail on
+every such change. The harness prints this decision on every run.

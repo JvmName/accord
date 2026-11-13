@@ -2,7 +2,7 @@
 #
 # Format: METHOD<space>path<tab>Controller#action
 # Paths are the RAW Express paths (`:param`), not the OpenAPI-normalised
-# `{param}` form used by .ai/plans/server-ts/artifacts/route-table.txt.
+# `{param}` form used by test/fixtures/route-table.txt.
 #
 # "DEV" entries are registered only when CONSTANTS.DEV is true
 # (i.e. NODE_ENV=development). Under NODE_ENV=test only the 20 non-DEV entries

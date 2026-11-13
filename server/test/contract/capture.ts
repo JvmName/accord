@@ -48,9 +48,7 @@ import * as Http from '../helpers/httpServer';
 
 
 export const GOLDENS_DIR = path.join(__dirname, 'goldens');
-export const ROUTE_TABLE = path.join(
-    __dirname, '..', '..', '..', '.ai', 'plans', 'server-ts', 'artifacts', 'route-table.txt',
-);
+export const ROUTE_TABLE = path.join(__dirname, '..', 'fixtures', 'route-table.txt');
 
 
 /**
@@ -197,7 +195,7 @@ function makeRawClient(origin: string) {
 export interface Record_ {
     /** Golden file base name. */
     name: string;
-    /** `METHOD /path` exactly as it appears in artifacts/route-table.txt. */
+    /** `METHOD /path` exactly as it appears in fixtures/route-table.txt. */
     route: string | null;
     /** What this case is here to prove. Stored in the golden. */
     why: string;
@@ -832,7 +830,7 @@ export interface CoverageReport {
 }
 
 
-/** Reads `artifacts/route-table.txt` into `METHOD /path` entries. */
+/** Reads `fixtures/route-table.txt` into `METHOD /path` entries. */
 export function readRouteTable(): string[] {
     const text = fs.readFileSync(ROUTE_TABLE, 'utf8');
     return text
@@ -869,7 +867,7 @@ export function buildCoverageReport(result: CaptureResult): CoverageReport {
     lines.push('CONTRACT CAPTURE — COMPLETENESS REPORT');
     lines.push('='.repeat(72));
     lines.push('');
-    lines.push(`routes in artifacts/route-table.txt : ${routes.length}`);
+    lines.push(`routes in fixtures/route-table.txt  : ${routes.length}`);
     lines.push(`routes with >= 1 golden             : ${covered.length}`);
     lines.push(`routes intentionally uncovered      : ${justified.length}`);
     lines.push(`routes UNCOVERED (must be zero)     : ${uncovered.length}`);

@@ -4,7 +4,7 @@
  * Two jobs:
  *
  *  1. **Completeness oracle (plan 7a/7d).** Runs the full capture plan and
- *     fails loudly if any route in `artifacts/route-table.txt` has no golden
+ *     fails loudly if any route in `fixtures/route-table.txt` has no golden
  *     and no documented justification. Run it with coverage to find actions
  *     that were *reached* but only on one branch:
  *

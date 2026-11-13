@@ -6,7 +6,7 @@
  * golden test, the typed route registry) can look up the exact shape a route
  * produces.
  *
- * Route keys are written exactly as `artifacts/route-table.txt` and the
+ * Route keys are written exactly as `test/fixtures/route-table.txt` and the
  * goldens spell them (`METHOD /path/{param}`).
  */
 import { z } from 'zod';

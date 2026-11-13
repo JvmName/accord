@@ -13,7 +13,7 @@
  * 'unauthorized' }. "Allow" means the request reached the action, which is
  * asserted as a specific non-401 status.
  *
- * The same table is written to .ai/plans/server-ts/artifacts/authz-matrix.txt.
+ * The same table is written to test/fixtures/authz-matrix.txt.
  *
  * Some assertions pin deliberate behavior: unauthenticated mat reads, and
  * judges unable to pause despite the `pause` permission existing for them.

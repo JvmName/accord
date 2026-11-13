@@ -8,7 +8,7 @@
  * than before would be a silent authorization downgrade.
  *
  * Two independent records of the route table are compared against the registry:
- *   1. `.ai/plans/server-ts/artifacts/route-table.txt` (`{param}` form);
+ *   1. `test/fixtures/route-table.txt` (`{param}` form);
  *   2. `test/characterization/fixtures/routeTable.txt` (raw `:param` paths,
  *      the `Controller#action` that owned each route, and the DEV flag).
  *
@@ -25,7 +25,7 @@ import { assertImplemented } from '../../src/http/router';
 import { routes } from '../../src/http/routes';
 import type { AuthorizeSpec } from '../../src/http/types';
 
-const ARTIFACT = path.join(__dirname, '..', '..', '..', '.ai', 'plans', 'server-ts', 'artifacts', 'route-table.txt');
+const ARTIFACT = path.join(__dirname, '..', 'fixtures', 'route-table.txt');
 const FIXTURE  = path.join(__dirname, '..', 'characterization', 'fixtures', 'routeTable.txt');
 
 const toOpenApiPath = (p: string) => p.replace(/:(\w+)/g, '{$1}');
