@@ -82,7 +82,7 @@ const fails   = (message) => ({ ok: false, error: 'Error', message });
 describe('lifecycle snapshot: harness', () => {
     it('the fixture holds exactly the scenarios defined, each with an outcome and a write log', () => {
         expect([...fixture.records.keys()].sort()).toEqual(Object.keys(built.scenarios).sort());
-        expect(fixture.records.size).toBeGreaterThanOrEqual(69);
+        expect(fixture.records.size).toBeGreaterThanOrEqual(67);
         for (const record of fixture.records.values()) {
             expect({ key: record.key, outcome: typeof record.outcome, writes: Array.isArray(record.writes), changes: typeof record.changes })
                 .toEqual({ key: record.key, outcome: 'object', writes: true, changes: 'object' });
@@ -265,12 +265,6 @@ describe('endRound + finishRound (route: POST /match/:id/rounds/end)', () => {
         expect(state.audit.filter((e) => e.tbl === 'riding_time_votes').map((e) => e.row.id)).toEqual([C.v1, C.v2, C.v3]);
     });
 
-    it('two open pauses: both are resumed when the round ends', async () => {
-        const { state } = await frozen('endRound.twoOpenPauses');
-        expect(rowOf(state, 'round_pauses', C.p1).resumed_at).not.toBeNull();
-        expect(rowOf(state, 'round_pauses', C.p2).resumed_at).not.toBeNull();
-    });
-
     it.each([
         ['match:break',      { safe: false }, 'No available round to end'],
         ['match:break',      undefined,       'No available round to end'],
@@ -345,11 +339,6 @@ describe('pauseRound / resumeRound', () => {
     it('resume a round that is not paused: throws "Round is not paused"', async () => {
         const { outcome } = await frozen('resume.notPaused');
         expect(outcome).toEqual(fails('Round is not paused'));
-    });
-
-    it('resume closes the LAST open pause', async () => {
-        const { state } = await frozen('resume.lastOpenPause');
-        expect(state.audit.map((e) => e.row.id)).toEqual([C.p2]);
     });
 
     it('pause, resume, pause again on the same round', async () => {

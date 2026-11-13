@@ -95,8 +95,8 @@ RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
   - `BreakTransitionWorker`: Checks matches in break state; when break expires, starts the next round and broadcasts `break.ended`
   - `RoundTimerWorker`: Checks open rounds for timer expiry; if elapsed time (minus pauses) ≥ max duration, ends the round and broadcasts `match.update`
   - **Critical**: Route handlers never emit WebSocket events directly — all WebSocket emissions go through the worker process exclusively.
-  - **Errors in a job**: `Worker._performJob` logs a throw from `performJob()` and queues the next tick, so one bad round does not stop the worker.
-  - **Races**: the web process and the worker write the same rows. Ending a round, ending a match and starting a match are claimed with a conditional `UPDATE ... WHERE <not yet done>` (`claimRoundEnd`, `claimMatchEnd`, `claimMatchStart`); the caller that loses writes nothing. `RoundTimerWorker` and `TechFallTrackerWorker` call `tryEndRound` and emit only if they ended the round, so a tech fall in the same second as the timer, or a master tap as the timer fires, ends the round once.
+  - **Errors in a job**: `Worker._performJob` logs a throw from `performJob()` and queues the next tick, so one bad round does not stop the worker. If the worker process itself exits, `bin/www.ts` restarts it (`src/workers/supervisor.ts`: a delay that doubles from 1 s to 30 s).
+  - **Races**: the web process and the worker write the same rows. Ending a round, ending a match and starting a match are claimed with a conditional `UPDATE ... WHERE <not yet done>` (`claimRoundEnd`, `claimMatchEnd`, `claimMatchStart`); the caller that loses writes nothing. Partial unique indexes allow one open vote per judge per round and one open pause per round. `RoundTimerWorker` and `TechFallTrackerWorker` call `tryEndRound` and emit only if they ended the round, so a tech fall in the same second as the timer, or a master tap as the timer fires, ends the round once.
 
 - **Break lifecycle**: When a round ends and the match is not over, `finishRound` (`/server/src/services/roundLifecycle.ts`) sets `break_started_at` and `break_duration` on the match. `MatchUpdateWorker` picks this up within 1 second and starts broadcasting `match.update` with `break_remaining` (computed seconds). `BreakTransitionWorker` auto-starts the next round when elapsed >= `break_duration` and emits `break.ended`.
 
@@ -110,6 +110,8 @@ RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
   - Auto-leaves room on cancellation
 
 ### Server Architecture
+
+Design decisions that are not obvious from the code (consistency model, the wire contract the client depends on, authorization, known limits) are in `/server/DESIGN.md`.
 
 **Layers** (all in `/server/src`, TypeScript, bun):
 - `db/`: Drizzle ORM over bun:sqlite. `schema.ts` is the schema; `repositories/` are plain query functions (no model classes, no association caching); `transaction.ts` is the transaction helper.

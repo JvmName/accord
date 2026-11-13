@@ -96,12 +96,18 @@ export async function pauseRound(db: DbOrTx, round: Pick<Round, 'id' | 'created_
     if (round.ended_at)    throw new Error('Round has already ended');
     if (await isRoundPaused(db, round.id)) throw new Error('Round is already paused');
 
-    await insertRoundPause(db, { round_id: round.id, paused_at: new Date() });
+    try {
+        await insertRoundPause(db, { round_id: round.id, paused_at: new Date() });
+    } catch (err) {
+        // A concurrent request paused the round after the check above.
+        if ((err as Error).message.startsWith('UNIQUE constraint failed')) throw new Error('Round is already paused');
+        throw err;
+    }
 }
 
 
 /**
- * Closes the LAST open pause (`resumed_at = now`), or
+ * Closes the open pause (`resumed_at = now`), or
  * `Error('Round is not paused')`. No ended-round check.
  */
 export async function resumeRound(db: DbOrTx, round: Pick<Round, 'id'>): Promise<void> {

@@ -79,15 +79,6 @@ function buildScenarios({ IDS, T0, NOW }) {
         addVote(add, C.v2, { round: C.r2, judge: IDS['user:judgeB'], competitor: IDS['user:red'], start: 310 });
     }
 
-    function twoOpenPauses(add) {
-        addMatch(add);
-        addRound(add, C.r1, { start: 500 });
-        add('round_pauses', [
-            { id: C.p1, round_id: C.r1, paused_at: iso(510), resumed_at: null, ...stamps(510) },
-            { id: C.p2, round_id: C.r1, paused_at: iso(520), resumed_at: null, ...stamps(520) },
-        ]);
-    }
-
     const judge = (k) => IDS[`user:${k}`];
     const S = {};
     const scenario = (key, steps, { setup, when }: { setup?: unknown; when?: number } = {}) => { S[key] = { key, steps, setup, at: when ?? NOW }; };
@@ -133,7 +124,6 @@ function buildScenarios({ IDS, T0, NOW }) {
             addVote(add, C.v3, { round: C.r1, judge: IDS['user:judgeB'], competitor: IDS['user:red'],  start: 522 });
         },
     });
-    scenario('endRound.twoOpenPauses', endRound(C.match, { safe: false }), { setup: twoOpenPauses });
     const NO_ROUND_CASES = [
         ['match:break',      { safe: false }],
         ['match:break',      undefined],
@@ -155,7 +145,6 @@ function buildScenarios({ IDS, T0, NOW }) {
     for (const key of ['match:paused', 'match:break']) scenario(`pause.throws:${key}`, [{ op: 'pause', match: id(key) }]);
     scenario('resume.paused', [{ op: 'resume', match: id('match:paused') }]);
     scenario('resume.notPaused', [{ op: 'resume', match: id('match:toPause') }]);
-    scenario('resume.lastOpenPause', [{ op: 'resume', match: C.match }], { setup: twoOpenPauses });
     scenario('pause.resume.pause', ['pause', 'resume', 'pause'].map((op) => ({ op, match: id('match:toPause') })));
 
     const setResult = (key, winner, stoppage, times = 1) =>

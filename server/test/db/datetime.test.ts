@@ -31,14 +31,14 @@ afterEach(() => {
 const raw = (id) => db.$client.query('SELECT * FROM round_pauses WHERE id = ?').get(id);
 
 const drizzleInsert = (values) => db.insert(schema.round_pauses).values({
-    round_id: 'r', created_at: new Date(), updated_at: new Date(), ...values,
+    round_id: values.id ?? crypto.randomUUID(), created_at: new Date(), updated_at: new Date(), ...values,
 }).returning().then(([row]) => row);
 
 /** A row written as raw text, the way any other writer of the file stores it. */
 function rawInsert({ id, pausedAt, resumedAt = null }: { id: string; pausedAt: Date; resumedAt?: Date | null }) {
     const now = new Date().toISOString();
     db.$client.query('INSERT INTO round_pauses (id, round_id, paused_at, resumed_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-        .run(id, 'r', pausedAt.toISOString(), resumedAt ? resumedAt.toISOString() : null, now, now);
+        .run(id, id, pausedAt.toISOString(), resumedAt ? resumedAt.toISOString() : null, now, now);
 }
 
 
@@ -51,7 +51,7 @@ describe('codec', () => {
     });
 
     it('reads unparseable text as an Invalid Date rather than throwing', async () => {
-        db.$client.query("INSERT INTO round_pauses (id, round_id, paused_at, created_at, updated_at) VALUES ('g', 'r', 'garbage', 'garbage', 'garbage')").run();
+        db.$client.query("INSERT INTO round_pauses (id, round_id, paused_at, created_at, updated_at) VALUES ('g', 'g', 'garbage', 'garbage', 'garbage')").run();
         const [found] = await db.select().from(schema.round_pauses).where(eq(schema.round_pauses.id, 'g'));
         expect(found.paused_at).toBeInstanceOf(Date);
         expect(Number.isNaN(found.paused_at.getTime())).toBe(true);

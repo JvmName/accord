@@ -15,6 +15,13 @@
       "when": 1794555407161,
       "tag": "0001_one_open_vote_per_judge",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794557457222,
+      "tag": "0002_one_open_pause_per_round",
+      "breakpoints": true
     }
   ]
 }

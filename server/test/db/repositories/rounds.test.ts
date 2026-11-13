@@ -67,14 +67,18 @@ describe('pauses', () => {
         expect(pauses[0].resumed_at).toBeNull();
     });
 
-    it('findCurrentPause: the LAST open pause in insertion order, else null', async () => {
+    it('findCurrentPause: the open pause, else null', async () => {
         expect(await Rounds.findCurrentPause(db, 'r1')).toBeNull();
         insertRows(db, 'round_pauses', [
-            { id: 'open-1', round_id: 'r1', paused_at: at(110), ...stampsAt(110) },
-            { id: 'open-2', round_id: 'r1', paused_at: at(105), ...stampsAt(105) },
             { id: 'closed', round_id: 'r1', paused_at: at(120), resumed_at: at(125), ...stampsAt(120) },
+            { id: 'open', round_id: 'r1', paused_at: at(130), ...stampsAt(130) },
         ]);
-        expect((await Rounds.findCurrentPause(db, 'r1'))!.id).toBe('open-2');
+        expect((await Rounds.findCurrentPause(db, 'r1'))!.id).toBe('open');
+    });
+
+    it('the database refuses a second open pause for a round', async () => {
+        insertRows(db, 'round_pauses', [{ id: 'open', round_id: 'r1', paused_at: at(130), ...stampsAt(130) }]);
+        expect(() => insertRows(db, 'round_pauses', [{ id: 'second', round_id: 'r1', paused_at: at(140), ...stampsAt(140) }])).toThrow(/UNIQUE constraint failed/);
     });
 
     it('insertRoundPause / setPauseResumed', async () => {

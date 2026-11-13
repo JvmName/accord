@@ -16,6 +16,7 @@ import { insertRound, updateRound } from '../../src/db/repositories/rounds';
 import { insertUser } from '../../src/db/repositories/users';
 import { CommandRefused } from '../../src/services/errors';
 import { endMatch, endRound, startMatch } from '../../src/services/matchLifecycle';
+import { pauseRound } from '../../src/services/roundLifecycle';
 import { startRidingTime } from '../../src/services/ridingTimeVotes';
 import { RoundTimerWorker } from '../../src/workers';
 import { installAudit } from './support';
@@ -112,6 +113,19 @@ describe('two connections starting riding time for the same judge', () => {
 
         expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
         expect(a.$client.query('SELECT count(*) AS n FROM riding_time_votes WHERE ended_at IS NULL').get()).toEqual({ n: 1 });
+    });
+});
+
+
+describe('two connections pausing the same round', () => {
+    it('open one pause, and the loser is refused', async () => {
+        const { open } = await seed(0);
+
+        const results = await Promise.allSettled([pauseRound(a, open), pauseRound(b, open)]);
+
+        expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+        expect((results.find((r) => r.status === 'rejected') as PromiseRejectedResult).reason.message).toBe('Round is already paused');
+        expect(a.$client.query('SELECT count(*) AS n FROM round_pauses WHERE resumed_at IS NULL').get()).toEqual({ n: 1 });
     });
 });
 

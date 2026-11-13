@@ -122,7 +122,7 @@ export const riding_time_votes = sqliteTable('riding_time_votes', {
     uniqueIndex('riding_time_votes_one_open_per_judge').on(t.round_id, t.judge_id).where(sql`\`ended_at\` IS NULL`),
 ]);
 
-/** `round_pauses` (createRoundPauses). Open pause = `resumed_at` NULL. */
+/** `round_pauses`. Open pause = `resumed_at` NULL; a round has at most one. */
 export const round_pauses = sqliteTable('round_pauses', {
     id:         uuidPk(),
     round_id:   text('round_id').notNull(),
@@ -131,6 +131,7 @@ export const round_pauses = sqliteTable('round_pauses', {
     ...timestamps(),
 }, (t) => [
     index('round_pauses_round_id').on(t.round_id),
+    uniqueIndex('round_pauses_one_open_per_round').on(t.round_id).where(sql`\`resumed_at\` IS NULL`),
 ]);
 
 /* --- join tables: no id, no primary key (created with `{id: false}`) ------ */

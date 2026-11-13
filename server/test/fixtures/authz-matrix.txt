@@ -17,8 +17,7 @@
 #   outsider  authenticated, but unrelated to the mat
 #   anon      no x-api-token header at all
 #
-# This table is FIDELITY, not correctness. Rows marked [F-nn] pin behavior that
-# is arguably wrong; see .ai/plans/server-ts/FINDINGS.md.
+# Deny is 401 with `{ data: null, status: 'unauthorized' }`. See DESIGN.md.
 
 ================================================================================
 MAT SCOPE
