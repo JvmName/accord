@@ -1,7 +1,7 @@
 {
   "name": "http.rounds.pause.asJudge.401",
   "route": "POST /match/{matchId}/rounds/pause",
-  "why": "FINDINGS F-11: the `pause` permission grants judges access, but authenticateMatch demands `manage` first, so the judge branch is unreachable over HTTP. Pinned as-is.",
+  "why": "The `pause` permission grants judges access, but the route demands `manage` first, so only the master can pause.",
   "request": {
     "method": "POST",
     "path": "/match/<match:toPause>/rounds/pause",

@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest,
 /**
  * DB-free unit tests for the pure scoring derivations
  * (src/domain/scoring.ts) and the RDojoKombat ruleset's use of them,
- * server-ts task 08. Everything is plain objects — no models, no database.
+ * Everything is plain objects — no database.
  */
 const { scoreRidingTime, determineRoundResult, getMatchWinner, getRoundScore, getRoundResult } = require('../../src/domain/scoring');
 const { RDojoKombatRules } = require('../../src/domain/rules');

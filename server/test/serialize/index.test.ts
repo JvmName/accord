@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 /**
- * src/serialize module hygiene and the opt-in runtime contract check (task 11).
+ * src/serialize module hygiene and the opt-in runtime contract check.
  */
 import fs from 'fs';
 import path from 'path';

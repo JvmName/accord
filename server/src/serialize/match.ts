@@ -1,29 +1,26 @@
 /**
- * `Match` -> wire (server-ts task 11).
- *
- * Legacy: `Match#toApiResponse(options)` (`models/match.js`):
+ * `Match` -> wire.
  *
  *   creator_id, id, mat_id, started_at, ended_at, break_started_at,
- *   break_duration                      `apiSafeKeys`, each `|| null`
+ *   break_duration                      the stored values
  *   red_competitor, blue_competitor     the competitor users (null if missing)
  *   winner                              best-of-maxRounds over the ENDED rounds
  *   break_remaining                     computed on EVERY render, HTTP included
- *                                       (FINDINGS F-20; README/CLAUDE.md wrong)
+ *                                       (a live countdown during a break)
  *   mat / judges / rounds               ONLY under includeMat /
  *                                       includeMatchJudges / includeRounds,
  *                                       otherwise ABSENT (never null)
  *
  * `red_score` / `blue_score` are columns but are deliberately NOT emitted:
- * `apiSafeKeys` is an explicit list that omits them. They must stay ABSENT
+ * the list of keys is explicit and omits them. They must stay ABSENT
  * (not null), see `test/serialize/match.test.ts`.
  *
  * The absent-vs-null split is what the Kotlin client's `Match.merge()`
  * (`models_ext.kt`) relies on: absent = keep cached, null = genuinely empty.
  * Partial payloads in the wild: `POST /mat/:code/matches` (`includeMat` only),
- * the round/ridingTime routes (`includeMat` + `includeRounds`; they pass
- * `includeJudges`, which is not an option, so `judges` is absent), the
- * matches nested in `Mat.current_match` / `upcoming_matches` (no includes),
- * and `round.tech-fall` (`includeRounds` only).
+ * the round/ridingTime routes (`includeMat` + `includeRounds`, so `judges` is
+ * absent), the matches nested in `Mat.current_match` / `upcoming_matches` (no
+ * includes), and `round.tech-fall` (`includeRounds` only).
  *
  * Input is always the full graph (`findMatchGraph` / `findMatchGraphsByIds`),
  * even when no association is rendered: `winner` needs every round's score.
@@ -45,9 +42,8 @@ const rules = RDojoKombatRules;
 export type MatchInput = MatchGraph;
 
 /**
- * Which optional associations to render. Named after the legacy render
- * options so a ported route passes the same flags it passed before. Each
- * association key is present on the wire if and only if its flag is truthy.
+ * Which optional associations to render. Each association key is present on
+ * the wire if and only if its flag is truthy.
  */
 export interface MatchRenderOptions extends ClockOptions {
     includeMat?: boolean;
@@ -66,13 +62,11 @@ export function matchBreakRemaining(match: Pick<MatchGraph, 'break_started_at' |
 }
 
 /**
- * `Match#getWinner()`: `null` until `maxRounds` rounds have ENDED (no early
+ * The match winner: `null` until `maxRounds` rounds have ENDED (no early
  * exit at 2 wins); then the competitor who won more of the ended rounds, or
  * `null` for a draw. Every ended round's winner is computed with the round
  * scoring (`roundOutcome`), and the id comparison is `getMatchWinner`'s. The
- * winner resolves to the competitor ROW (`null` if that row is missing), as
- * legacy re-fetched it with `getRedCompetitor()` / `getBlueCompetitor()`.
- * (F-34's memoization is not reproduced: there is no instance to cache on.)
+ * winner resolves to the competitor ROW (`null` if that row is missing).
  */
 export function matchWinner(match: MatchInput, now: Date): User | null {
     const ended = match.rounds.filter((r) => Boolean(r.ended_at));
@@ -109,15 +103,13 @@ function renderMatch<U, R>(match: MatchInput,
     };
 
     if (options.includeMat) {
-        // Legacy `(await this.getMat()).toApiResponse(options)` throws on a
-        // missing mat row; so does this. The nested mat is rendered with the
-        // match's options, none of which is a mat include (no route combines
-        // them), so it is always the bare mat.
+        // A missing mat row throws. The nested mat is always the bare mat:
+        // no route combines a mat include with a match include.
         if (!match.mat) throw new TypeError(`Cannot render match ${match.id}: its mat ${match.mat_id} does not exist`);
         response.mat = serializeMat(match.mat);
     }
     if (options.includeMatchJudges) {
-        // Match judges always go through `User#toApiResponse`: safe even on the WS path.
+        // Judges always go through the safe user shape, on every transport.
         response.judges = match.judges.map((judge) => serializeUser(judge));
     }
     if (options.includeRounds) {

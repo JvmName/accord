@@ -1,24 +1,17 @@
 /**
- * `Mat` -> wire (server-ts task 11).
+ * `Mat` -> wire.
  *
- * Legacy: `Mat` has no `apiSafeKeys` override, so `BaseRecord` renders the
- * `mats` columns minus `created_at`/`updated_at`: `id`, `name`,
- * `judge_count`, `creator_id`, each `|| null`. `Mat#toApiResponse(options)`
- * (`models/mat.js`) then adds, ONLY when asked (absent otherwise, never null):
+ * `id`, `name`, `judge_count` and `creator_id` are always present. The rest
+ * are present ONLY when the data is passed (absent otherwise, never null):
  *
- *   judges            includeMatJudges   mat judges (`judges_mats`), safe users
- *   codes             includeCodes       `POST /mats` only
- *   current_match     includeMatches     earliest-created STARTED incomplete
- *                                        match, or `null` (the `undefined`
- *                                        from `find()` is rendered as null)
- *   upcoming_matches  includeMatches     the not-started incomplete matches
+ *   judges            mat judges (`judges_mats`), safe users
+ *   codes             `POST /mats` only
+ *   current_match     earliest-created STARTED incomplete match, or `null`
+ *   upcoming_matches  the not-started incomplete matches
  *
- * Here the presence of the data decides the presence of the key: pass
- * `judges` to render `judges`, and so on. `incompleteMatches` are full match
- * graphs (`findMatchGraphsByIds` over `findMatGraph().incompleteMatches`),
- * because each nested match renders its `winner`; they are rendered with no
- * match includes, exactly as the legacy options object (which never carries
- * a match include on a mat route) produced.
+ * `incompleteMatches` are full match graphs (`findMatchGraphsByIds` over
+ * `findMatGraph().incompleteMatches`), because each nested match renders its
+ * `winner`; they are rendered with no match includes.
  */
 import type { Mat as WireMat, Match as WireMatch } from '../contract';
 import type { MatchGraph } from '../db/repositories/matches';
@@ -31,22 +24,22 @@ import { resolveNow, type ClockOptions } from './values';
 export type MatInput = Pick<Mat, 'id' | 'name' | 'judge_count' | 'creator_id'>;
 
 export interface MatRenderOptions extends ClockOptions {
-    /** `includeMatJudges`: the mat's judges (`findMatJudges` / `findMatGraph().judges`). */
+    /** The mat's judges (`findMatJudges` / `findMatGraph().judges`). */
     judges?: readonly UserInput[];
-    /** `includeCodes`: the mat's codes (`findMatCodesForMat`). */
+    /** The mat's codes (`findMatCodesForMat`). */
     codes?: readonly MatCodeInput[];
     /**
-     * `includeMatches`: the mat's INCOMPLETE matches as graphs, in any order
-     * (they are sorted here by `created_at`, stably, as legacy sorted them).
+     * The mat's INCOMPLETE matches as graphs, in any order (they are sorted
+     * here by `created_at`, stably).
      */
     incompleteMatches?: readonly MatchGraph[];
 }
 
 /**
- * `Mat#toApiResponse`'s split of the incomplete matches: stable sort by
+ * Splits the incomplete matches: stable sort by
  * `created_at` (`m1.sortKey - m2.sortKey`), then the first STARTED one is
  * current and every not-started one is upcoming. A started match that is not
- * the first is in neither list, as before.
+ * the first is in neither list.
  */
 export function splitIncompleteMatches(matches: readonly MatchGraph[]): { current: MatchGraph | null; upcoming: MatchGraph[] } {
     const sorted = matches.slice().sort((m1, m2) => new Date(m1.created_at).getTime() - new Date(m2.created_at).getTime());

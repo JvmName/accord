@@ -1,25 +1,17 @@
 /**
- * Authentication + authorization gates (server-ts task 12): the replacement for
- * the controllers' before-callbacks (`authenticateRequest`, `requireMatch`,
- * `authenticateMatch`) and the unconditional `authorize()` calls at the top of
- * actions.
+ * Authentication + authorization gates.
  *
- * SECURITY BOUNDARY. Each `AuthorizeSpec` variant expands to the exact legacy
- * check sequence, in the legacy order, because the order is observable:
- * whichever check fails first decides between 401, 404 and 400. Every
- * expansion below cites the code it reproduces. Proven by
- * `test/http/authorizationParity.test.ts` (the task-02b matrix, every row,
- * grants AND denies) and `test/http/permissions.test.ts` (differential against
- * the legacy `Authorizer`).
+ * SECURITY BOUNDARY. Each `AuthorizeSpec` variant expands to a fixed check
+ * sequence, in a fixed order, because the order is observable: whichever check
+ * fails first decides between 401, 404 and 400. Proven by
+ * `test/http/authorizationParity.test.ts` (the authorization matrix, every
+ * row, grants AND denies) and `test/http/permissions.test.ts`.
  *
- * A gate either passes (returns `null`), returns a `Rendered` (404 / 400, as the
- * legacy callbacks rendered and returned `false`), or throws
- * `AuthorizationError` (401, as legacy `authorize()` threw).
+ * A gate either passes (returns `null`), returns a `Rendered` (404 / 400), or
+ * throws `AuthorizationError` (401).
  *
- * Note on `authenticateRequest`: legacy also ran `authorize('view', mat)` and
- * `authorize('view', match)` for whatever mat/match the bag resolved. Both are
- * unconditionally `true` for a non-null scope and are skipped for a null one,
- * so they can never deny and are not repeated here.
+ * Viewing a mat or a match is unconditionally allowed for a non-null scope, so
+ * those checks can never deny and are not repeated here.
  */
 import type { NextFunction, Request, Response } from 'express';
 import type { DbOrTx } from '../../db/repositories/internal';
@@ -29,7 +21,7 @@ import { can, repositoryLoaders, type ActionFor, type PermissionLoaders, type Sc
 import type { AuthorizeSpec } from '../types';
 import { getRequestState, type RequestState } from './requestState';
 
-/** Legacy `ServerController#authorize(action, scope)`: throw on deny. */
+/** Throws `AuthorizationError` when `subject` may not do `action` to `scope`. */
 export async function assertCan<S extends Scope>(
     subject: Subject,
     action: ActionFor<S>,
@@ -65,9 +57,8 @@ export async function runGates(spec: AuthorizeSpec, state: RequestState, loaders
             return null;
 
         case 'mat':
-            // MatsController#getMat: `authorize('view', this.currentMat)`.
-            // Unauthenticated BY DESIGN (F-15, decision 2026-10-11). A missing
-            // mat is a 404 (F-16; it used to be a 401).
+            // Unauthenticated BY DESIGN: a mat's page is public. A missing mat
+            // is a 404.
             if (!state.currentMat) return renderNotFound();
             await assertCan(subject, 'view', { kind: 'mat', mat: state.currentMat }, loaders);
             return null;
@@ -75,29 +66,23 @@ export async function runGates(spec: AuthorizeSpec, state: RequestState, loaders
         case 'matCode':
             switch (spec.level) {
                 case 'public':
-                    // `POST /mat/:matCode/join` is excluded from authenticateRequest
-                    // (`except: 'postJoin'`). Its unknown-code 404 and its
-                    // role-dependent assign/'be assigned judge' checks live in the
-                    // handler (`addUser`), so nothing is checked here.
+                    // `POST /mat/:matCode/join` takes no token. Its unknown-code
+                    // 404 and its role-dependent assign/'be assigned judge' checks
+                    // live in the handler (`addUser`), so nothing is checked here.
                     return null;
 
                 case 'view':
                     // Authentication first (401), then the mat (404): an anonymous
-                    // caller gets 401 whether or not the code exists (F-74; the
-                    // legacy controller never awaited its authentication check, so
-                    // a missing mat used to win).
+                    // caller gets 401 whether or not the code exists.
                     if (!state.currentUser) return renderUnauthorized();
                     if (!state.currentMat) return renderNotFound();
                     return null;
 
                 case 'create a match':
-                    // MatchesController: authenticateRequest (401 without a user),
-                    // `requireMatch` skipped for postIndex, then the action's
-                    //     authorize('create a match', currentMat)
-                    //     authorize('assign',         currentMat)
-                    // (identical checks: the request's mat code must be the ADMIN
-                    // code OF THIS MAT; membership is irrelevant). A missing mat is
-                    // a 404 (F-16).
+                    // 401 without a user, 404 for a missing mat, then both
+                    // 'create a match' and 'assign' (identical checks: the
+                    // request's mat code must be the ADMIN code OF THIS MAT;
+                    // membership is irrelevant).
                     if (!state.currentUser) return renderUnauthorized();
                     if (!state.currentMat) return renderNotFound();
                     await assertCan(subject, 'create a match', { kind: 'mat', mat: state.currentMat }, loaders);
@@ -107,17 +92,9 @@ export async function runGates(spec: AuthorizeSpec, state: RequestState, loaders
             break;
 
         case 'match':
-            // Common prefix of MatchesController (authenticateRequest,
-            // requireMatch), RoundsController and RidingTimeVoteController
-            // (authenticateRequest, authenticateMatch).
+            // The common prefix of every match route: 401, then 404.
             if (!state.currentUser) return renderUnauthorized();
             if (!state.currentMatch) {
-                // F-25.1: MatchesController#requireMatch rendered this 404 but
-                // returned `undefined`, so the action ran anyway and wrote a
-                // second response (ERR_HTTP_HEADERS_SENT, logged as a 500, plus
-                // an unhandled rejection). The client only ever saw this 404;
-                // stopping here removes the double write without changing the
-                // wire.
                 return renderNotFound();
             }
 
@@ -138,7 +115,7 @@ export async function runGates(spec: AuthorizeSpec, state: RequestState, loaders
                     // postPauseRound / postResumeRound. RoundsController#authenticateMatch
                     // authorizes 'manage' FIRST, then the action authorizes 'pause'
                     // (= manage || judge). The judge branch of 'pause' is therefore
-                    // unreachable (F-11): judges get 401 here. Decision 2026-10-11:
+                    // unreachable: judges get 401 here. Decision 2026-10-11:
                     // only the master may pause, so this is the intended behaviour.
                     // Both checks are kept, in order, so the effective rule is
                     // reproduced rather than re-derived.

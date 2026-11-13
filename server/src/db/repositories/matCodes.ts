@@ -1,7 +1,6 @@
 /**
- * `mat_codes` repository (server-ts task 10). Code generation
- * (`MatCode.generateCode()`, which calls the external word generator) is not
- * data access and is not here; the regexp and roles are in
+ * `mat_codes` repository. Code generation (the external word generator) is
+ * not data access and is not here; the regexp and roles are in
  * `src/domain/matCode.ts`.
  */
 import { asc, eq } from 'drizzle-orm';
@@ -10,11 +9,9 @@ import type { MatCode } from '../types';
 import { assertDefined, insertStamps, orNull, type DbOrTx, inserted } from './internal';
 
 /**
- * `MatCode.findByCode(code)`: exact, case-sensitive equality on the unique
- * `code` column (no regexp check here; the caller discriminates with
- * `isMatCode`). Returns the row or `null` (Sequelize `findOne`). `undefined`
- * throws like Sequelize's `where: {code: undefined}`; the only caller guards
- * with `if (matCode)`.
+ * Exact, case-sensitive equality on the unique `code` column (no regexp check
+ * here; the caller discriminates with `isMatCode`). Returns the row or `null`.
+ * `undefined` throws; the only caller guards with `if (matCode)`.
  */
 export async function findMatCodeByCode(db: DbOrTx, code: string | null | undefined): Promise<MatCode | null> {
     assertDefined(code, 'code');
@@ -23,9 +20,8 @@ export async function findMatCodeByCode(db: DbOrTx, code: string | null | undefi
 }
 
 /**
- * `mat.getMatCodes()` (Mat#toApiResponse `includeCodes`). Legacy order: SQLite
- * walks the unique index `(mat_id, role)`, so rows come back by `role`
- * (`admin` before `viewer`), not by insertion.
+ * A mat's codes, by `role` (`admin` before `viewer`), not by insertion
+ * (SQLite walks the unique index `(mat_id, role)`).
  */
 export async function findMatCodesForMat(db: DbOrTx, matId: string): Promise<MatCode[]> {
     return await db.query.mat_codes.findMany({

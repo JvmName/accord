@@ -7,13 +7,12 @@
  * second table is a SECURITY BOUNDARY: a route declared with a weaker level
  * than before would be a silent authorization downgrade.
  *
- * Two independent records of the old table are compared against the registry:
+ * Two independent records of the route table are compared against the registry:
  *   1. `.ai/plans/server-ts/artifacts/route-table.txt` (`{param}` form);
  *   2. `test/characterization/fixtures/routeTable.txt` (raw `:param` paths,
  *      the `Controller#action` that owned each route, and the DEV flag).
  *
- * Order is not compared: the old registration order depended on directory
- * listing order. The registry's order is the explicit array in
+ * Order is not compared. The registry's order is the explicit array in
  * `src/http/routes/index.ts`.
  */
 import { describe, expect, it } from 'bun:test';
@@ -207,7 +206,7 @@ describe('route registry: no reflection', () => {
         expect(files.length).toBeGreaterThan(5);
         for (const file of files) {
             const code = fs.readFileSync(file, 'utf8')
-                // comments may NAME the legacy mechanisms; only code is checked
+                // comments may NAME the old mechanisms; only code is checked
                 .replace(/\/\*[\s\S]*?\*\//g, '')
                 .replace(/^\s*\/\/.*$/gm, '');
             expect({ file, readdir: /readdir/.test(code) }).toEqual({ file, readdir: false });

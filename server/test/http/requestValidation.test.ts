@@ -158,7 +158,7 @@ describe('PATCH /match/:matchId/rounds/result', () => {
     });
 });
 
-describe('path parameters are the only way to address a resource (F-73)', () => {
+describe('path parameters are the only way to address a resource', () => {
     it('ignores matId / matCode / matchId in the query and the body', async () => {
         const master = await newUser();
         const { mat, match } = await newMatch(master);
@@ -171,7 +171,7 @@ describe('path parameters are the only way to address a resource (F-73)', () => 
         expect(matchViaQuery.body.data.match.id).toBe(match.id);
 
         const leave = await request('DELETE', `/mat/${other.adminCode}/join?matCode=&matId=${mat.id}`, { token: master });
-        // It used to answer 500 with an engine TypeError (F-84); it now acts on the path code only.
+        // It used to answer 500 with an engine TypeError; it now acts on the path code only.
         expect(leave.status).not.toBe(500);
     });
 

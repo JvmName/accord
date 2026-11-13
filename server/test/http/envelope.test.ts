@@ -53,7 +53,7 @@ describe('envelope: statusText', () => {
         for (const code of [201, 204, 403, 409, 503]) expect(statusText(code)).toBeUndefined();
     });
 
-    it('a 422 envelope carries status "unprocessable entity" (F-21)', () => {
+    it('a 422 envelope carries status "unprocessable entity"', () => {
         expect(JSON.stringify(envelopeFor(422, { errors: { matchId: ['x'] } }))).toBe('{"data":{"errors":{"matchId":["x"]}},"status":"unprocessable entity"}');
     });
 });
@@ -289,7 +289,7 @@ describe('errors: a REAL SQLite unique violation through Drizzle', () => {
         expect(uniqueViolationErrors(null)).toBeNull();
     });
 
-    it('does not treat a NOT NULL violation from the real database as a unique violation (F-78)', async () => {
+    it('does not treat a NOT NULL violation from the real database as a unique violation', async () => {
         let err: unknown;
         try {
             await probeApp.db.$client.run("INSERT INTO users (id, name, api_token, created_at, updated_at) VALUES ('x', NULL, 't', 'n', 'n')");

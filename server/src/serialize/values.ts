@@ -3,11 +3,9 @@
  */
 
 /**
- * `ServerController#_formatJSONBody` renders a `Date` as `toISOString()`
- * (`lib/server/serverController.js`). Drizzle rows carry `Date` objects
+ * Renders a `Date` as `toISOString()`. Drizzle rows carry `Date` objects
  * (`isoDateTime` column type), so every timestamp passes through here.
- * `null` stays `null`. A non-Date value is passed through unchanged, as the
- * legacy walker did.
+ * `null` stays `null`. A non-Date value is passed through unchanged.
  */
 export function wireTime(value: Date): string;
 export function wireTime(value: Date | null | undefined): string | null;
@@ -20,10 +18,9 @@ export function wireTime(value: Date | null | undefined): string | null {
 /**
  * Options shared by every mapper that renders a time-dependent value
  * (`Round.score` for open votes, `Round.time_remaining`,
- * `Match.break_remaining`). Legacy read the wall clock (`new Date()` /
- * `Date.now()`) at render time; here it is injected so tests and golden
+ * `Match.break_remaining`). The clock is injected so tests and golden
  * replays with a frozen clock are deterministic. Defaults to `new Date()`
- * at call time, which is exactly the legacy behaviour.
+ * at call time.
  */
 export interface ClockOptions {
     now?: Date;

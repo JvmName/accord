@@ -3,6 +3,7 @@
  * and viewers. The admin code makes the caller a judge (of the mat, and of the
  * match in progress if there is one); the viewer code makes them a viewer.
  */
+import { present } from '../../domain/present';
 import { routeResponses } from '../../contract/responses';
 import { joinMatRequestSchema } from '../../contract/requests';
 import { addMatchJudge, findMatchJudges, removeMatchJudge } from '../../db/repositories/matches';
@@ -170,13 +171,9 @@ export const deleteMatJoin = defineRoute({
     tags:      ['mat/users'],
     openapi:   { description: 'Leave a mat (remove self as viewer or judge)' },
     handler: async ctx => {
-        if (!ctx.currentMatCode) {
-            // Reachable only with `?matCode=&matId=<id>`: the mat resolves from
-            // the id and there is no code. The legacy controller dereferenced the
-            // missing code, and this 500 with the engine's message is what went out.
-            throw new TypeError("null is not an object (evaluating 'this.currentMatCode.role')");
-        }
-        await removeUser(ctx, ctx.currentUser, ctx.currentMatCode.role);
+        // Validation only lets a mat code through, so the code is resolved.
+        const matCode = present(ctx.currentMatCode, 'the mat code');
+        await removeUser(ctx, ctx.currentUser, matCode.role);
 
         const judges = await findMatJudges(ctx.db, ctx.currentMat.id);
         return { mat: serializeMat(ctx.currentMat, { judges }) };

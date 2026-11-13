@@ -1,15 +1,14 @@
 /**
- * Test harness for the task-12 route registry. Not a test file.
+ * Test harness for the route registry. Not a test file.
  *
  * Mounts the REAL route definitions (`src/http/routes`), with their real
  * authorization specs, request schemas and middleware, on a throwaway Express
  * app over a scratch IN-MEMORY Drizzle database (created from the Drizzle
- * baseline). Only the HANDLERS are replaced: every route gets a stub (the
- * real handlers are ported in 13a/13b). No real sqlite file is touched and
- * Sequelize is never involved.
+ * baseline). Only the HANDLERS are replaced: every route gets a stub. No real
+ * sqlite file is touched.
  *
- * The app installs the same global body parsing the legacy app does
- * (`legacyBodyParsers()`), so the request reaching the registry is shaped as
+ * The app installs the same global body parsing the application does
+ * (`bodyParsers()`), so the request reaching the registry is shaped as
  * it will be in production.
  */
 import express from 'express';
@@ -21,7 +20,7 @@ import { insertMatch, setMatchJudges, updateMatch } from '../../../src/db/reposi
 import { insertRound, updateRound } from '../../../src/db/repositories/rounds';
 import { insertUser } from '../../../src/db/repositories/users';
 import type { Mat, Match, User } from '../../../src/db/types';
-import { legacyBodyParsers, registerRoutes } from '../../../src/http/router';
+import { bodyParsers, registerRoutes } from '../../../src/http/router';
 import { routes as declaredRoutes } from '../../../src/http/routes';
 import type { AnyRouteDefinition } from '../../../src/http/types';
 
@@ -65,7 +64,7 @@ export async function startRegistryApp(options: {
     })) as AnyRouteDefinition[];
 
     const app = express();
-    app.use(...legacyBodyParsers());
+    app.use(...bodyParsers());
     registerRoutes(app, stubbed, { db, dev: options.dev ?? false });
 
     const server = await new Promise<ReturnType<typeof app.listen>>(resolve => {
@@ -86,8 +85,8 @@ export async function startRegistryApp(options: {
 }
 
 // ---------------------------------------------------------------------------
-// Fixture builders (repositories only; the legacy equivalents are the HTTP
-// calls in test/characterization/authorization.test.ts#createWorld).
+// Fixture builders (repositories only; the HTTP equivalents are the calls in
+// test/characterization/authorization.test.ts#createWorld).
 // ---------------------------------------------------------------------------
 
 let counter = 0;
@@ -107,7 +106,7 @@ export interface World {
 }
 
 /**
- * The task-02b world: creator (mat.creator_id), judge (joined with the ADMIN
+ * The world: creator (mat.creator_id), judge (joined with the ADMIN
  * code -> mat judge), viewer (joined with the VIEWER code), outsider.
  */
 export async function createWorld(db: Db): Promise<World> {

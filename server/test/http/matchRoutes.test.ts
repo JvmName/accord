@@ -1,7 +1,6 @@
 /**
  * Match, round and riding-time routes served by the running application:
- * behavior the contract goldens do not cover, kept exactly as the legacy
- * controllers had it.
+ * behavior the contract goldens do not cover.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import net from 'net';
@@ -46,7 +45,7 @@ afterAll(() => booted?.server.close());
 describe('match routes', () => {
     const userCount = () => booted.server.db.$client.query('SELECT count(*) AS n FROM users').get().n;
 
-    it('answers 400 for a competitor id that is not a UUID string, and creates nobody (F-91)', async () => {
+    it('answers 400 for a competitor id that is not a UUID string, and creates nobody', async () => {
         const { master, adminCode } = await createMatch(1);
         const usersBefore = userCount();
 
@@ -58,7 +57,7 @@ describe('match routes', () => {
         expect(userCount()).toBe(usersBefore);
     });
 
-    it('answers 401 for an unknown competitor id, and creates nobody even when the other competitor is new (F-91)', async () => {
+    it('answers 401 for an unknown competitor id, and creates nobody even when the other competitor is new', async () => {
         const { master, adminCode } = await createMatch(1);
         const usersBefore = userCount();
 
@@ -78,7 +77,7 @@ describe('match routes', () => {
         expect(res).toEqual({ status: 400, body: { data: { errors: { red: ['id or name required'] } }, status: 'bad request' } });
     });
 
-    it('ending the match during the final round ends it and answers 200 (F-54)', async () => {
+    it('ending the match during the final round ends it and answers 200', async () => {
         const { master, match } = await createMatch(1);
         expect((await request('POST', `/match/${match.id}/start`, { token: master })).status).toBe(200);
         for (let round = 1; round < 3; round++) {
@@ -97,7 +96,7 @@ describe('match routes', () => {
         expect(after.rounds.every((round: { ended_at: string | null }) => round.ended_at !== null)).toBe(true);
     });
 
-    it('refuses to open a round on a match that has not started (F-56)', async () => {
+    it('refuses to open a round on a match that has not started', async () => {
         const { master, match } = await createMatch(1);
 
         const res = await request('POST', `/match/${match.id}/rounds`, { token: master });
@@ -107,7 +106,7 @@ describe('match routes', () => {
         expect(after.rounds).toHaveLength(0);
     });
 
-    it('refuses to open a round on a match that has ended (F-56)', async () => {
+    it('refuses to open a round on a match that has ended', async () => {
         const { master, match } = await createMatch(1);
         expect((await request('POST', `/match/${match.id}/start`, { token: master })).status).toBe(200);
         expect((await request('POST', `/match/${match.id}/end`, { token: master })).status).toBe(200);
@@ -160,7 +159,7 @@ describe('match routes', () => {
 
         socket.write(`GET /match/${UNKNOWN_ID} HTTP/1.1\r\nHost: test\r\nx-api-token: ${token}\r\nConnection: keep-alive\r\n\r\n`);
         await waitFor(1);
-        // Give a socket teardown (what the legacy double render caused) time to land.
+        // Give a socket teardown (what a double render used to cause) time to land.
         await new Promise(resolve => setTimeout(resolve, 50));
         expect(closed).toBe(false);
 

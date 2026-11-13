@@ -1,7 +1,7 @@
 {
   "name": "http.rounds.pause.noActiveRound.422",
   "route": "POST /match/{matchId}/rounds/pause",
-  "why": "A second 422 envelope (F-21).",
+  "why": "A second 422 envelope.",
   "request": {
     "method": "POST",
     "path": "/match/<match:notStarted>/rounds/pause",

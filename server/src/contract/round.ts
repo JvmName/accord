@@ -41,15 +41,14 @@ const makeRoundResultSchema = (winner: z.ZodType) =>
     });
 
 /**
- * `winnerUser` is parameterised only to accommodate F-22: over WebSocket,
- * `result.winner` is an unserialised Sequelize instance and carries
- * `api_token`. See `user.ts`.
+ * `winnerUser` is a parameter so the same shape serves both transports; both
+ * use the safe user (`{ id, name }`).
  *
  * Optionality notes, all cross-checked against the 32 round objects in the
  * goldens (every key present in all 32):
  *   - `paused` and `time_remaining` carry Kotlin defaults (`false` / `null`),
- *     so the client tolerates their absence — but `Round#toApiResponse`
- *     builds a fixed object literal, so they are ALWAYS present on the wire.
+ *     so the client tolerates their absence — but the round is
+ *     rendered as a fixed object, so they are ALWAYS present on the wire.
  *     Modelled as required (nullable for `time_remaining`), describing what
  *     the server actually sends.
  *   - `time_remaining` is null exactly when the round has ended.

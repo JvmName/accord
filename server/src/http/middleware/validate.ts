@@ -1,7 +1,7 @@
 /**
  * Request validation: Zod schemas for the path parameters, the query and the
- * body, each parsed from its own part of the request (F-73: a body or query
- * key can no longer stand in for a path parameter, and string values are not
+ * body, each parsed from its own part of the request (a body or query key
+ * never stands in for a path parameter, and string values are not
  * JSON-decoded).
  *
  * A failure is a `ValidationError` carrying `{ "<dotted.path>": ["<message>", ...] }`,
@@ -23,7 +23,7 @@ export interface ParsedRequest {
     body: unknown;
 }
 
-/** Appends a schema's issues to `errors` in legacy shape; returns the parsed value on success. */
+/** Appends a schema's issues to `errors` keyed by dotted path; returns the parsed value on success. */
 function collect(schema: z.ZodType, value: unknown, errors: ErrorMap): { ok: true; data: unknown } | { ok: false } {
     const result = schema.safeParse(value);
     if (result.success) return { ok: true, data: result.data };
@@ -37,7 +37,6 @@ function collect(schema: z.ZodType, value: unknown, errors: ErrorMap): { ok: tru
 
 /**
  * Validates one request. Throws `ValidationError` with every failing field
- * (legacy `validateParameters` collected all fields before throwing).
  */
 export function validateRequest(
     schemas: { params: z.ZodType; query: z.ZodType; body: z.ZodType },

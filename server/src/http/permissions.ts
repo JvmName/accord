@@ -1,22 +1,17 @@
 /**
- * Permission rules (server-ts task 12): the replacement for
- * `lib/server/authorizer.js`, reproducing its grant/deny logic EXACTLY.
+ * Permission rules: who may do what to a mat, a match or a user.
  *
- * SECURITY BOUNDARY. Every function here is a line-for-line port; deviations
- * are bugs. `test/http/permissions.test.ts` runs this module and the legacy
- * `Authorizer` side by side over the full (action x scope x subject) grid and
- * asserts identical answers, and `test/http/authorizationParity.test.ts`
- * replays the task-02b matrix over HTTP against the route gates built on it.
+ * SECURITY BOUNDARY. `test/http/permissions.test.ts` checks every grant and
+ * deny over the full (action x scope x subject) grid against
+ * `test/fixtures/frozen/permissions.jsonl`, and
+ * `test/http/authorizationParity.test.ts` replays the authorization matrix over
+ * HTTP against the route gates built on it.
  *
- * F-53: the legacy `Authorizer#can` chooses the permission table from
- * `scope.constructor.name` (`'String' | 'Mat' | 'Match' | 'User'`), which plain
- * Drizzle rows do not have (`constructor.name === 'Object'`). Here the scope
- * KIND is explicit (`Scope`, a tagged union), so dispatch never depends on a
- * runtime class. The class-vs-instance distinction (`can('create', Mat)` is
- * called with the CLASS) becomes its own kind, `matClass`.
+ * The scope KIND is explicit (`Scope`, a tagged union), so dispatch never
+ * depends on a runtime class. Creating a mat has no row yet and is its own
+ * kind, `matClass`.
  *
- * Relationship loading: `matchPermission` called `scope.getJudges()` and
- * `scope.getMat()` on a Sequelize instance; here those reads go through the
+ * Relationship loading: a match's judges and mat are read through the
  * repositories (`findMatchJudges`, `findMatById`) via `PermissionLoaders`,
  * which tests may replace.
  */
@@ -33,20 +28,19 @@ import type { MatCodeModule } from '../domain/types';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const MatCodes: MatCodeModule = require('../domain/matCode');
 
-/** Actions the legacy `Authorizer#matPermission` knows. */
+/** Actions a mat scope accepts. */
 export type MatAction = 'assign' | 'create a match' | 'create' | 'be assigned judge' | 'view';
 
-/** Actions the legacy `Authorizer#matchPermission` knows: the four match levels. */
+/** Actions a match scope accepts: the four match levels. */
 export type MatchAction = 'judge' | 'manage' | 'pause' | 'view';
 
-/** Actions the legacy `Authorizer#userPermission` knows. */
+/** Actions a user scope accepts. */
 export type UserAction = 'assign';
 
 /**
  * The scope a permission is evaluated against, with its kind made explicit
- * (F-53). The `null` resource cases model legacy calls such as
- * `authorize('view', this.currentMat)` with no mat resolved: `can` returns
- * `false` for a null scope before any dispatch (`if (!scope) return false`).
+ * A `null` resource (no mat resolved, say) is denied: `can` returns `false`
+ * for a null scope before any dispatch.
  */
 export type Scope =
     | { kind: 'string'; value: string }
@@ -56,7 +50,7 @@ export type Scope =
     | { kind: 'user'; user: User | null };
 
 /**
- * Who is asking: the legacy `new Authorizer(this.currentUser, this.currentMatCode)`.
+ * Who is asking: the current user and the mat code the request carried.
  * The mat code matters because mat-level `assign`/`create a match` permission
  * is granted by holding the mat's ADMIN code, not by membership.
  */
@@ -78,7 +72,7 @@ export function repositoryLoaders(db: DbOrTx): PermissionLoaders {
     };
 }
 
-/** Legacy `simpleScopePermission`. No HTTP call site uses a string scope (authz-matrix.txt), kept for parity. */
+/** String scopes. No route uses one. */
 async function simpleScopePermission(subject: Subject, _action: string, scope: string): Promise<boolean> {
     if (scope == 'authenticated')   return Boolean(subject.user);
     if (scope == 'unauthenticated') return true;
@@ -87,9 +81,8 @@ async function simpleScopePermission(subject: Subject, _action: string, scope: s
 }
 
 /**
- * Legacy `matPermission`. For the `matClass` kind (`can('create', Mat)`),
- * legacy passed the CLASS as `scope`, so `scope.id` was `Mat.id` (undefined):
- * reproduced by passing `{ id: undefined }`.
+ * Mat permissions. The `matClass` kind (creating a mat) has no id, so it is
+ * passed as `{ id: undefined }`.
  */
 async function matPermission(subject: Subject, action: string, scope: { id?: string }): Promise<boolean | undefined> {
     switch (action) {
@@ -109,16 +102,14 @@ async function matPermission(subject: Subject, action: string, scope: { id?: str
 }
 
 /**
- * Legacy `matchPermission`.
+ * Match permissions.
  *
  * `judge`: loose `==` id comparison against the match's judges.
  * `manage`: STRICT `===` against the mat's `creator_id`; a missing mat throws a
- *   `TypeError` from `mat.creator_id`, exactly as legacy did (impossible
- *   through the API: no deletes exist).
- * `pause`: `manage || judge`. NOTE (F-11, decision 2026-10-11: only the
- *   master may pause): this permission DOES grant judges, but no route ever
- *   reaches it for a judge, because the rounds routes check `manage` first
- *   (see `middleware/authorize.ts`). Ported unchanged, not widened, not dropped.
+ *   `TypeError` (impossible through the API: no deletes exist).
+ * `pause`: `manage || judge`. Only the master may pause: this permission does
+ *   grant judges, but no route reaches it for a judge, because the rounds
+ *   routes check `manage` first (see `middleware/authorize.ts`).
  * `view`: unconditional.
  */
 async function matchPermission(subject: Subject, action: string, scope: Match, loaders: PermissionLoaders): Promise<boolean | undefined> {
@@ -139,7 +130,7 @@ async function matchPermission(subject: Subject, action: string, scope: Match, l
     return undefined;
 }
 
-/** Legacy `userPermission`. */
+/** User permissions. */
 async function userPermission(_subject: Subject, action: string, _scope: User): Promise<boolean | undefined> {
     switch (action) {
         case 'assign':
@@ -148,7 +139,7 @@ async function userPermission(_subject: Subject, action: string, _scope: User): 
     return undefined;
 }
 
-/** The action names each scope kind accepts; anything else is denied (legacy returns `undefined`). */
+/** The action names each scope kind accepts; anything else is denied. */
 export type ActionFor<S extends Scope> =
     S extends { kind: 'string' }   ? string :
     S extends { kind: 'matClass' } ? MatAction :
@@ -158,9 +149,7 @@ export type ActionFor<S extends Scope> =
     never;
 
 /**
- * Legacy `Authorizer#can(action, scope)`. Returns a boolean (legacy returned
- * `undefined` for an unknown action; that is coerced to `false`, which is how
- * every legacy caller used it: `if (!authorized) throw`).
+ * Whether `subject` may do `action` to `scope`. An unknown action is `false`.
  */
 export async function can<S extends Scope>(
     subject: Subject,

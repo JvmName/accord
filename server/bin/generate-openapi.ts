@@ -1,5 +1,5 @@
 /**
- * Generates `openapi.json` from the task-05 Zod wire schemas.
+ * Generates `openapi.json` from the Zod wire schemas.
  *
  * Run via `bun run generate:openapi`. The output is committed so a fresh
  * clone has a spec without running codegen.

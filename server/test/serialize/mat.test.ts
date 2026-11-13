@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 /**
- * `serializeMat`, `serializeUser(s)`, `serializeMatCode` (task 11), from plain
- * fixture rows. No database. Outputs are parsed through the task-05 schemas.
+ * `serializeMat`, `serializeUser(s)`, `serializeMatCode`, from plain
+ * fixture rows. No database. Outputs are parsed through the schemas.
  */
 import * as S from '../../src/serialize';
 import { matSchema, matCodeSchema, userSchema } from '../../src/contract';
@@ -29,7 +29,7 @@ describe('serializeUser / serializeUsers', () => {
         expect(userSchema.safeParse(out).success).toBe(true);
     });
 
-    it('renders the stored value, even an empty name (F-63)', () => {
+    it('renders the stored value, even an empty name', () => {
         expect(S.serializeUser({ ...USERS.red, name: '' }).name).toBe('');
     });
 
@@ -59,7 +59,7 @@ describe('serializeMat — base keys', () => {
         }
     });
 
-    it('renders the stored judge_count: 0 stays 0 (F-63); null stays null', () => {
+    it('renders the stored judge_count: 0 stays 0; null stays null', () => {
         expect(renderMat(F.mat({ judge_count: 0 })).judge_count).toBe(0);
         expect(renderMat(F.mat({ judge_count: null })).judge_count).toBeNull();
     });
@@ -94,7 +94,7 @@ describe('serializeMat — includes', () => {
         const out = renderMat(F.mat(), { incompleteMatches: [laterStarted, upcomingB, earlierStarted, upcomingA] });
         expect(out.current_match!.id).toBe(earlierStarted.id);
         expect(out.upcoming_matches!.map((m) => m.id)).toEqual([upcomingA.id, upcomingB.id]);
-        // a started match that is not the first is in NEITHER list (as legacy)
+        // a started match that is not the first is in NEITHER list
         expect([out.current_match!.id, ...out.upcoming_matches!.map((m) => m.id)]).not.toContain(laterStarted.id);
     });
 

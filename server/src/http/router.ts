@@ -1,5 +1,5 @@
 /**
- * Route registration over Express 5 (server-ts task 12).
+ * Route registration over Express 5.
  *
  * `registerRoutes(app, routes, deps)` walks an EXPLICIT array of route
  * definitions (imported from `routes/index.ts`) and registers each one with a
@@ -10,12 +10,11 @@
  * No reflection: no `fs.readdirSync`, no prototype scanning, no
  * `this['_' + method]` string-keyed dispatch. The method is a typed union and
  * is dispatched with a `switch`. Registration order is the order of the array,
- * a declaration, which also resolves F-04 (bun's unsorted `readdirSync` made
- * legacy registration order, and so route precedence, filesystem-dependent).
+ * a declaration, so route precedence never depends on the filesystem.
  *
  * The application (`server.ts`) registers every route in the table. Global
  * middleware (CORS, body parsers, logging, static files) stays the
- * application's job; `legacyBodyParsers()` exists so tests can mount the
+ * application's job; `bodyParsers()` exists so tests can mount the
  * registry with the same body parsing the application has.
  */
 import express, {
@@ -39,16 +38,14 @@ import type { AnyRouteDefinition, ContextHelpers } from './types';
 export interface HttpDeps {
     /** The Drizzle database every repository call runs against. */
     db: DbOrTx;
-    /** Register DEV-only routes (the docs routes) and log 400/500 errors, as legacy `CONSTANTS.DEV` did. */
+    /** Register DEV-only routes (the docs routes) and log 400/500 errors. */
     dev?: boolean;
     logger?: ErrorLogger;
 }
 
 /**
  * Builds the handler context and invokes the handler. A `Rendered` result is
- * sent as-is; any other result is the success payload. Legacy rendered
- * `responseBody || {}` when an action returned without rendering, so a falsy
- * result renders `{}`.
+ * sent as-is; any other result is the success payload. A falsy result renders `{}`.
  */
 function handlerMiddleware(route: AnyRouteDefinition, deps: HttpDeps) {
     const loaders = repositoryLoaders(deps.db);
@@ -98,11 +95,10 @@ function handlerMiddleware(route: AnyRouteDefinition, deps: HttpDeps) {
                 sendEnvelope(res, 200, result || {});
                 return;
             case 'json':
-                // Legacy DocsController overrode formatJSONBody: the raw value, no envelope.
+                // The raw value, no envelope.
                 res.json(result);
                 return;
             case 'html':
-                // Legacy ServerController#renderHtml.
                 res.set('Content-Type', 'text/html');
                 res.send(result);
                 return;
@@ -156,12 +152,11 @@ export function registerRoutes(app: IRouter, routes: readonly AnyRouteDefinition
 }
 
 /**
- * The body parsing the legacy application installs globally
- * (`ApplicationServer#setupMiddleware`): JSON for `application/json` AND
+ * The body parsing the application installs globally: JSON for `application/json` AND
  * `text/plain`, plus extended urlencoded. Only for mounting the registry in
  * tests; the application keeps owning its global middleware.
  */
-export function legacyBodyParsers() {
+export function bodyParsers() {
     return [
         express.json({ type: ['application/json', 'text/plain'] }),
         express.urlencoded({ extended: true }),

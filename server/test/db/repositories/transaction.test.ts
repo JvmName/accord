@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 /**
- * src/db/transaction.ts (task 10) against a real temp-file SQLite DB (a file,
+ * src/db/transaction.ts against a real temp-file SQLite DB (a file,
  * not :memory:, so a second connection can observe what was committed).
  */
 import fs from 'node:fs';

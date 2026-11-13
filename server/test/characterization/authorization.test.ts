@@ -1,12 +1,9 @@
 /**
  * CHARACTERIZATION — the authorization matrix, driven over real HTTP.
  *
- * `test/server/authorizer.test.ts` is thorough but calls `authorizer.can(action,
- * scope)` directly, so it dies with the `Authorizer` class in task 15. This file
- * restates the SAME behavior as (actor role, action, resource state) →
- * allow | deny, observed through actual HTTP requests against a booted server.
- * It must therefore pass UNCHANGED against both the current controller stack and
- * the task-12 route middleware. That is the entire point.
+ * Restates the permission rules as (actor role, action, resource state) →
+ * allow | deny, observed through actual HTTP requests against a booted
+ * server, so it holds whatever implements the permissions.
  *
  * DENY CASES ARE THE VALUABLE HALF. An authorization test made only of allows
  * passes against middleware that permits everything — the single most dangerous
@@ -16,14 +13,10 @@
  * 'unauthorized' }. "Allow" means the request reached the action, which is
  * asserted as a specific non-401 status.
  *
- * Consumed by tasks 12 and 15. The same table is written to
- * .ai/plans/server-ts/artifacts/authz-matrix.txt.
+ * The same table is written to .ai/plans/server-ts/artifacts/authz-matrix.txt.
  *
- * FIDELITY, NOT CORRECTNESS: several assertions below pin behavior that is
- * arguably wrong (unauthenticated mat reads; 401-instead-of-404 for a missing
- * mat; judges unable to pause despite the `pause` permission existing for them).
- * They are pinned because they are what the server does today. See FINDINGS.md
- * F-11, F-15, F-16.
+ * Some assertions pin deliberate behavior: unauthenticated mat reads, and
+ * judges unable to pause despite the `pause` permission existing for them.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import * as Http from '../helpers/httpServer';
@@ -158,7 +151,7 @@ describe('CHARACTERIZATION: authorization matrix (over HTTP)', () => {
 
 
         // FIDELITY: this endpoint is effectively public. Pinned, not endorsed.
-        // See FINDINGS.md F-15.
+        // See.
         it('ALLOWS an ANONYMOUS request — this route requires no authentication at all', async () => {
             const res = await request('GET', `/mat/${world.mat.id}`);
 
@@ -175,7 +168,7 @@ describe('CHARACTERIZATION: authorization matrix (over HTTP)', () => {
         });
 
 
-        // A missing mat is a 404 (F-16; it used to be reported as 401).
+        // A missing mat is a 404 (it used to be reported as 401).
         it('reports 404 when the mat id does not exist', async () => {
             const res = await request('GET', '/mat/550e8400-e29b-41d4-a716-446655440000', { token: world.creator });
 
@@ -434,17 +427,10 @@ describe('CHARACTERIZATION: authorization matrix (over HTTP)', () => {
         });
 
 
-        // FIDELITY / KNOWN BUG — FINDINGS.md F-11.
-        //
-        // Authorizer grants `pause` to judges as well as to the mat creator
-        // ("allows a judge (non-creator) to pause" in authorizer.test.ts), but
-        // RoundsController#authenticateMatch runs FIRST and requires `manage`,
-        // so a judge is rejected before authorize('pause') is ever reached. The
-        // `pause` permission's judge branch is therefore dead over HTTP.
-        //
-        // This assertion is what the server does, not what it should do. If a
-        // rewrite makes judges able to pause, this test failing is CORRECT and
-        // the change must be made deliberately in task 18.
+        // Only the master may pause or resume. The `pause` permission grants
+        // judges as well as the mat creator, but the rounds routes check
+        // `manage` FIRST, so a judge is rejected before `pause` is reached.
+        // Letting judges pause would have to be a deliberate change.
         it('DENIES a match judge — despite the `pause` permission granting judges access', async () => {
             const match = await createStartedMatch(world);
 

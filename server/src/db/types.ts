@@ -1,5 +1,5 @@
 /**
- * Row types inferred from the Drizzle schema (server-ts task 09).
+ * Row types inferred from the Drizzle schema.
  *
  * Types-only: always pulled in with `import type`, so it is erased at runtime
  * and bun never loads it (same convention as `src/domain/types.ts`, which is
@@ -55,9 +55,8 @@ export type NewJudgeMatch = InferInsertModel<typeof judges_matches>;
 /* ----------------------------------------------------------------------------
  * Compile-time assertions (erased at runtime; `bun run typecheck` checks them).
  *
- * tsconfig has `strict: false` (until task 18), so `string | null` collapses to
- * `string` and row-type assertions cannot see nullability. The assertions
- * therefore read the column's own `notNull` type flag instead.
+ * The assertions read the column's own `notNull` type flag, so they hold
+ * whatever the compiler options.
  *
  * The columns listed in `_NotNullValueClassColumns` back NON-nullable Kotlin
  * value classes (UserId, MatId, MatchId, RoundId, AuthToken in

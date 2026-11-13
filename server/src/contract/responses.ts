@@ -3,11 +3,11 @@
  *
  * The payload schemas describe the `data` member of the success envelope;
  * `routeResponses` maps each route to the full envelope, so a caller (the
- * golden test today, the typed route registry in task 12) can look up the
- * exact shape a route produces.
+ * golden test, the typed route registry) can look up the exact shape a route
+ * produces.
  *
  * Route keys are written exactly as `artifacts/route-table.txt` and the
- * task-04 goldens spell them (`METHOD /path/{param}`).
+ * goldens spell them (`METHOD /path/{param}`).
  */
 import { z } from 'zod';
 import { envelope } from './envelope';

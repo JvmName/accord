@@ -1,13 +1,12 @@
 /**
- * The JSON error handler (server-ts task 12): port of
- * `ApplicationServer#handleError` (`lib/server/applicationServer.js:272-296`).
+ * The JSON error handler.
  *
  * Branch order, pinned by `test/characterization/errorMapping.test.ts` and
  * replayed against this handler by `test/http/envelope.test.ts`:
  *
- *   1. unique-constraint violation -> 400 `{ errors: { field: ["<field> must be unique"] } }` (F-14)
- *   2. `instanceof AuthorizationError` -> 401 `{ data: null }`         (F-13)
- *   3. `instanceof ValidationError`    -> 400 `{ data: { errors } }`   (F-13)
+ *   1. unique-constraint violation -> 400 `{ errors: { field: ["<field> must be unique"] } }`
+ *   2. `instanceof AuthorizationError` -> 401 `{ data: null }`        
+ *   3. `instanceof ValidationError`    -> 400 `{ data: { errors } }`  
  *   4. anything else -> 500 `{ data: { error: err.message } }` (a missing message renders `null`
  *      through the envelope's undefined -> null walk)
  *
@@ -47,7 +46,7 @@ export function handleError(err: unknown, res: Response, options: ErrorHandlerOp
 
 /**
  * Route-level Express error middleware. Every error in the route chain,
- * including request-state resolution (F-77), is rendered by `handleError`.
+ * including request-state resolution, is rendered by `handleError`.
  *
  * If a response was already written (impossible by construction in the new
  * pipeline, which renders once), the error is passed on rather than writing a

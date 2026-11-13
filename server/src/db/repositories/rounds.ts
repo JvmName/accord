@@ -1,6 +1,6 @@
 /**
- * `rounds` and `round_pauses` repository (server-ts task 10). Pauses live here
- * because they are only ever reached through a round (`round.getPauses()`).
+ * `rounds` and `round_pauses` repository. Pauses live here because they are
+ * only ever reached through a round.
  */
 import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { round_pauses, rounds } from '../schema';
@@ -8,9 +8,8 @@ import type { NewRound, Round, RoundPause } from '../types';
 import { insertStamps, orNull, rowid, type DbOrTx, inserted } from './internal';
 
 /**
- * `Round.getOpenRounds()` (`Round.where({ended_at: null})`): every round
- * still open, across all matches (TechFallTracker, RoundTimer and
- * MatchUpdate workers). Legacy order: a table scan, i.e. insertion (rowid).
+ * Every round still open, across all matches (TechFallTracker, RoundTimer and
+ * MatchUpdate workers), in insertion order (rowid).
  */
 export async function findOpenRounds(db: DbOrTx): Promise<Round[]> {
     return await db.query.rounds.findMany({
@@ -20,10 +19,8 @@ export async function findOpenRounds(db: DbOrTx): Promise<Round[]> {
 }
 
 /**
- * `match.getRounds()`: legacy loads `WHERE match_id = ?` unordered (rowid,
- * since `rounds.match_id` has no index, F-40) and then stable-sorts by
- * `created_at` in JS, so ties keep insertion order. Reproduced as
- * `ORDER BY created_at, rowid` (ISO text sorts chronologically).
+ * A match's rounds, `ORDER BY created_at, rowid` (ties keep insertion order;
+ * ISO text sorts chronologically).
  */
 export async function findMatchRounds(db: DbOrTx, matchId: string): Promise<Round[]> {
     return await db.query.rounds.findMany({
@@ -49,8 +46,7 @@ export async function findRoundPauses(db: DbOrTx, roundId: string): Promise<Roun
 }
 
 /**
- * `round.getCurrentPause()`: legacy takes `pauses.slice().reverse().find(isOpen) || null`,
- * i.e. the LAST open pause in insertion order, or `null`.
+ * The LAST open pause in insertion order, or `null`.
  */
 export async function findCurrentPause(db: DbOrTx, roundId: string): Promise<RoundPause | null> {
     return orNull(await db.query.round_pauses.findFirst({
@@ -61,7 +57,7 @@ export async function findCurrentPause(db: DbOrTx, roundId: string): Promise<Rou
 
 
 /* ----------------------------------------------------------------------------
- * Write primitives (composed by the lifecycle services, task 10b)
+ * Write primitives (composed by the lifecycle services)
  * ------------------------------------------------------------------------- */
 
 export type InsertRoundValues = Omit<NewRound, 'created_at' | 'updated_at'>;

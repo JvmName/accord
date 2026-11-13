@@ -5,7 +5,7 @@
  * the *generated* `openapi.json` components do too, by validating each golden
  * payload with ajv (JSON Schema 2020-12, which is what OpenAPI 3.1 uses).
  * It exists because the generator can emit something the Zod side doesn't
- * mean — F-30: zod-to-openapi emitted `registered.nullable()` as an `allOf`
+ * mean: zod-to-openapi emitted `registered.nullable()` as an `allOf`
  * that rejected `null`, while every Zod-side test stayed green.
  *
  * Strict mode stays on; the one non-JSON-Schema key (`components`, the
@@ -98,7 +98,7 @@ describe('generated openapi.json components vs. goldens', () => {
         expect(checked).toBe(42); // 38 HTTP 200s with a component + 4 WebSocket
     });
 
-    it('accepts a null winner and rejects a non-user winner (F-30 regression)', () => {
+    it('accepts a null winner and rejects a non-user winner (regression)', () => {
         const match = goldens.find(g => g.file === 'http.match.get.inBreak.json')!.golden
             .response.body.data.match;
         const validate = validator('Match');

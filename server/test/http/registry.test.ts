@@ -1,5 +1,5 @@
 /**
- * Task 12 — route registry mechanics, legacy input/validation semantics, and
+ * route registry mechanics, input/validation semantics, and
  * TYPE INFERENCE.
  *
  * The type-inference section is checked by `bun run typecheck` (tsc includes
@@ -74,7 +74,7 @@ export const sampleMatCodeRoute = defineRoute({
     },
 });
 
-/** A public route: the user is optional; the legacy-faithful body type is honest (presence only). */
+/** A public route: the user is optional; the body type is honest (presence only). */
 export const samplePublicRoute = defineRoute({
     method:    'post',
     path:      '/sample-public',
@@ -201,7 +201,7 @@ beforeAll(async () => {
 afterAll(() => { app?.close(); devApp?.close(); });
 
 describe('registration', () => {
-    it('skips DEV-only routes outside DEV (Express default 404, as legacy in production)', async () => {
+    it('skips DEV-only routes outside DEV (Express default 404)', async () => {
         const res = await fetch(`${app.origin}/docs.json`);
         expect(res.status).toBe(404);
         expect(res.headers.get('content-type')).toContain('text/html');
@@ -220,7 +220,7 @@ describe('registration', () => {
         try {
             const put = await putApp.request('PUT', '/__put');
             expect(put).toEqual({ status: 200, body: { data: {}, status: 'ok' } });
-            // legacy: render(responseBody || {}) -> a falsy result renders {}
+            // a falsy result renders {}
             expect(await putApp.request('GET', '/__falsy')).toEqual({ status: 200, body: { data: {}, status: 'ok' } });
         } finally {
             putApp.close();
@@ -229,18 +229,18 @@ describe('registration', () => {
 
     it('placeholder handlers fail LOUDLY (500), never silently succeed', async () => {
         const { getHealthCheck } = await import('../../src/http/routes/system');
-        const placeholder = { ...getHealthCheck, handler: notImplemented('14') } as AnyRouteDefinition;
+        const placeholder = { ...getHealthCheck, handler: notImplemented('placeholder') } as AnyRouteDefinition;
         const placeholderApp = await startRegistryApp({ routes: [placeholder] });
         try {
             const res = await placeholderApp.request('GET', '/system/healthCheck');
             expect(res.status).toBe(500);
-            expect(res.body).toEqual({ data: { error: 'handler not implemented: ported in task 14' }, status: 'server error' });
+            expect(res.body).toEqual({ data: { error: 'handler not implemented: placeholder' }, status: 'server error' });
         } finally {
             placeholderApp.close();
         }
     });
 
-    it('renders request-state resolution errors as the JSON 500 envelope (F-77)', async () => {
+    it('renders request-state resolution errors as the JSON 500 envelope', async () => {
         const broken = await startRegistryApp({ routes: [(await import('../../src/http/routes/system')).getRoot] });
         try {
             broken.db.$client.close();
@@ -254,7 +254,7 @@ describe('registration', () => {
     });
 });
 
-describe('request parts reaching the handler (F-73)', () => {
+describe('request parts reaching the handler', () => {
     it('validates the body from the body: a query value does not replace it', async () => {
         const res = await app.request('POST', '/users?name=fromQuery', { body: { name: 'fromBody' } });
         expect(res.status).toBe(200);
@@ -289,7 +289,7 @@ describe('request parts reaching the handler (F-73)', () => {
         expect(seen['POST /match/:matchId/ridingTime']).toEqual({ params: { matchId: match.id }, query: {}, body: { rider: 'red' } });
     });
 
-    it('accepts and ignores DELETE ridingTime `rider`, valid or not (F-55)', async () => {
+    it('accepts and ignores DELETE ridingTime `rider`, valid or not', async () => {
         const world = await createWorld(app.db);
         const match = await createStartedMatch(app.db, world);
         for (const rider of ['red', 'purple', '']) {

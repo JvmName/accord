@@ -11,10 +11,7 @@
 import { z } from 'zod';
 import { matchSchema } from './match';
 
-/**
- * The event names. Exported as a literal union so a typo'd event name is a
- * compile error once task 14 ports the worker/WebSocket tier.
- */
+/** The event names, as a literal union so a typo'd event name is a compile error. */
 export const socketEventSchema = z.enum([
     'match.update',
     'round.tech-fall',

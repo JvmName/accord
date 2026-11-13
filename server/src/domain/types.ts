@@ -1,11 +1,9 @@
 /**
- * Plain structural input/output types for the pure domain layer
- * (server-ts task 08).
+ * Plain structural input/output types for the pure domain layer.
  *
- * These are deliberately NOT Sequelize models and NOT Drizzle rows. Anything
- * with the right shape — a Sequelize instance today, a Drizzle row or a plain
- * object in a test — can be passed in. That decoupling is what lets the
- * domain survive the phase-4 ORM swap untouched.
+ * These are deliberately NOT Drizzle rows. Anything with the right shape — a
+ * Drizzle row or a plain object in a test — can be passed in, which keeps the
+ * domain independent of the database layer.
  *
  * This file is types-only and is only ever pulled in with `import type`, so it
  * is erased at runtime and bun never loads it (which is why it may use
@@ -164,14 +162,14 @@ export type MatCodeRole = 'admin' | 'viewer';
 
 /** Runtime export shape of `src/domain/matCode.ts` (CommonJS, typed at the `require`). */
 export interface MatCodeModule {
-    /** Legacy `MatCode.CODE_REGEXP`, preserved exactly: UNANCHORED (FINDINGS F-12). */
+    /** Three dotted word runs, anchored. */
     readonly CODE_REGEXP: RegExp;
-    /** Legacy `MatCode.ROLES`. */
+    /** The two mat-code roles. */
     readonly ROLES: { readonly ADMIN: 'admin'; readonly VIEWER: 'viewer' };
-    /** `CODE_REGEXP.test(s)` — the code-vs-id discrimination of `ServerController#initCurrentMat`. */
+    /** `CODE_REGEXP.test(s)` — tells a mat code from a mat id. */
     isMatCode(s: string): boolean;
-    /** Legacy `MatCode#isAdminCode` (loose `==`). */
+    /** Loose `==` on the role. */
     isAdminCode(code: { role: string }): boolean;
-    /** Legacy `MatCode#isViewerCode` (loose `==`). */
+    /** Loose `==` on the role. */
     isViewerCode(code: { role: string }): boolean;
 }

@@ -1,9 +1,7 @@
 /**
- * `MatCode` -> wire (server-ts task 11).
+ * `MatCode` -> wire.
  *
- * Legacy: `MatCode#apiSafeKeys` returns exactly `['code', 'role']`, each
- * `|| null` (`models/matCode.js`). Rendered only by `POST /mats`
- * (`includeCodes`), as `Mat.codes`.
+ * Exactly `code` and `role`. Rendered only by `POST /mats`, as `Mat.codes`.
  */
 import type { MatCode as WireMatCode } from '../contract/matCode';
 import type { MatCode } from '../db/types';

@@ -65,8 +65,8 @@ export const INTENTIONALLY_UNCOVERED: Record<string, string> = {
         + '(absent from AccordClient.kt), and does not exist in production. Its production behaviour '
         + '(404) IS captured.',
     'GET /docs.json':
-        'DEV-only, same gate. The body is the GENERATED OpenAPI spec, which task 06 replaces on purpose; '
-        + 'byte-locking it here would create a gate that a later task is required to break. '
+        'DEV-only, same gate. The body is the GENERATED OpenAPI spec, which changes whenever a route or schema does; '
+        + 'byte-locking it here would make every such change fail this gate. '
         + 'Its production behaviour (404) IS captured.',
     'GET /async-docs.json':
         'DEV-only, same gate and same reasoning as /docs.json for the AsyncAPI spec.',
@@ -314,7 +314,7 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
         // POST /mats
         // =====================================================================
         await http('http.users.create.objectName.400', 'POST /users',
-                   'A name that is not a string is a validation error (F-75); it used to get past the '
+                   'A name that is not a string is a validation error; it used to get past the '
                    + 'presence check and fail at the insert with a 500.',
                    'POST', '/users', { body: { name: { nested: true } } });
 
@@ -341,13 +341,12 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
                    'GET', `/mat/${IDS['mat:main']}`, { as: 'creator' });
 
         await http('http.mat.get.byId.anonymous', 'GET /mat/{matId}',
-                   'FINDINGS F-15: MatsController registers no authenticateRequest and matPermission("view") '
-                   + 'is unconditionally true, so an anonymous caller gets the full payload. Pinned as-is.',
+                   'A mat page is public on purpose: an anonymous caller gets the full payload.',
                    'GET', `/mat/${IDS['mat:main']}`);
 
         await http('http.mat.get.byCode', 'GET /mat/{matId}',
-                   'The :matId segment doubles as a mat code when it matches MatCode.CODE_REGEXP '
-                   + '(FINDINGS F-12). Same payload as by-id.',
+                   'The :matId segment doubles as a mat code when it matches MatCode.CODE_REGEXP. '
+                   + 'Same payload as by-id.',
                    'GET', `/mat/${CODES['code:main-viewer']}`, { as: 'creator' });
 
         await http('http.mat.get.empty', 'GET /mat/{matId}',
@@ -357,7 +356,7 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
                    'GET', `/mat/${IDS['mat:empty']}`, { as: 'creator' });
 
         await http('http.mat.get.unknownId.404', 'GET /mat/{matId}',
-                   'FINDINGS F-16: an unknown mat is a 404 (it used to be a 401), like the other not-found routes.',
+                   'An unknown mat is a 404, like the other not-found routes.',
                    'GET', `/mat/${'11111111-2222-4333-8444-555555555555'}`, { as: 'creator' });
 
         // =====================================================================
@@ -369,8 +368,7 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
                    'GET', `/mat/${CODES['code:main-admin']}/judges`, { as: 'creator' });
 
         await http('http.mat.judges.unknownCode.404', 'GET /mat/{matCode}/judges',
-                   'Mat-scoped UsersController#authenticateRequest renders 404 when the code resolves to '
-                   + 'no mat — contrast the 401 on GET /mat/{matId} (F-16).',
+                   'A mat-scoped route renders 404 when the code resolves to no mat.',
                    'GET', '/mat/no.such.code/judges', { as: 'creator' });
 
         await http('http.mat.judges.unauthenticated.401', 'GET /mat/{matCode}/judges',
@@ -484,8 +482,7 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
                    'GET', `/match/${IDS['match:paused']}`, { as: 'creator' });
 
         await http('http.match.get.inBreak', 'GET /match/{matchId}',
-                   'CRITICAL: break_remaining is NON-NULL over plain HTTP during a break. '
-                   + 'See FINDINGS F-20 — the plan documents this field as WebSocket-only, which is wrong.',
+                   'CRITICAL: break_remaining is NON-NULL over plain HTTP during a break.',
                    'GET', `/match/${IDS['match:break']}`, { as: 'creator' });
 
         await http('http.match.get.notStarted', 'GET /match/{matchId}',
@@ -506,7 +503,7 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
                    'GET', '/match/11111111-2222-4333-8444-666666666666', { as: 'creator' });
 
         await http('http.match.get.unauthenticated.401', 'GET /match/{matchId}',
-                   'Match routes authenticate; contrast GET /mat/{matId} (F-15).',
+                   'Match routes authenticate; contrast GET /mat/{matId}, which is public.',
                    'GET', `/match/${IDS['match:done']}`);
 
         // =====================================================================
@@ -587,7 +584,7 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
                    { as: 'creator', body: { winner: 'blue', stoppage: true } });
 
         await http('http.rounds.result.explicitNull', 'PATCH /match/{matchId}/rounds/result',
-                   'FINDINGS F-24: an EXPLICIT `winner: null` clears the result, like an omitted '
+                   'An EXPLICIT `winner: null` clears the result, like an omitted '
                    + 'winner (it used to be rejected with 400). The Kotlin client omits the null '
                    + '(encodeDefaults is false), so it never sends this shape.',
                    'PATCH', `/match/${IDS['match:toClearResult']}/rounds/result`,
@@ -607,8 +604,8 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
                    { as: 'creator', body: { winner: 'green' } });
 
         await http('http.rounds.result.windowClosed.422', 'PATCH /match/{matchId}/rounds/result',
-                   'FINDINGS F-21: a 422 used to render with NO `status` key, which ApiResultSerializer.kt '
-                   + 'throws on; it now renders status "unprocessable entity".',
+                   'A 422 renders status "unprocessable entity"; ApiResultSerializer.kt throws on a '
+                   + 'response without a status.',
                    'PATCH', `/match/${IDS['match:open']}/rounds/result`,
                    { as: 'creator', body: { winner: 'red', stoppage: false } });
 
@@ -640,12 +637,12 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
                    'POST', `/match/${IDS['match:toPause']}/rounds/resume`, { as: 'creator' });
 
         await http('http.rounds.pause.asJudge.401', 'POST /match/{matchId}/rounds/pause',
-                   'FINDINGS F-11: the `pause` permission grants judges access, but authenticateMatch '
-                   + 'demands `manage` first, so the judge branch is unreachable over HTTP. Pinned as-is.',
+                   'The `pause` permission grants judges access, but the route demands `manage` '
+                   + 'first, so only the master can pause.',
                    'POST', `/match/${IDS['match:toPause']}/rounds/pause`, { as: 'judgeA' });
 
         await http('http.rounds.pause.noActiveRound.422', 'POST /match/{matchId}/rounds/pause',
-                   'A second 422 envelope (F-21).',
+                   'A second 422 envelope.',
                    'POST', `/match/${IDS['match:notStarted']}/rounds/pause`, { as: 'creator' });
 
         await http('http.rounds.resume.noActiveRound.422', 'POST /match/{matchId}/rounds/resume',

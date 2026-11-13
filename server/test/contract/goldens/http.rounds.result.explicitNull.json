@@ -1,7 +1,7 @@
 {
   "name": "http.rounds.result.explicitNull",
   "route": "PATCH /match/{matchId}/rounds/result",
-  "why": "FINDINGS F-24: an EXPLICIT `winner: null` clears the result, like an omitted winner (it used to be rejected with 400). The Kotlin client omits the null (encodeDefaults is false), so it never sends this shape.",
+  "why": "An EXPLICIT `winner: null` clears the result, like an omitted winner (it used to be rejected with 400). The Kotlin client omits the null (encodeDefaults is false), so it never sends this shape.",
   "request": {
     "method": "PATCH",
     "path": "/match/<match:toClearResult>/rounds/result",

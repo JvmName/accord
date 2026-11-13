@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-/** rounds + round_pauses repository (task 10). Real in-memory SQLite. */
+/** rounds + round_pauses repository. Real in-memory SQLite. */
 import { ID, at, freshDb, insertRows, seedBase, stampsAt } from './support';
 import * as Rounds from '../../../src/db/repositories/rounds';
 
@@ -29,7 +29,7 @@ describe('findOpenRounds', () => {
 });
 
 describe('findMatchRounds / findLastRound', () => {
-    it('orders by created_at, ties by insertion (legacy stable JS sort)', async () => {
+    it('orders by created_at, ties by insertion', async () => {
         insertRows(db, 'rounds', [
             round('r3', 'm1', 300),
             round('r1', 'm1', 100),

@@ -1,15 +1,12 @@
 /**
- * The serialization layer (server-ts task 11): repository rows (task 10) +
- * domain results (task 08) in, plain wire objects (task 05 schemas) out.
+ * The serialization layer: repository rows + domain results in, plain wire
+ * objects (the `src/contract` schemas) out.
  *
- * This replaces, explicitly, what `BaseRecord#toApiResponse` /
- * `apiSafeKeys` and `ServerController#_formatJSONBody` did reflectively. Every
- * mapper is a pure function; the only implicit input, the wall clock, is
- * injectable (`{ now }`). Nothing here touches the database, the legacy
- * models, or Sequelize; nothing in `src/db` knows about wire shapes.
+ * Every mapper is a pure function; the only implicit input, the wall clock, is
+ * injectable (`{ now }`). Nothing here touches the database, and nothing in
+ * `src/db` knows about wire shapes.
  *
- * The HTTP routes and the worker jobs render with these. The spec and evidence are in
- * `.ai/plans/server-ts/artifacts/serialize-inventory.md`.
+ * The HTTP routes and the worker jobs render with these.
  */
 import type { z } from 'zod';
 import { loadConfig } from '../config';
@@ -51,7 +48,7 @@ export const wireSchemas = {
 export type WireKind = keyof typeof wireSchemas;
 export type WireOf<K extends WireKind> = z.infer<(typeof wireSchemas)[K]>;
 
-/** A mapper produced something its task-05 schema rejects. */
+/** A mapper produced something its wire schema rejects. */
 export class WireContractError extends Error {
     readonly kind: WireKind;
     readonly issues: readonly z.core.$ZodIssue[];
@@ -90,8 +87,8 @@ export function wireValidationEnabled(env: NodeJS.ProcessEnv = process.env): boo
 
 /**
  * The opt-in dev-mode check: `assertWire` when `wireValidationEnabled()`,
- * otherwise a no-op. Not wired into the app (task 11 cuts nothing over); a
- * route or worker can wrap its payload in this once it adopts the mappers.
+ * otherwise a no-op. Not wired into the app; a route or worker can wrap its
+ * payload in this.
  */
 export function devAssertWire<K extends WireKind>(kind: K, value: WireOf<K>): WireOf<K> {
     return wireValidationEnabled() ? assertWire(kind, value) : value;

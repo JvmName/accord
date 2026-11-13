@@ -1,8 +1,8 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } from 'bun:test';
 /**
- * Drizzle schema baseline (server-ts task 09). In-memory bun:sqlite only:
+ * Drizzle schema baseline. In-memory bun:sqlite only:
  * applies ./drizzle through the real migrator and asserts the physical shape
- * the legacy-migrated database has (table list, columns, NOT NULL on the
+ * the migrated database has (table list, columns, NOT NULL on the
  * Kotlin-value-class columns, unique indexes), plus round-trips and the
  * relational query API. Never touches a real sqlite file.
  */
@@ -31,7 +31,7 @@ const NOT_NULL_VALUE_CLASS_COLUMNS = {
     riding_time_votes: ['judge_id', 'competitor_id'],
 };
 
-const TS = new Date('2026-04-24T20:50:38.866Z'); // datetime columns are Date-typed (isoDateTime, F-39)
+const TS = new Date('2026-04-24T20:50:38.866Z'); // datetime columns are Date-typed (isoDateTime)
 const stamps = { created_at: TS, updated_at: TS };
 
 let db;

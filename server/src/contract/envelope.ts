@@ -46,15 +46,7 @@ export const envelope = <T extends z.ZodType>(data: T) =>
 /**
  * `ApiResult.Error(errors: Map<String, List<String>>)` in `models.kt`.
  *
- * NOTE (F-14): the Sequelize unique-constraint branch in
- * `applicationServer.js:275` writes `errors[null] = err.parent.message` — a
- * bare STRING under the literal key `"null"`, where every other key holds an
- * array. No captured golden exercises that path, and the Kotlin client cannot
- * decode it either. It is deliberately NOT modelled here: this schema
- * describes the contract the client can actually consume, and F-14 is a bug
- * scheduled for task 18. If task 12 reproduces that branch verbatim (it must,
- * under the behavior-preservation rule), it produces a body this schema
- * rejects — which is the correct signal.
+ * Every value is an array, which is what the Kotlin client can decode.
  */
 export const errorMapSchema = z.record(z.string(), z.array(z.string()));
 export type ErrorMap = z.infer<typeof errorMapSchema>;
@@ -77,8 +69,7 @@ export const errorDataSchema = z.union([
 
 /**
  * Error envelope. `status` is always present: the Kotlin client's
- * `ApiResultSerializer` throws on a response without it (F-21 was a 422 that
- * had none; it now renders `unprocessable entity`).
+ * `ApiResultSerializer` throws on a response without it.
  */
 export const errorEnvelopeSchema = z.strictObject({
     data: errorDataSchema.nullable(),

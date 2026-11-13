@@ -1,19 +1,10 @@
 /**
  * Error classes and error classification for the typed route registry
- * (server-ts task 12).
+ *.
  *
- * These are NEW classes, deliberately not the legacy ones from
- * `lib/server/serverController.js`: the legacy stack keeps running the app
- * until 13c, and `lib/server` is deleted in task 15. The new error handler
- * (`middleware/errors.ts`) matches THESE classes.
- *
- * Classification reproduces `ApplicationServer#handleError`
- * (`lib/server/applicationServer.js:272-296`) exactly, including two quirks
- * pinned by `test/characterization/errorMapping.test.ts`:
- *   - F-13: classes are matched by CONSTRUCTOR IDENTITY, not `instanceof`, so a
- *     subclass of either class falls through to the generic 500 branch.
- *   - F-14: the unique-violation branch writes the raw driver message as a bare
- *     STRING under the literal key `"null"`.
+ * The error handler (`middleware/errors.ts`) matches these classes with
+ * `instanceof`; its branch order is pinned by
+ * `test/characterization/errorMapping.test.ts`.
  */
 import type { ErrorMap } from '../contract/envelope';
 
@@ -23,8 +14,8 @@ export class AuthorizationError extends Error {}
 /**
  * Thrown for request validation failures -> 400 `{ data: { errors }, status: 'bad request' }`.
  *
- * Mirrors the legacy class: the map is held privately and the getter returns
- * a deep copy (`structuredClone`), so a caller cannot mutate it after the fact.
+ * The map is held privately and the getter returns a deep copy
+ * (`structuredClone`), so a caller cannot mutate it after the fact.
  */
 export class ValidationError extends Error {
     readonly #errors: ErrorMap;
@@ -40,10 +31,8 @@ export class ValidationError extends Error {
 }
 
 /**
- * Thrown by a `notImplemented()` placeholder handler. The server refuses to
- * start while any route has one; it is an ordinary `Error` subclass, so if a
- * placeholder were ever reached it would surface as a loud 500, never as a
- * silent success.
+ * Thrown by a `notImplemented()` placeholder handler, which would surface as
+ * a loud 500, never as a silent success.
  */
 export class NotImplementedError extends Error {}
 
@@ -80,7 +69,7 @@ function findSqliteDriverError(err: unknown): DriverError | null {
  *
  * Only a real unique (or primary key) violation matches; any other SQLite
  * constraint failure (NOT NULL, CHECK, foreign key) is not a client-fixable
- * duplicate and falls through to the generic 500 (F-78). Returns `null` when
+ * duplicate and falls through to the generic 500. Returns `null` when
  * `err` is not a unique violation.
  */
 export function uniqueViolationErrors(err: unknown): ErrorMap | null {

@@ -1,14 +1,12 @@
 /**
- * Pure round/match scoring derivations (server-ts task 08).
+ * Pure round/match scoring derivations.
  *
- * Extracted from `RDojoKombatRules` (`scoreRound`/`determineWinner` bodies) and
- * `Match#getWinner` (best-of-`maxRounds` resolution). Every function here is
- * generic over `{ id }` competitors and returns the competitor objects that
- * were passed in — never ids — because the models depend on getting the same
- * object back.
+ * Round scoring, round results and the best-of-`maxRounds` match winner. Every
+ * function here is generic over `{ id }` competitors and returns the
+ * competitor objects that were passed in — never ids — because callers depend
+ * on getting the same object back.
  *
- * Pure: no imports outside `src/domain`. The models (`models/round.js`,
- * `models/match.js`) still do all the loading and call into these.
+ * Pure: no imports outside `src/domain`. Callers do the loading.
  */
 import type {
     Competitor,

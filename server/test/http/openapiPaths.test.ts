@@ -1,9 +1,9 @@
 /**
- * Task 12 — the generated OpenAPI PATHS against the wire.
+ * the generated OpenAPI PATHS against the wire.
  *
  * `openapi.json` paths are generated from the route registry
  * (`src/contract/openapi.ts#buildPaths`). This validates every HTTP golden
- * (task 04) against the response its operation DOCUMENTS for that status
+ * against the response its operation DOCUMENTS for that status
  * (ajv, JSON Schema 2020-12, strict), so the documented statuses are complete
  * with respect to every captured response and each documented envelope
  * accepts the bytes the server actually sends. The DEV-only docs routes are
@@ -68,7 +68,7 @@ describe('generated OpenAPI paths', () => {
         expect(checked).toBe(78);
     });
 
-    it('overrides the global ApiToken requirement only on the legacy-public routes', () => {
+    it('overrides the global ApiToken requirement only on the public routes', () => {
         const security = Object.fromEntries(Object.entries(spec.paths).flatMap(([p, item]) =>
             Object.entries(item as Record<string, { security?: unknown }>).map(([m, op]) => [`${m.toUpperCase()} ${p}`, op.security]),
         ));
@@ -94,7 +94,7 @@ describe('generated OpenAPI paths', () => {
         expect(spec.components.schemas.UnprocessableEntityEnvelope.required).toEqual(['data', 'status']);
     });
 
-    it('contains no allOf (the zod-to-openapi nullable-$ref bug, F-30)', () => {
+    it('contains no allOf (the zod-to-openapi nullable-$ref bug)', () => {
         expect(JSON.stringify(spec)).not.toContain('"allOf"');
     });
 });

@@ -1,7 +1,6 @@
 /**
- * `riding_time_votes` repository (server-ts task 10). An open vote has
- * `ended_at` NULL; a vote's start is its `created_at`
- * (`RidingTimeVote#started_at` is an alias for it).
+ * `riding_time_votes` repository. An open vote has `ended_at` NULL; a vote's
+ * start is its `created_at`.
  */
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { riding_time_votes } from '../schema';
@@ -42,10 +41,10 @@ export async function findOpenVoteForJudge(db: DbOrTx, roundId: string, judgeId:
 
 
 /* ----------------------------------------------------------------------------
- * Write primitives (composed by the lifecycle services, task 10b)
+ * Write primitives (composed by the lifecycle services)
  * ------------------------------------------------------------------------- */
 
-/** `new RidingTimeVote({competitor_id, judge_id, round_id}).save()` (`Round#startRidingTime`). */
+/** Inserts an open vote. */
 export async function insertRidingTimeVote(
     db: DbOrTx,
     values: { round_id: string; judge_id: string; competitor_id: string; id?: string },

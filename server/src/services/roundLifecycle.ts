@@ -1,7 +1,6 @@
 /**
- * Round lifecycle commands (server-ts task 10b). Ports of `Round#end`,
- * `Round#pause`, `Round#resume`, `Round#setResult` and the supporting read
- * `Round#isPaused` (`models/round.js`).
+ * Round lifecycle commands: `finishRound`, `pauseRound`, `resumeRound`,
+ * `setRoundResult` and the supporting `isRoundPaused`.
  *
  * Same rules as `matchLifecycle.ts`: plain async functions, no classes, no
  * caching, no WebSocket emission, conditional writes where two connections can
@@ -87,7 +86,7 @@ export async function finishRound(db: DbOrTx, round: Round, { transition = true 
 }
 
 /**
- * `Round#pause()`. Preconditions in legacy order:
+ * Pauses the round. Preconditions, in order:
  * `'Round has not started'` (no `created_at`; unreachable for a stored row),
  * `'Round has already ended'`, `'Round is already paused'`. Then inserts a
  * pause with `paused_at = now`.
@@ -102,8 +101,8 @@ export async function pauseRound(db: DbOrTx, round: Pick<Round, 'id' | 'created_
 
 
 /**
- * `Round#resume()`: closes the LAST open pause (`resumed_at = now`), or
- * `Error('Round is not paused')`. No ended-round check (legacy has none).
+ * Closes the LAST open pause (`resumed_at = now`), or
+ * `Error('Round is not paused')`. No ended-round check.
  */
 export async function resumeRound(db: DbOrTx, round: Pick<Round, 'id'>): Promise<void> {
     const openPause: RoundPause | null = await findCurrentPause(db, round.id);
@@ -116,18 +115,17 @@ export async function resumeRound(db: DbOrTx, round: Pick<Round, 'id'>): Promise
 export interface RoundResultInput {
     /** `'red'` / `'blue'`; falsy clears the result. */
     winner?: string | null;
-    /** Defaults to `false` only when `undefined` (destructuring default), as legacy. */
+    /** Defaults to `false` only when `undefined` (destructuring default). */
     stoppage?: boolean | null;
 }
 
 /**
- * `Round#setResult({ winner, stoppage = false } = {})` — step two of the
- * two-step end-round flow (`PATCH /match/:id/rounds/result`).
+ * Sets the round result: step two of the two-step end-round flow (`PATCH /match/:id/rounds/result`).
  *
  * `'Cannot set result on a round that has not ended'` unless the round has
  * ended. The "only during the break or after the match has ended" window and
  * the "last round has ended" check are the ROUTE's preconditions
- * (`isResultWindowOpen`, 422s), not this command's, exactly as in legacy.
+ * (`isResultWindowOpen`, 422s), not this command's.
  *
  * winner truthy -> `declared_winner_id = competitorForColor(winner)?.id`
  * (left UNCHANGED when the competitor row is missing), `stoppage = stoppage`;

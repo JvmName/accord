@@ -1,6 +1,5 @@
 /**
- * `matches` repository (server-ts task 10), including the `judges_matches`
- * join rows (legacy `Match.belongsToMany(User, {as: 'judges'})`) and the
+ * `matches` repository, including the `judges_matches` join rows and the
  * hot-path relational loader used by every match render and worker tick.
  */
 import { and, asc, eq, getTableColumns, inArray, isNotNull, isNull, notInArray, type SQL } from 'drizzle-orm';
@@ -15,10 +14,9 @@ export async function findMatchById(db: DbOrTx, id: string | null | undefined): 
 }
 
 /**
- * `Match.where({ break_started_at: {[Op.ne]: null}, ended_at: null })`
- * (MatchUpdateWorker, BreakTransitionWorker). Legacy order: SQLite scans the
- * partial index `incomplete_matches_idx (mat_id) WHERE ended_at IS NULL`, so
- * rows come back by `(mat_id, rowid)`.
+ * Matches in a break that have not ended (MatchUpdateWorker,
+ * BreakTransitionWorker), by `(mat_id, rowid)`: SQLite scans the partial index
+ * `incomplete_matches_idx (mat_id) WHERE ended_at IS NULL`.
  */
 export async function findMatchesInBreak(db: DbOrTx): Promise<Match[]> {
     return await db.query.matches.findMany({
@@ -28,9 +26,8 @@ export async function findMatchesInBreak(db: DbOrTx): Promise<Match[]> {
 }
 
 /**
- * `match.getJudges()` (Authorizer `judge`, Round scoring, render
- * `includeMatchJudges`, UsersController). INNER JOIN through `judges_matches`;
- * legacy order is by `user_id` (driven from the unique index
+ * A match's judges (permissions, round scoring, rendering). INNER JOIN
+ * through `judges_matches`, ordered by `user_id` (the unique index
  * `(match_id, user_id)`), not by join time.
  */
 export async function findMatchJudges(db: DbOrTx, matchId: string): Promise<User[]> {
@@ -67,11 +64,9 @@ export type MatchGraph = Match & {
 };
 
 /**
- * One relational query that loads everything `Match#toApiResponse` with
- * `{includeMat, includeMatchJudges, includeRounds}` (and the round scoring it
- * triggers) used to fetch lazily: mat, both competitors, judges, rounds, and
- * each round's votes and pauses. Replaces the per-match / per-round
- * `getCachedAssociation` round trips (FINDINGS F-49).
+ * One relational query that loads everything a match render and its round
+ * scoring need: mat, both competitors, judges, rounds, and each round's votes
+ * and pauses.
  */
 function matchGraphQuery(db: DbOrTx, where: SQL) {
     return db.query.matches.findMany({
@@ -83,7 +78,7 @@ function matchGraphQuery(db: DbOrTx, where: SQL) {
             // Callback form: nested relations are aliased, so columns come from `t`.
             judgesMatches:  { with: { user: true }, orderBy: (t, o) => [o.asc(t.user_id)] },
             rounds: {
-                // Legacy: unordered scan (rowid) then a stable JS sort by created_at.
+                // By created_at, ties in insertion order.
                 orderBy: (t, o) => [o.asc(t.created_at), asc(rowid)],
                 with: {
                     ridingTimeVotes: { orderBy: () => [asc(rowid)] },
@@ -131,7 +126,7 @@ export async function findMatchGraphsByIds(db: DbOrTx, matchIds: readonly string
 
 
 /* ----------------------------------------------------------------------------
- * Write primitives (composed by the lifecycle services, task 10b)
+ * Write primitives (composed by the lifecycle services)
  * ------------------------------------------------------------------------- */
 
 export type InsertMatchValues = Omit<NewMatch, 'created_at' | 'updated_at'>;
@@ -149,10 +144,8 @@ export type MatchPatch = Partial<Pick<Match,
     'started_at' | 'ended_at' | 'break_started_at' | 'break_duration' | 'red_score' | 'blue_score'>>;
 
 /**
- * `match.save()` after setting attributes (`start`, `end`, `Round#end`'s
- * break, BreakTransitionWorker). Writes the given columns plus
- * `updated_at = now`, and returns the updated row (`null` if no such match).
- * Unlike Sequelize's dirty tracking, `updated_at` is bumped even if a value is
+ * Writes the given columns plus `updated_at = now`, and returns the updated
+ * row (`null` if no such match). `updated_at` is bumped even if a value is
  * unchanged.
  */
 export async function updateMatch(db: DbOrTx, id: string, patch: MatchPatch): Promise<Match | null> {
@@ -185,8 +178,7 @@ export async function claimMatchEnd(db: DbOrTx, id: string, endedAt: Date): Prom
 }
 
 /**
- * `match.setJudges(users)` (`Match#start`). Sequelize `belongsToMany#set`
- * semantics: delete join rows for users not in `userIds`, insert rows for new
+ * Sets the match's judges: delete join rows for users not in `userIds`, insert rows for new
  * ones, leave existing rows (and their timestamps) untouched.
  */
 export async function setMatchJudges(db: DbOrTx, matchId: string, userIds: readonly string[]): Promise<void> {

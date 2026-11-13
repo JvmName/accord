@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'bun:test';
 /**
- * Module-format and dependency hygiene for src/services (task 10b).
+ * Module-format and dependency hygiene for src/services.
  *
- * The services use ES `export`, like the task-10 repositories. Only new code
- * loads them, but they must still load through `require()` under bun (the
- * legacy stack and these JS tests are CommonJS). They must not depend on the
- * legacy ORM, and must not use the transaction helper (the routes that need
- * one wrap the call).
+ * The services use ES `export`, like the repositories, but they must still
+ * load through `require()` under bun. They must not depend on an ORM or on
+ * WebSocket code, and must not use the transaction helper (the routes that
+ * need one wrap the call).
  */
 import fs from 'fs';
 import path from 'path';
@@ -25,7 +24,7 @@ describe('src/services modules', () => {
         for (const fn of exported) expect(mod[fn].constructor.name).toBe('AsyncFunction');
     });
 
-    it('import the legacy ORM, the transaction helper, or WebSocket code: never', () => {
+    it('import an ORM, the transaction helper, or WebSocket code: never', () => {
         const dir = path.join(__dirname, '../../src/services');
         const files = fs.readdirSync(dir).filter((f) => f.endsWith('.ts'));
         expect(files.sort()).toEqual(['errors.ts', 'matchLifecycle.ts', 'ridingTimeVotes.ts', 'roundLifecycle.ts']);

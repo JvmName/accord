@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, mock, spyOn, test } from 'bun:test';
 /**
  * DB-free unit tests for the consensus riding-time calculator
- * (src/domain/ridingTime.ts), server-ts task 08.
+ * (src/domain/ridingTime.ts).
  *
  * Threshold rule (CLAUDE.md): 1 for a single judge, ALWAYS 2 for any
  * multi-judge panel regardless of size. Time derives from vote timestamps.

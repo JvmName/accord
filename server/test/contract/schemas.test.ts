@@ -8,12 +8,12 @@
  *
  * Unlike `contract.test.ts` this file boots nothing: it reads the goldens off
  * disk and parses them. It is therefore also the gate that keeps the Zod
- * layer honest once task 06 generates OpenAPI from it and task 12 validates
- * requests with it.
+ * layer honest: the OpenAPI document is generated from it and the DEV
+ * validator checks requests and responses with it.
  *
  * The schemas are `strictObject`, so an unexpected EXTRA key in a payload
  * fails here too — which is the point: extra keys are how `api_token` got
- * onto the WebSocket wire (F-22).
+ * onto the WebSocket wire.
  */
 import { describe, expect, it } from 'bun:test';
 import fs from 'fs';
@@ -174,7 +174,7 @@ describe('contract schemas — optionality is not accidentally loose', () => {
         return golden.response.body.data.match;
     };
 
-    it('rejects a Match missing break_remaining (present-but-nullable, F-20)', () => {
+    it('rejects a Match missing break_remaining (present-but-nullable)', () => {
         const { break_remaining, ...withoutBreakRemaining } = baseMatch();
         expect(break_remaining).toBe(40); // non-null over plain HTTP
         const schema = routeResponses['GET /match/{matchId}'];
@@ -211,7 +211,7 @@ describe('contract schemas — optionality is not accidentally loose', () => {
             .success).toBe(true);
     });
 
-    it('rejects a competitor api_token on a Match, over HTTP and WebSocket (F-22)', () => {
+    it('rejects a competitor api_token on a Match, over HTTP and WebSocket', () => {
         const match = baseMatch();
         const leaky = {
             ...match,
@@ -226,7 +226,7 @@ describe('contract schemas — optionality is not accidentally loose', () => {
         expect(matchSchema.safeParse({ ...wsPayload, red_competitor: { ...wsPayload.red_competitor, api_token: 'leaked' } }).success).toBe(false);
     });
 
-    it('a 422 error envelope has the status "unprocessable entity" and is rejected without it (F-21)', () => {
+    it('a 422 error envelope has the status "unprocessable entity" and is rejected without it', () => {
         const golden = readGolden('http.rounds.pause.noActiveRound.422.json');
         expect(golden.response.body.status).toBe('unprocessable entity');
         expect(errorEnvelopeSchema.safeParse(golden.response.body).success).toBe(true);
@@ -238,7 +238,7 @@ describe('contract schemas — optionality is not accidentally loose', () => {
         expect(errorEnvelopeSchema.safeParse({
             data: { error: 'boom' }, status: 'server error',
         }).success).toBe(true);
-        // A bare string where the client expects List<String> (the F-14 shape)
+        // A bare string where the client expects List<String> (the old unique-violation shape)
         // is deliberately NOT accepted — see envelope.ts.
         expect(errorEnvelopeSchema.safeParse({
             data: { errors: { null: 'UNIQUE constraint failed' } }, status: 'bad request',
@@ -277,7 +277,7 @@ describe('contract request schemas', () => {
         expect(failures).toEqual([]);
     });
 
-    it('accepts an explicit winner: null on PATCH /rounds/result, like an omitted winner (F-24)', () => {
+    it('accepts an explicit winner: null on PATCH /rounds/result, like an omitted winner', () => {
         const body = readGolden('http.rounds.result.explicitNull.json').request.body;
         expect(body).toEqual({ stoppage: false, winner: null });
         expect(endRoundRequestSchema.safeParse(body).success).toBe(true);
@@ -290,7 +290,7 @@ describe('contract request schemas', () => {
         expect(competitorRequestSchema.safeParse({ name: 'Fresh Red' }).success).toBe(true);
         expect(competitorRequestSchema.safeParse({}).success).toBe(false);
         expect(competitorRequestSchema.safeParse({ name: '' }).success).toBe(false);
-        expect(competitorRequestSchema.safeParse({ id: 'u1' }).success).toBe(false);   // ids are UUIDs (F-91)
+        expect(competitorRequestSchema.safeParse({ id: 'u1' }).success).toBe(false);   // ids are UUIDs
     });
 
     it('treats judge_count as optional on mat creation', () => {

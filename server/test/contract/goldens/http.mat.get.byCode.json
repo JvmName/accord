@@ -1,7 +1,7 @@
 {
   "name": "http.mat.get.byCode",
   "route": "GET /mat/{matId}",
-  "why": "The :matId segment doubles as a mat code when it matches MatCode.CODE_REGEXP (FINDINGS F-12). Same payload as by-id.",
+  "why": "The :matId segment doubles as a mat code when it matches MatCode.CODE_REGEXP. Same payload as by-id.",
   "request": {
     "method": "GET",
     "path": "/mat/<code:main-viewer>",

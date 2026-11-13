@@ -1,8 +1,7 @@
 /**
- * `Round` -> wire (server-ts task 11).
+ * `Round` -> wire.
  *
- * Legacy: `Round#toApiResponse()` (`models/round.js`) builds a fixed object
- * literal; almost nothing in it is a column:
+ * A fixed object; almost nothing in it is a column:
  *
  *   id, started_at (= created_at), ended_at,
  *   max_duration   rules.roundDurations[index] || 0
@@ -12,13 +11,12 @@
  *   score          { [red_competitor_id]: red, [blue_competitor_id]: blue }
  *   result         { winner, method: { type, value } }
  *
- * `score` and `result` come from the task-08 domain functions
+ * `score` and `result` come from the domain functions
  * (`RDojoKombatRules.scoreRound` -> consensus calculator, `getRoundResult`),
- * fed the same inputs `#collectResultsData` loaded: the match's competitor
- * rows, the MATCH judges, the round's votes (`started_at` = `created_at`) and
- * pauses, and the round's 1-based position in the match's rounds. `stoppage`,
- * `declared_winner_id` and `match_id` are NOT emitted (F-51: stoppage is never
- * on the wire).
+ * fed the match's competitor rows, the MATCH judges, the round's votes
+ * (`started_at` = `created_at`) and pauses, and the round's 1-based position
+ * in the match's rounds. `stoppage`, `declared_winner_id` and `match_id` are
+ * NOT emitted.
  *
  * Input is the match graph (`findMatchGraph`) plus one of its rounds: a round
  * cannot be rendered without its match (competitors, judges, position).
@@ -47,11 +45,11 @@ export type RoundMatchContext = Pick<MatchGraph,
 
 export type RoundInput = RoundWithActivity;
 
-/** Score + result of one round, as `Round#collectResultsData` computed them. */
+/** Score + result of one round. */
 export interface RoundOutcome extends RoundScore, RoundResult<User> {}
 
 /**
- * The legacy `#collectResultsData` for one round, from already-loaded rows.
+ * The score and result of one round, from already-loaded rows.
  *
  * An open control period closes at the round's `ended_at`, or at `now` while
  * the round is open. `now` is injectable for tests.
@@ -84,7 +82,7 @@ export function currentPause(pauses: readonly RoundPause[]): RoundPause | null {
 }
 
 /**
- * `time_remaining`, verbatim from `Round#toApiResponse`: `null` once the round
+ * `time_remaining`: `null` once the round
  * has ended; otherwise `max(0, maxDuration - floor((ref - started_at -
  * pausedMs) / 1000))`, where `ref` is the open pause's `paused_at` (the clock
  * freezes while paused) or `now`, and `pausedMs` sums only RESUMED pauses.

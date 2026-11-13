@@ -2,10 +2,8 @@
  * THE CONTRACT GATE.
  *
  * Replays the whole capture plan against a freshly-seeded server and asserts
- * byte-equality with the committed goldens in `goldens/`. From task 04 onward
- * this is the acceptance gate for every phase that touches the wire: the ORM
- * swap (11), the routing rewrite (13a/13b/13c), the worker/WebSocket tier (14)
- * and the legacy deletion (15).
+ * byte-equality with the committed goldens in `goldens/`. This is the
+ * acceptance gate for every change that touches the wire.
  *
  * A red run here means the wire contract changed. The fix is the server, not
  * the golden. Regenerating goldens to turn this green is exactly the failure

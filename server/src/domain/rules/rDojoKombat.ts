@@ -1,8 +1,7 @@
 /**
- * The R-Dojo Kombat ruleset. Moved from `lib/rules/rDojoKombat.js` in
- * server-ts task 08; values and behaviour unchanged. The scoring/winner
- * bodies now live in `../scoring` as pure functions; these methods adapt the
- * ruleset's parameters (tech-fall thresholds) onto them.
+ * The R-Dojo Kombat ruleset. The scoring/winner bodies live in `../scoring`
+ * as pure functions; these methods adapt the ruleset's parameters (tech-fall
+ * thresholds) onto them.
  */
 import type { Competitor, Judge, PauseInput, RoundStatusInput, Rules, ScoredVoteInput, ScoringModule } from '../types';
 

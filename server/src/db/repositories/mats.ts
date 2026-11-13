@@ -1,6 +1,5 @@
 /**
- * `mats` repository (server-ts task 10), including the `judges_mats` and
- * `mats_viewers` join rows (legacy `Mat.belongsToMany(User, {as: 'judges'|'viewers'})`).
+ * `mats` repository, including the `judges_mats` and `mats_viewers` join rows.
  */
 import { and, asc, eq, getTableColumns, isNull } from 'drizzle-orm';
 import { judges_mats, matches, mats, mats_viewers, users } from '../schema';
@@ -22,10 +21,9 @@ export async function findMatByCode(db: DbOrTx, code: string | null | undefined)
 }
 
 /**
- * `mat.getJudges()`. Users joined through `judges_mats` (INNER JOIN: a join
- * row whose user is missing yields nothing). Legacy order: SQLite drives the
- * join from the unique index `(mat_id, user_id)`, so judges come back ordered
- * by `user_id`, NOT by when they joined.
+ * A mat's judges: users joined through `judges_mats` (INNER JOIN: a join row
+ * whose user is missing yields nothing), ordered by `user_id`, NOT by when they
+ * joined.
  */
 export async function findMatJudges(db: DbOrTx, matId: string): Promise<User[]> {
     return await db.select(getTableColumns(users))
@@ -52,11 +50,9 @@ export async function findMatViewers(db: DbOrTx, matId: string, filter: { userId
 }
 
 /**
- * `mat.getIncompleteMatches()` (`getMatches({where: {ended_at: null}})`).
- * Returned in legacy DB order (insertion/rowid, via `incomplete_matches_idx`),
- * NOT sorted: `Mat#toApiResponse` sorts by `created_at` itself, while
- * `UsersController` takes `.find(m => m.started)` on this unsorted order
- * (FINDINGS F-48). Callers must reproduce whichever they replace.
+ * A mat's matches that have not ended, in insertion order (rowid, via
+ * `incomplete_matches_idx`), NOT sorted. Callers that need `created_at` order
+ * sort themselves.
  */
 export async function findIncompleteMatchesForMat(db: DbOrTx, matId: string): Promise<Match[]> {
     return await db.query.matches.findMany({
@@ -72,8 +68,7 @@ export type MatGraph = Mat & {
 };
 
 /**
- * Everything `Mat#toApiResponse` loads (`includeMatJudges`, `includeCodes`,
- * `includeMatches`) in ONE relational query, with the same per-association
+ * A mat's judges, codes and incomplete matches in ONE relational query, with the same per-association
  * ordering as the single-purpose functions above. `null` when the mat does
  * not exist. Nested match payloads (competitors, rounds, winner) are loaded
  * with `findMatchGraphsByIds` (matches.ts).
@@ -101,12 +96,12 @@ export async function findMatGraph(db: DbOrTx, matId: string): Promise<MatGraph 
 export interface InsertMatValues {
     name: string;
     creator_id: string;
-    /** Omitted/`undefined` -> the column default (1), as `Mat.create` does for a missing param. */
+    /** Omitted/`undefined` -> the column default (1). */
     judge_count?: number;
     id?: string;
 }
 
-/** `Mat.create({ creator_id, name, judge_count })`. */
+/** Inserts a mat. */
 export async function insertMat(db: DbOrTx, values: InsertMatValues): Promise<Mat> {
     const [row] = await db.insert(mats).values({
         ...(values.id ? { id: values.id } : {}),
@@ -119,9 +114,8 @@ export async function insertMat(db: DbOrTx, values: InsertMatValues): Promise<Ma
 }
 
 /**
- * `mat.addJudge(user)`. Idempotent like Sequelize's `belongsToMany#add`, which
- * inserts only the targets that have no join row yet (an existing row is left
- * untouched, timestamps included).
+ * Adds a judge. Idempotent: an existing join row is left untouched,
+ * timestamps included.
  */
 export async function addMatJudge(db: DbOrTx, matId: string, userId: string): Promise<void> {
     await db.insert(judges_mats)

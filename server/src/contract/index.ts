@@ -6,11 +6,10 @@
  * `time_remaining`, `Match.red_competitor`, `Match.break_remaining`,
  * `Mat.current_match` and `upcoming_matches` are all computed, not columns).
  *
- * Every schema here is derived from the task-04 goldens in
+ * Every schema here is derived from the goldens in
  * `test/contract/goldens/`, cross-checked field by field against the Kotlin
  * client's `models.kt`. Where a golden and a prose document disagreed, the
- * golden won; those cases are commented in place and recorded in
- * `.ai/plans/server-ts/FINDINGS.md` (F-20, F-21, F-22, F-24).
+ * golden won; those cases are commented in place.
  *
  * `test/contract/schemas.test.ts` parses all 85 goldens through these
  * schemas, so they describe reality rather than aspiration.

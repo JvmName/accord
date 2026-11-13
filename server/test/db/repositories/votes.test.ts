@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-/** riding_time_votes repository (task 10). Real in-memory SQLite. */
+/** riding_time_votes repository. Real in-memory SQLite. */
 import { ID, at, freshDb, insertRows, seedBase, stampsAt } from './support';
 import * as Votes from '../../../src/db/repositories/votes';
 

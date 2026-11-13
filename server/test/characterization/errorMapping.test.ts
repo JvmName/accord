@@ -15,7 +15,7 @@ import { createDb, migrateDb } from '../../src/db';
 import { routeResponses } from '../../src/contract/responses';
 import { AuthorizationError, ValidationError } from '../../src/http/errors';
 import { defineRoute } from '../../src/http/route';
-import { legacyBodyParsers, registerRoutes } from '../../src/http/router';
+import { bodyParsers, registerRoutes } from '../../src/http/router';
 
 
 /** A route whose handler throws whatever the test hands it. */
@@ -46,7 +46,7 @@ beforeAll(async () => {
         res.end  = (...args) => { calls.end++; return end(...args); };
         next();
     });
-    app.use(...legacyBodyParsers());
+    app.use(...bodyParsers());
     registerRoutes(app, [probe], { db, dev: false });
     server = await new Promise((resolve) => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
     origin = `http://127.0.0.1:${server.address().port}`;
@@ -88,7 +88,7 @@ describe('CHARACTERIZATION: error class → HTTP response', () => {
         });
 
 
-        // The branch is `instanceof`, so a subclass is still a 401 (F-13).
+        // The branch is `instanceof`, so a subclass is still a 401.
         it('matches a SUBCLASS of AuthorizationError (401, message not leaked)', async () => {
             class DerivedAuthorizationError extends AuthorizationError {}
             const { status, body } = await requestThatThrows(new DerivedAuthorizationError('nope'));
@@ -152,7 +152,7 @@ describe('CHARACTERIZATION: error class → HTTP response', () => {
         });
 
 
-        // F-14: the driver message used to be echoed as a bare string under the
+        // The driver message used to be echoed as a bare string under the
         // key "null", which the client cannot decode (every other value is a list).
         it('never adds a "null" key or the driver message', async () => {
             const { body } = await requestThatThrows(driverError('UNIQUE constraint failed: mat_codes.code'));
@@ -162,7 +162,7 @@ describe('CHARACTERIZATION: error class → HTTP response', () => {
         });
 
 
-        // F-78: only a unique violation is a client-fixable duplicate.
+        // Only a unique violation is a client-fixable duplicate.
         it('answers other constraint failures with the generic 500', async () => {
             const { status, body } = await requestThatThrows(driverError('NOT NULL constraint failed: users.name', 'SQLITE_CONSTRAINT_NOTNULL'));
 

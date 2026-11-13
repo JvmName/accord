@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 /**
- * `serializeRound` (task 11), from plain fixture rows.
- * No database. Every output is also parsed through the task-05 schema.
+ * `serializeRound`, from plain fixture rows.
+ * No database. Every output is also parsed through the schema.
  */
 import * as S from '../../src/serialize';
 import { roundSchema } from '../../src/contract';
@@ -38,7 +38,7 @@ describe('serializeRound — field set', () => {
         expect(out.score).toEqual({ [ID.red]: 0, [ID.blue]: 0 });
     });
 
-    it('result.winner is the SAFE user {id, name}: never api_token or timestamps (F-22)', () => {
+    it('result.winner is the SAFE user {id, name}: never api_token or timestamps', () => {
         const rounds = [F.round({ started: 20, ended: 90, declaredWinnerId: ID.blue, stoppage: false })];
         const match = F.matchGraph({ rounds });
         const out = S.serializeRound(match, rounds[0], { now: NOW });
@@ -58,8 +58,7 @@ describe('serializeRound — result for every win method (domain-derived)', () =
         expect(out.result.method).toEqual({ type: 'submission', value: null });
     });
 
-    it('STOPPAGE: declared winner, stoppage true -> type stoppage, value null (and legacy 0/1 reads the same, F-51)', () => {
-        // The legacy column returned 1 for true; the row type says boolean.
+    it('STOPPAGE: declared winner, stoppage true -> type stoppage, value null', () => {
         for (const stoppage of [true, 1 as unknown as boolean]) {
             const out = render([F.round({ started: 20, ended: 90, declaredWinnerId: ID.blue, stoppage })]);
             expect(out.result).toEqual({ winner: { id: ID.blue, name: 'Blair Blue' }, method: { type: 'stoppage', value: null } });
@@ -148,7 +147,7 @@ describe('serializeRound — clock-dependent fields use the injected `now`', () 
         expect(render([F.round({ started: 480 })]).paused).toBe(false);
     });
 
-    it('paused is reported for an ended round with an unresolved pause (legacy reads only the pause rows)', () => {
+    it('paused is reported for an ended round with an unresolved pause', () => {
         const out = render([F.round({ started: 480, ended: 590, pauses: [F.pause(500, null)] })]);
         expect([out.paused, out.time_remaining]).toEqual([true, null]);
     });
@@ -161,7 +160,7 @@ describe('serializeRound — clock-dependent fields use the injected `now`', () 
 });
 
 describe('serializeRound — max_duration by position', () => {
-    it('180 / 120 / 60 for rounds 1-3, 0 beyond (a 4th round, F-56)', () => {
+    it('180 / 120 / 60 for rounds 1-3, 0 beyond (a 4th round)', () => {
         const rounds = [0, 1, 2, 3].map((i) => F.round({ started: 20 + i * 10, ended: 25 + i * 10 }));
         expect(rounds.map((_, i) => render(rounds, i).max_duration)).toEqual([180, 120, 60, 0]);
     });

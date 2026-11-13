@@ -13,9 +13,9 @@
  * — with the votes visible only through their effect on `Round.score`.
  * Confirmed across `http.ridingTime.*` in `test/contract/goldens/`.
  *
- * This module exists so that absence is stated rather than looked like an
- * omission. The vote's row type arrives with Drizzle in task 09; if a future
- * endpoint ever exposes a vote directly, its wire schema belongs here.
+ * This module exists so that absence is stated rather than looking like an
+ * omission. If a future endpoint exposes a vote directly, its wire schema
+ * belongs here.
  */
 import { matchResponseSchema } from './responses';
 

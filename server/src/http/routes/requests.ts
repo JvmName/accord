@@ -16,7 +16,7 @@
  * | POST /mat/:matCode/matches         | `red`, `blue`: `{ id?: UUID string, name?: string }`, one of the two  |
  * | PATCH /match/:matchId/rounds/result| `winner`: `red` \| `blue` \| null, optional; `stoppage`: boolean, optional |
  * | POST /match/:matchId/ridingTime    | `rider`: `red` \| `blue`                                             |
- * | DELETE /match/:matchId/ridingTime  | `rider` is accepted and ignored (installed clients send it, F-55)    |
+ * | DELETE /match/:matchId/ridingTime  | `rider` is accepted and ignored (installed clients send it)    |
  *
  * Messages: a missing or empty required value is `required`; a value of the
  * wrong type says what it should be.

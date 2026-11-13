@@ -1,12 +1,10 @@
 /**
- * The `{ data, status }` response envelope (server-ts task 12).
+ * The `{ data, status }` response envelope.
  *
- * A faithful port of the rendering half of `ServerController`
- * (`lib/server/serverController.js`): `render`, `renderErrors`,
- * `renderNotFoundResponse`, `renderUnauthorizedResponse`, `formatJSONBody`,
- * `_formatJSONBody` and `statusText`. The task-04 goldens pin the bytes these
- * produce; `test/http/envelope.test.ts` replays the relevant goldens through
- * this module.
+ * Rendering: `render`, `renderErrors`, `renderNotFound`, `renderUnauthorized`,
+ * `formatJSONBody` and `statusText`. The goldens pin the bytes these produce;
+ * `test/http/envelope.test.ts` replays the relevant goldens through this
+ * module.
  */
 import type { Response } from 'express';
 import type { ErrorMap } from '../contract/envelope';
@@ -14,7 +12,7 @@ import type { ErrorMap } from '../contract/envelope';
 /**
  * The `status` text for a status code: 200/400/401/404/422/500. Any other
  * code yields `undefined`, and `JSON.stringify` then DROPS the `status` key,
- * which the Kotlin client cannot decode. 422 used to be missing (F-21); no
+ * which the Kotlin client cannot decode. 422 used to be missing; no
  * route renders a code outside this list.
  */
 export function statusText(statusCode: number): string | undefined {
@@ -36,23 +34,19 @@ export function statusText(statusCode: number): string | undefined {
 }
 
 /**
- * `ServerController#_formatJSONBody`, minus the `toApiResponse()` hook.
- *
- * Generic walk applied to every rendered body, reproduced exactly because it
- * changes bytes on the wire:
+ * The generic walk applied to every rendered body. It changes bytes on the
+ * wire:
  *   - `undefined` -> `null`, at the top level AND as any object value or array
- *     element. NOTE for tasks 11/13: a serializer that writes `key: undefined`
+ *     element. NOTE: a serializer that writes `key: undefined`
  *     therefore renders `key: null`, NOT an absent key. Absent vs `null` is the
  *     distinction `Match.merge()` in `models_ext.kt` depends on, so omit a key
  *     by not setting it, never by setting it to `undefined`.
  *   - a `Date` -> `toISOString()`.
  *   - primitives (and `null`) pass through.
  *
- * Like the legacy walk it MUTATES the objects/arrays it is given in place and
- * returns the same reference (so a class instance keeps its prototype and any
- * `toJSON`). The `toApiResponse()` branch is intentionally absent: handlers on
- * the new stack return plain wire objects built by the task-11 serializers,
- * not Sequelize models.
+ * It MUTATES the objects/arrays it is given in place and returns the same
+ * reference (so a class instance keeps its prototype and any `toJSON`).
+ * Handlers return plain wire objects built by the serializers.
  */
 export function formatJSONBody(body: unknown): unknown {
     if (body === undefined) return null;
@@ -75,9 +69,8 @@ export function formatJSONBody(body: unknown): unknown {
 }
 
 /**
- * The envelope object `ServerController#formatJSONBody` returns for a body at
- * a given status. `status` is computed from the status code exactly when the
- * body is rendered, as legacy did.
+ * The envelope object for a body at a given status. `status` is computed from
+ * the status code when the body is rendered.
  *
  * A status with no text leaves the key out of the object rather than
  * holding `undefined`. The JSON is the same either way, but the DEV response
@@ -91,9 +84,8 @@ export function envelopeFor(statusCode: number, body: unknown): { data: unknown;
 
 /**
  * A response a handler (or a gate) decided to send instead of the success
- * payload: the equivalent of the legacy `renderErrors` /
- * `renderNotFoundResponse` / `renderUnauthorizedResponse` calls. Returned, not
- * thrown, so a handler's early exits are visible in its return type.
+ * payload (an error, a 404, a 401). Returned, not thrown, so a handler's early
+ * exits are visible in its return type.
  */
 export class Rendered {
     constructor(

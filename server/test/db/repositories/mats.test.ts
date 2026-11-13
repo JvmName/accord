@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-/** mats repository (task 10): lookups, judge/viewer joins, graph, writes. Real in-memory SQLite. */
+/** mats repository: lookups, judge/viewer joins, graph, writes. Real in-memory SQLite. */
 import { CODE, ID, at, freshDb, insertRows, seedBase, stampsAt } from './support';
 import * as Mats from '../../../src/db/repositories/mats';
 
@@ -53,7 +53,7 @@ describe('judges and viewers (join rows)', () => {
         expect(row.created_at).toBe(at(14).toISOString());
     });
 
-    it('returns full User rows (incl. api_token: stripping is serialisation, task 11)', async () => {
+    it('returns full User rows (incl. api_token: stripping is serialisation)', async () => {
         await Mats.addMatJudge(db, ID.matMain, ID.judgeA);
         const [judge] = await Mats.findMatJudges(db, ID.matMain);
         expect(Object.keys(judge).sort()).toEqual(['api_token', 'created_at', 'id', 'name', 'updated_at']);

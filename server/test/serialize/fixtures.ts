@@ -1,5 +1,5 @@
 /**
- * Plain-object fixture rows for the serializer unit tests (task 11). Not a
+ * Plain-object fixture rows for the serializer unit tests. Not a
  * test file. Shapes are Drizzle rows (`src/db/types.ts`): every datetime is a
  * `Date`, `stoppage` is a boolean. No database is involved.
  */

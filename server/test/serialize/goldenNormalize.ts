@@ -1,8 +1,7 @@
 /**
  * A faithful COPY of the golden normalizer in `test/contract/capture.ts`
  * (`DynamicNames`, `replaceString`, `replaceInPath`, `normalizeValue`), which
- * keeps those module-private. Not a test file. Task 11 may not edit the
- * capture harness, so the copy lives here; `goldenEquivalence.test.ts` checks
+ * keeps those module-private. Not a test file. The copy lives here; `goldenEquivalence.test.ts` checks
  * that this copy re-normalises every committed golden's LIVE replay
  * response byte-identically, so a drift between the two would fail loudly.
  *

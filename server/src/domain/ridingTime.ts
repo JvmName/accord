@@ -1,8 +1,7 @@
 /**
  * Consensus riding-time calculator — the application's core algorithm.
  *
- * Moved from `lib/ridingTime.js` in server-ts task 08; the algorithm is
- * unchanged. Threshold is 1 for a single judge and ALWAYS 2 for any
+ * Threshold is 1 for a single judge and ALWAYS 2 for any
  * multi-judge panel. Time derives from vote timestamps, never increments.
  *
  * Pure: no imports outside `src/domain`.

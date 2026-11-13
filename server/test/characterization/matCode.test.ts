@@ -7,7 +7,7 @@
  * silently misroutes every mat lookup, so both the regexp itself and the
  * branch it drives are pinned.
  *
- * NOTE: the regexp is anchored (F-12; it used to match a dotted triple
+ * NOTE: the regexp is anchored (it used to match a dotted triple
  * anywhere in the string) and built from `\w`, so it accepts underscores and
  * digits.
  *
@@ -86,7 +86,7 @@ describe('CHARACTERIZATION: CODE_REGEXP', () => {
         });
 
 
-        it('is anchored, so it does not match a code embedded in a longer string (F-12)', () => {
+        it('is anchored, so it does not match a code embedded in a longer string', () => {
             expect(CODE_REGEXP.test('!!morning.coffee.bicycle!!')).toBe(false);
             expect(CODE_REGEXP.test('a.b.c.d.e')).toBe(false);
             expect(CODE_REGEXP.test('a.b.c\n')).toBe(false);

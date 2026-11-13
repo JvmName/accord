@@ -1,7 +1,7 @@
 {
   "name": "http.mat.get.byId.anonymous",
   "route": "GET /mat/{matId}",
-  "why": "FINDINGS F-15: MatsController registers no authenticateRequest and matPermission(\"view\") is unconditionally true, so an anonymous caller gets the full payload. Pinned as-is.",
+  "why": "A mat page is public on purpose: an anonymous caller gets the full payload.",
   "request": {
     "method": "GET",
     "path": "/mat/<mat:main>",

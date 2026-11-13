@@ -1,5 +1,5 @@
 /**
- * `defineRoute()` (server-ts task 12): one object that is simultaneously the
+ * `defineRoute()`: one object that is simultaneously the
  * runtime route, its validation source and its OpenAPI path entry.
  *
  * ```ts
@@ -118,13 +118,13 @@ export function defineRoute<
 const placeholders = new WeakSet<object>();
 
 /**
- * The placeholder every route carries until its handler is ported. It THROWS
- * (never resolves to a success), so a route that is somehow registered before
- * its port answers a loud 500 rather than a silent 200.
+ * A placeholder handler for a route that has none yet. It THROWS (never
+ * resolves to a success), so a route registered without a handler answers a
+ * loud 500 rather than a silent 200.
  */
-export function notImplemented(task: '13a' | '13b' | '13c' | '14'): () => Promise<never> {
+export function notImplemented(task: string): () => Promise<never> {
     const placeholder = async () => {
-        throw new NotImplementedError(`handler not implemented: ported in task ${task}`);
+        throw new NotImplementedError(`handler not implemented: ${task}`);
     };
     placeholders.add(placeholder);
     return placeholder;

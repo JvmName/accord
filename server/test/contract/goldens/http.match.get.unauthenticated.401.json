@@ -1,7 +1,7 @@
 {
   "name": "http.match.get.unauthenticated.401",
   "route": "GET /match/{matchId}",
-  "why": "Match routes authenticate; contrast GET /mat/{matId} (F-15).",
+  "why": "Match routes authenticate; contrast GET /mat/{matId}, which is public.",
   "request": {
     "method": "GET",
     "path": "/match/<match:done>",

@@ -1,21 +1,16 @@
 /**
- * OpenAPI generation from the task-05 Zod wire schemas and the task-12 route
- * definitions.
+ * OpenAPI generation from the Zod wire schemas and the route definitions.
  *
- * Components come from the Zod wire schemas (task 06). PATHS come from the
- * route definitions in `src/http/routes` (task 12): every non-DEV route
+ * Components come from the Zod wire schemas. PATHS come from the
+ * route definitions in `src/http/routes`: every non-DEV route
  * contributes one operation, built from its literal path, its request schemas
  * (or its `openapi.body` / `openapi.query` documentation overrides), its
  * success envelope and the error statuses its authorization spec, validation
  * and `openapi.errors` imply. No path entry is written by hand. See
  * `buildPaths()` below.
  *
- * Component names are chosen to match `lib/openapi/schemas/index.js`
- * (`User`, `Mat`, `MatCode`, `Match`, `Round`) so `$ref`s stay stable across
- * the hand-written → generated cutover and the step-5 diff in
- * `06-openapi-generation.md` is meaningful. The WebSocket-only "leaked"
- * variants (F-22) and the request/response payload shapes have no
- * hand-written counterpart — they're new components, not renames.
+ * Component names are `User`, `Mat`, `MatCode`, `Match`, `Round`, plus the
+ * request and response payload shapes.
  *
  * ## Why this doesn't use `OpenAPIRegistry.register()`
  *
@@ -89,8 +84,7 @@ const taggedSchemas: z.ZodType[] = [
     tagSchema('EndRoundRequest', contract.endRoundRequestSchema),
     tagSchema('StartRidingTimeVoteRequest', contract.startRidingTimeVoteRequestSchema),
 
-    // --- Response payloads (the `data` shape, unwrapped — the envelope and the
-    // route -> schema mapping belong to task 12, which owns paths). ---
+    // --- Response payloads (the `data` shape, unwrapped; `buildPaths` adds the envelope). ---
     tagSchema('CreateUserResponse', contract.createUserResponseSchema),
     tagSchema('MatResponse', contract.matResponseSchema),
     tagSchema('MatchResponse', contract.matchResponseSchema),
@@ -100,7 +94,7 @@ const taggedSchemas: z.ZodType[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Error envelopes (task 12). One schema component per error status the
+// Error envelopes. One schema component per error status the
 // registry can produce, each the exact wire shape (see `src/http/envelope.ts`),
 // and one `responses` component per status, named as in the hand-written
 // spec (`BadRequest`, `Unauthorized`, `NotFound`, `ServerError`) plus the
@@ -111,7 +105,7 @@ const errorEnvelopes = {
     400: {
         response: 'BadRequest',
         description: 'Bad Request',
-        // NOTE (F-14): a unique-constraint 400 also carries a bare STRING under the
+        // NOTE: a unique-constraint 400 also carries a bare STRING under the
         // key "null", which this map type does not admit (see envelope.ts).
         schema: tagSchema('BadRequestEnvelope', z.strictObject({
             data: contract.validationErrorDataSchema,
@@ -164,7 +158,7 @@ function gateStatuses(spec: AuthorizeSpec): ErrorStatus[] {
     switch (spec.scope) {
         case 'none':    return [];
         case 'newMat':  return [401];
-        case 'mat':     return [404];                 // public, but a missing mat is a 404 (F-16)
+        case 'mat':     return [404];                 // public, but a missing mat is a 404
         case 'matCode':
             if (spec.level === 'public') return [];
             return [401, 404];                        // no user (or the wrong code) is 401, a missing mat is 404
@@ -187,7 +181,7 @@ function securityFor(spec: AuthorizeSpec): RouteConfig['security'] | undefined {
  * The documented success envelope. Rebuilt from the route's envelope schema
  * because `envelope()` (src/contract/envelope.ts) uses `.nullable()` on the
  * payload, which zod-to-openapi 9.1.0 emits as `allOf [$ref, {type: [object,
- * null]}]`, rejecting `null` (F-30); `nullableRef` emits `anyOf [$ref, null]`.
+ * null]}]`, rejecting `null`; `nullableRef` emits `anyOf [$ref, null]`.
  * The wire shape is unchanged.
  */
 function documentedSuccess(route: AnyRouteDefinition): z.ZodType {
@@ -254,9 +248,7 @@ export function generateOpenApiDocument(): OpenAPIObject {
         {
             type: 'component' as const,
             componentType: 'securitySchemes' as const,
-            // `X-Api-Token` header, matching `lib/openapi/specGenerator.js`'s
-            // `ApiToken` security scheme exactly (name casing included) so
-            // step 5's diff isn't polluted by an incidental rename.
+            // The `X-Api-Token` header.
             name: 'ApiToken',
             component: {
                 type: 'apiKey',

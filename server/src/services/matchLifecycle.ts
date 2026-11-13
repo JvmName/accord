@@ -1,7 +1,6 @@
 /**
- * Match lifecycle commands (server-ts task 10b). Ports of `Match#start`,
- * `Match#end`, `Match#startRound`, `Match#endRound({safe})` and the supporting
- * read `Match#competitorForColor` (`models/match.js`).
+ * Match lifecycle commands: `startMatch`, `endMatch`, `startRound`,
+ * `endRound` and the supporting `competitorForColor`.
  *
  * Plain async functions over the Drizzle handle: no classes, no association
  * caching, no WebSocket emission, no serialisation. One implementation for
@@ -13,8 +12,8 @@
  * transactions: a caller that needs a command's writes to be all-or-nothing
  * (`startMatch`) wraps the call in `transaction()`.
  *
- * Every command resolves to `undefined` (`tryEndRound` to a boolean), like the
- * legacy methods; callers re-read what they render.
+ * Every command resolves to `undefined` (`tryEndRound` to a boolean); callers
+ * re-read what they render.
  */
 import { present } from '../domain/present';
 import type { Match, User } from '../db/types';
@@ -32,14 +31,12 @@ const { logger }: { logger: Logger } = require('../../lib/logger');
 
 
 /**
- * `Match#competitorForColor(color)`: `'red'`/`'blue'` (any case) -> that
- * competitor's `User` row, or `null` when the row is missing.
+ * `'red'`/`'blue'` (any case) -> that competitor's `User` row, or `null` when
+ * the row is missing.
  *
- * Legacy dispatches dynamically (`this['get' + Color + 'Competitor']()`), so
- * any other colour throws a TypeError and an undefined colour throws a
- * TypeError from `color.charAt`. The same expressions are used here so the
- * thrown TypeErrors carry the same messages. Routes validate the colour first,
- * so these paths are unreachable over HTTP today.
+ * Any other colour throws a TypeError, and an undefined colour throws one from
+ * `color.charAt`. Routes validate the colour first, so these paths are
+ * unreachable over HTTP.
  */
 export async function competitorForColor(db: DbOrTx, match: Pick<Match, 'red_competitor_id' | 'blue_competitor_id'>, color: string): Promise<User | null> {
           color  = color.charAt(0).toUpperCase() + color.slice(1).toLowerCase();
@@ -52,7 +49,7 @@ export async function competitorForColor(db: DbOrTx, match: Pick<Match, 'red_com
 }
 
 function callAccessor(this: Record<string, () => Promise<User | null>>, method: string): Promise<User | null> {
-    // An unknown colour has no accessor: the call below throws the TypeError legacy threw, which is pinned.
+    // An unknown colour has no accessor: the call below throws a TypeError.
     return this[method]!();
 }
 
@@ -61,7 +58,7 @@ function callAccessor(this: Record<string, () => Promise<User | null>>, method: 
  * `Match#start()`.
  *
  * 1. `match.started_at` set -> `Error("This match has already started")`
- *    (checked on the row passed in, as legacy checked the in-memory instance)
+ *    (checked on the row passed in)
  * 2. `started_at = now`, only if the match has not started in the meantime
  *    (otherwise `CommandRefused`)
  * 3. judges of the match's mat (ordered by user_id) copied onto the match with
@@ -115,7 +112,7 @@ export async function closeMatch(db: DbOrTx, matchId: string): Promise<boolean> 
 
 /**
  * `Match#startRound()`: refuses a match that has not started or has ended
- * (F-56; a misclick used to add a 4th round to a finished match), refuses
+ * (a misclick must not add a 4th round to a finished match), refuses
  * while the last round (by `created_at`, then insertion) is still open,
  * otherwise inserts a new round (its `created_at` is its start time).
  */

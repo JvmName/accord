@@ -1,9 +1,7 @@
 /**
- * Shared plumbing for the repository modules (server-ts task 10). Not part of
+ * Shared plumbing for the repository modules. Not part of
  * the public repository API.
  *
- * ES `export` like `../schema.ts`: repositories are loaded only by TS / new
- * code and tests, never by the legacy CommonJS stack.
  */
 import { sql, type SQL } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
@@ -18,19 +16,18 @@ import type * as schema from '../schema';
 export type DbOrTx = BaseSQLiteDatabase<'sync', unknown, typeof schema>;
 
 /**
- * Sequelize's automatic timestamps: `created_at` and `updated_at` are both set
- * to the same "now" on insert (the schema has no DB default for them).
+ * `created_at` and `updated_at` are both set to the same "now" on insert (the
+ * schema has no DB default for them).
  */
 export function insertStamps(now: Date = new Date()): { created_at: Date; updated_at: Date } {
     return { created_at: now, updated_at: now };
 }
 
 /**
- * SQLite's implicit `rowid`, i.e. insertion order. The legacy queries carry no
- * ORDER BY; for an index-driven `WHERE x = ?` (or a table scan) SQLite returns
- * rows in `(x, rowid)` order, which is insertion order within the group. This
- * is used as the explicit, deterministic equivalent (see the inventory in
- * `.ai/plans/server-ts/artifacts/repository-inventory.md`, "Ordering").
+ * SQLite's implicit `rowid`, i.e. insertion order. For an index-driven
+ * `WHERE x = ?` (or a table scan) SQLite returns rows in `(x, rowid)` order,
+ * which is insertion order within the group. Used as the explicit,
+ * deterministic order wherever insertion order is wanted.
  *
  * Unqualified on purpose: every use is in a single-table (sub)select, where
  * `rowid` resolves to that table, including inside Drizzle's relational
@@ -38,17 +35,16 @@ export function insertStamps(now: Date = new Date()): { created_at: Date; update
  */
 export const rowid: SQL = sql`rowid`;
 
-/** Drizzle's `findFirst` yields `undefined` when nothing matches; Sequelize's `findOne`/`findByPk` yield `null`. */
+/** Drizzle's `findFirst` yields `undefined` when nothing matches, and callers want `null`. */
 export function orNull<T>(row: T | undefined): T | null {
     return row === undefined ? null : row;
 }
 
 /**
- * Sequelize rejects `where: { col: undefined }` with
- * `WHERE parameter "col" has invalid "undefined" value`. Drizzle would instead
- * build `col = NULL`/`col IS NULL`. Reproduce the legacy throw so a lookup
- * with a missing key fails the same way it did (callers guard today, so this
- * is unreachable in practice).
+ * Drizzle builds `col = NULL`/`col IS NULL` for `where: { col: undefined }`,
+ * which silently matches nothing or everything. Throw instead, so a lookup
+ * with a missing key fails loudly (callers guard, so this is unreachable in
+ * practice).
  */
 export function assertDefined<T>(value: T, column: string): asserts value is Exclude<T, undefined> {
     if (value === undefined) {

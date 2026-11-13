@@ -22,7 +22,7 @@ const { logger } = require('../../../lib/logger');
  * Each competitor is an existing user (`id`) or a new one (`name`). Existing
  * users are looked up and authorized first (an unknown id answers 401), and
  * new users are created only once both competitors are accepted, so a refused
- * request leaves no user behind (F-91).
+ * request leaves no user behind.
  */
 export const postMatches = defineRoute({
     method:    'post',

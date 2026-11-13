@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-/** matches repository (task 10): lookups, worker queries, judges, hot-path graph, writes. Real in-memory SQLite. */
+/** matches repository: lookups, worker queries, judges, hot-path graph, writes. Real in-memory SQLite. */
 import { ID, at, freshDb, insertRows, seedBase, stampsAt } from './support';
 import * as Matches from '../../../src/db/repositories/matches';
 import * as Rounds from '../../../src/db/repositories/rounds';
@@ -91,7 +91,7 @@ describe('findMatchGraph / findMatchGraphsByIds (hot path)', () => {
         insertRows(db, 'round_pauses', [{ id: 'p1', round_id: 'r2', paused_at: at(220), ...stampsAt(220) }]);
     });
 
-    it('loads mat, competitors, judges, rounds -> votes/pauses with legacy orderings', async () => {
+    it('loads mat, competitors, judges, rounds -> votes/pauses with their orderings', async () => {
         const g = await Matches.findMatchGraph(db, 'm1');
         expect(g!.id).toBe('m1');
         expect(g!.started_at).toEqual(at(100));

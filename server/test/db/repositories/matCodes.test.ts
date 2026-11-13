@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 /**
- * matCodes repository + src/domain/matCode.ts (task 10), real in-memory SQLite.
- * Also the require() smoke test for the module formats chosen in task 10.
+ * matCodes repository + src/domain/matCode.ts, real in-memory SQLite.
+ * Also the require() smoke test for the module format.
  */
 import { CODE, ID, freshDb, seedBase } from './support';
 import * as MatCodes from '../../../src/db/repositories/matCodes';
@@ -26,7 +26,7 @@ describe('module format (require() smoke test)', () => {
     });
 });
 
-describe('CODE_REGEXP (anchored, FINDINGS F-12)', () => {
+describe('CODE_REGEXP (anchored)', () => {
     it('is exactly three dotted word runs', () => {
         expect(matCode.CODE_REGEXP.source).toBe('^\\w+\\.\\w+\\.\\w+$');
         expect(matCode.CODE_REGEXP.flags).toBe('');
@@ -46,7 +46,7 @@ describe('CODE_REGEXP (anchored, FINDINGS F-12)', () => {
         expect(matCode.isMatCode('a..b.c')).toBe(false);
     });
 
-    it('ROLES and the role predicates match the legacy getters', () => {
+    it('ROLES and the role predicates are right', () => {
         expect(matCode.ROLES).toEqual({ ADMIN: 'admin', VIEWER: 'viewer' });
         expect(matCode.isAdminCode({ role: 'admin' })).toBe(true);
         expect(matCode.isAdminCode({ role: 'viewer' })).toBe(false);
@@ -67,14 +67,14 @@ describe('findMatCodeByCode', () => {
         expect(await MatCodes.findMatCodeByCode(db, CODE.mainAdmin.toUpperCase())).toBeNull();
     });
 
-    it('null -> null; undefined throws like Sequelize', async () => {
+    it('null -> null; undefined throws', async () => {
         expect(await MatCodes.findMatCodeByCode(db, null)).toBeNull();
         await expect(MatCodes.findMatCodeByCode(db, undefined)).rejects.toThrow('WHERE parameter "code"');
     });
 });
 
 describe('findMatCodesForMat', () => {
-    it('orders by role (legacy index order), not insertion', async () => {
+    it('orders by role, not insertion', async () => {
         // seedBase inserts the viewer code first
         const rows = await MatCodes.findMatCodesForMat(db, ID.matMain);
         expect(rows.map((c) => c.role)).toEqual(['admin', 'viewer']);

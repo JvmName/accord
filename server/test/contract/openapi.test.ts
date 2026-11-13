@@ -2,7 +2,7 @@
  * THE OPENAPI GENERATION GATE.
  *
  * `generateOpenApiDocument()` (`src/contract/openapi.ts`) assembles a
- * components-only OpenAPI 3.1 document from the task-05 Zod wire schemas —
+ * components-only OpenAPI 3.1 document from the Zod wire schemas —
  * see that file's module doc for why it's built the way it is (in short:
  * `OpenAPIRegistry.register()` clones, which breaks the `Mat`/`Match` cycle;
  * this file tags the original schema objects in place instead).
@@ -10,7 +10,7 @@
  * This test does not re-litigate the field-by-field content — that's what
  * `schemas.test.ts` already pins by parsing every golden through the same
  * schemas. It guards the two things specific to *generation*:
- *   - the process is deterministic (task 06 success criterion 1);
+ *   - the process is deterministic;
  *   - the committed `openapi.json` is what the generator currently produces
  *     (so `bun run generate:openapi` isn't forgotten after a schema edit);
  *   - the component names line up with the hand-written spec's five
@@ -60,10 +60,9 @@ describe('generateOpenApiDocument', () => {
         expect(document.security).toEqual([{ ApiToken: [] }]);
     });
 
-    // Task 12 flipped this: it used to assert `paths: {}` ("defers paths to
-    // task 12"). Paths are now generated from the route registry; the full
-    // contract of that generation is pinned in test/http/openapiPaths.test.ts.
-    it('generates paths from the task-12 route registry (every non-DEV route)', () => {
+    // Paths are generated from the route registry; the full contract of that
+    // generation is pinned in test/http/openapiPaths.test.ts.
+    it('generates paths from the route registry (every non-DEV route)', () => {
         const paths = generateOpenApiDocument().paths ?? {};
         const operations = Object.entries(paths)
             .flatMap(([p, item]) => Object.keys(item as object).map(method => `${method.toUpperCase()} ${p}`))
@@ -72,18 +71,16 @@ describe('generateOpenApiDocument', () => {
         expect(operations).not.toContain('GET /docs');
     });
 
-    // --- Step-5 diff anchors: F-20 and F-24 (see 06-openapi-generation.md's
-    // "Note for step 5's diff" and FINDINGS.md). The generated spec is
-    // deliberately MORE PERMISSIVE/accurate than the hand-written one here —
-    // asserted directly so a future edit that silently narrows either back
-    // to the hand-written (wrong) shape is caught.
-    it('models Match.break_remaining as required-but-nullable (F-20; hand-written spec omitted it)', () => {
+    // The generated spec is deliberately accurate where the old hand-written
+    // one was wrong; asserted directly so a future edit cannot silently narrow
+    // it back.
+    it('models Match.break_remaining as required-but-nullable (hand-written spec omitted it)', () => {
         const schemas = generateOpenApiDocument().components?.schemas as Record<string, any>;
         expect(schemas.Match.required).toContain('break_remaining');
         expect(schemas.Match.properties.break_remaining.type).toEqual(['integer', 'null']);
     });
 
-    it('models EndRoundRequest.winner as optional and nullable (F-24)', () => {
+    it('models EndRoundRequest.winner as optional and nullable', () => {
         const schemas = generateOpenApiDocument().components?.schemas as Record<string, any>;
         expect(schemas.EndRoundRequest.required ?? []).not.toContain('winner');
         const winner = JSON.stringify(schemas.EndRoundRequest.properties.winner);

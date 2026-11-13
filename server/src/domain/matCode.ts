@@ -1,16 +1,15 @@
 /**
- * Mat-code constants and predicates (server-ts task 10), lifted out of
- * `models/matCode.js` so the code-vs-id discrimination survives the model.
+ * Mat-code constants and predicates: the code-vs-id discrimination.
  *
  * Pure: no DB, no imports outside `src/domain`. CommonJS runtime with a
  * type-only import as module marker (same convention as `ridingTime.ts` /
- * `scoring.ts`), so the legacy stack could `require()` it unchanged.
+ * `scoring.ts`).
  */
 import type { MatCodeModule } from './types';
 
 /**
  * A mat code is exactly three dotted word runs (`morning.coffee.bicycle`).
- * Anchored (F-12): it used to match a dotted triple anywhere in the string
+ * Anchored: it used to match a dotted triple anywhere in the string
  * (`'!!a.b.c!!'`, `'a.b.c.d'`), which routed a malformed id to the code lookup.
  */
 const CODE_REGEXP = /^\w+\.\w+\.\w+$/;

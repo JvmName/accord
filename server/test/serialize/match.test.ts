@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 /**
- * `serializeMatch` (task 11), from plain fixture rows.
- * No database. Every output is also parsed through the task-05 schema.
+ * `serializeMatch`, from plain fixture rows.
+ * No database. Every output is also parsed through the schema.
  */
 import * as S from '../../src/serialize';
 import { matchSchema } from '../../src/contract';
@@ -66,7 +66,7 @@ describe('serializeMatch — base field set', () => {
         expect('red_competitor' in out).toBe(true);
     });
 
-    it('renders the stored columns: break_duration 0 stays 0 (F-63); a zero-length break has nothing remaining', () => {
+    it('renders the stored columns: break_duration 0 stays 0; a zero-length break has nothing remaining', () => {
         const out = render(F.matchGraph({ break_started_at: at(590), break_duration: 0 }));
         expect(out.break_duration).toBe(0);
         expect(out.break_remaining).toBeNull();
@@ -74,7 +74,7 @@ describe('serializeMatch — base field set', () => {
     });
 });
 
-describe('serializeMatch — break_remaining (F-20: computed on HTTP too)', () => {
+describe('serializeMatch — break_remaining (computed on HTTP too)', () => {
     it('null when there is no break', () => {
         expect(render(F.matchGraph()).break_remaining).toBeNull();
     });
@@ -120,7 +120,7 @@ describe('serializeMatch — optional associations: absent unless included, neve
         expect([empty.judges, empty.rounds]).toEqual([[], []]);
     });
 
-    it('includeMat with a missing mat row throws (legacy dereferenced null)', () => {
+    it('includeMat with a missing mat row throws', () => {
         expect(() => S.serializeMatch(F.matchGraph({ mat: null }), { includeMat: true, now: NOW })).toThrow(TypeError);
         expect(() => S.serializeMatch(F.matchGraph({ mat: null }), { now: NOW })).not.toThrow();
     });
@@ -152,7 +152,7 @@ describe('serializeMatch — winner', () => {
         expect(render(F.matchGraph({ rounds, ended_at: at(200) })).winner).toBeNull();
     });
 
-    it('a 4th ended round counts (F-56), and the winner is the competitor ROW (null if missing)', () => {
+    it('a 4th ended round counts, and the winner is the competitor ROW (null if missing)', () => {
         const rounds = [
             F.round({ started: 20, ended: 30, declaredWinnerId: ID.red }),
             F.round({ started: 40, ended: 50, declaredWinnerId: ID.blue }),
@@ -176,7 +176,7 @@ describe('serializeMatch — winner', () => {
     });
 });
 
-describe('serializeMatch never carries a credential (F-22)', () => {
+describe('serializeMatch never carries a credential', () => {
     it('no key anywhere in a fully rendered match is api_token, created_at or updated_at', () => {
         const g = F.matchGraph({ rounds: doneRounds(), ended_at: at(200), break_started_at: at(590), break_duration: 60 });
         const out = S.serializeMatch(g, { now: NOW, includeMat: true, includeMatchJudges: true, includeRounds: true });

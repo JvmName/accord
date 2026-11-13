@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-/** users repository (task 10) against a real in-memory SQLite DB. */
+/** users repository against a real in-memory SQLite DB. */
 import { ID, freshDb, seedBase } from './support';
 import * as Users from '../../../src/db/repositories/users';
 
@@ -37,7 +37,7 @@ describe('findUserByApiToken (auth lookup)', () => {
         expect(await Users.findUserByApiToken(db, 'not-a-token')).toBeNull();
     });
 
-    it('is exact and case-sensitive (BINARY collation, as legacy)', async () => {
+    it('is exact and case-sensitive (BINARY collation)', async () => {
         expect(await Users.findUserByApiToken(db, ID.tokenCreator.toUpperCase())).toBeNull();
         expect(await Users.findUserByApiToken(db, `${ID.tokenCreator} `)).toBeNull();
         expect(await Users.findUserByApiToken(db, ID.tokenCreator.slice(0, -1))).toBeNull();
@@ -47,7 +47,7 @@ describe('findUserByApiToken (auth lookup)', () => {
         expect(await Users.findUserByApiToken(db, null)).toBeNull();
     });
 
-    it('throws for an undefined token, like Sequelize where:{api_token: undefined}', async () => {
+    it('throws for an undefined token', async () => {
         await expect(Users.findUserByApiToken(db, undefined))
             .rejects.toThrow('WHERE parameter "api_token" has invalid "undefined" value');
     });
@@ -65,7 +65,7 @@ describe('insertUser', () => {
         expect(await Users.findUserById(db, user.id)).toEqual(user);
     });
 
-    it('keeps a given api_token and regenerates a falsy one (legacy beforeValidate hook)', async () => {
+    it('keeps a given api_token and regenerates a falsy one', async () => {
         expect((await Users.insertUser(db, { name: 'a', api_token: 'given' })).api_token).toBe('given');
         expect((await Users.insertUser(db, { name: 'b', api_token: '' })).api_token).toMatch(UUID_RE);
         expect((await Users.insertUser(db, { name: 'c', api_token: null })).api_token).toMatch(UUID_RE);

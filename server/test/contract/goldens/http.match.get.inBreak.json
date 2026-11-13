@@ -1,7 +1,7 @@
 {
   "name": "http.match.get.inBreak",
   "route": "GET /match/{matchId}",
-  "why": "CRITICAL: break_remaining is NON-NULL over plain HTTP during a break. See FINDINGS F-20 — the plan documents this field as WebSocket-only, which is wrong.",
+  "why": "CRITICAL: break_remaining is NON-NULL over plain HTTP during a break.",
   "request": {
     "method": "GET",
     "path": "/match/<match:break>",

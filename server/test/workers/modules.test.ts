@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 /**
- * The web process and the worker jobs load neither the legacy worker / socket
- * modules nor the Sequelize models. Checked on the require cache after booting
+ * The web process and the worker jobs load no ORM models, controllers or old
+ * worker / socket modules. Checked on the require cache after booting
  * the server, connecting a client socket, and running one tick of every job
  * against a real (Drizzle-baseline) database. This file runs in its own module
  * registry (`--isolate`), so the cache holds only what happened here.

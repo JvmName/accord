@@ -1,7 +1,7 @@
 {
   "name": "http.users.create.objectName.400",
   "route": "POST /users",
-  "why": "A name that is not a string is a validation error (F-75); it used to get past the presence check and fail at the insert with a 500.",
+  "why": "A name that is not a string is a validation error; it used to get past the presence check and fail at the insert with a 500.",
   "request": {
     "method": "POST",
     "path": "/users",

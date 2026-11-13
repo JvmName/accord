@@ -47,7 +47,7 @@ const keysWith = (IDS, prefix) => Object.keys(IDS).filter((k) => k.startsWith(pr
 
 /**
  * The records, from a reader that answers every query. `reader` methods may
- * return Sequelize instances or Drizzle rows; `enc` turns them into row form.
+ * return rows; `enc` turns them into row form.
  */
 async function recordQueries({ IDS, CODES }, reader, enc) {
     const records: any[] = [];

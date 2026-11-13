@@ -1,50 +1,39 @@
 /**
- * Drizzle schema for the Accord SQLite database (server-ts task 09).
+ * Drizzle schema for the Accord SQLite database.
  *
- * THIS FILE IS THE SOURCE OF TRUTH for the schema going forward; the baseline
- * migration in `server/drizzle/` is generated from it by drizzle-kit. It is a
- * faithful transcription of the database that the 14 legacy Sequelize
- * migrations (`config/db/migrations/`) produce TODAY — verified by replaying
- * those migrations into a scratch DB and diffing PRAGMA output and a
- * `drizzle-kit pull` introspection against this file. See `src/db/README.md`.
- *
- * Fidelity rules (do not "improve" these here — behaviour changes belong to
- * task 18, see FINDINGS.md F-38..F-46):
+ * THIS FILE IS THE SOURCE OF TRUTH for the schema; the migrations in
+ * `server/drizzle/` are generated from it by drizzle-kit (`bun run db:generate`).
+ * See `src/db/README.md`.
  *
  *  - Table and column names are the physical snake_case names, and the JS
  *    property keys are the SAME snake_case names, so `InferSelectModel` rows
  *    line up with the domain layer (`src/domain/types.ts`) and the wire.
- *  - Ids are UUID strings stored as text. There is NO database default; the
- *    legacy stack generates them in the app (Sequelize `UUIDV4`), mirrored here
- *    with `$defaultFn` (app-side only, emits no DDL).
+ *  - Ids are UUID strings stored as text. There is NO database default; they
+ *    are generated in the app with `$defaultFn` (app-side only, emits no DDL).
  *  - DATETIME columns are `text` holding ISO 8601 UTC
  *    (`YYYY-MM-DDTHH:mm:ss.SSSZ`, i.e. `Date#toISOString()`) and surface as
  *    JS `Date` via the `isoDateTime` custom type (`./columns`). Read
- *    with `new Date(text)`; ISO is the only supported format. User decision
- *    2026-10-11, FINDINGS.md F-39.
- *  - `created_at` / `updated_at` have no DB default (Sequelize sets them in
- *    the app); task 10 must set them on insert/update.
- *  - There are NO foreign keys: the legacy migrations never declared any, and
- *    SQLite would not enforce them without `PRAGMA foreign_keys=ON` anyway.
- *    Associations exist only as `relations()` below (query-level, no DDL).
- *  - `migration_versions` (Sequelize's own migration bookkeeping table) is
- *    intentionally NOT modelled: it is not application data.
+ *    with `new Date(text)`; ISO is the only supported format.
+ *  - `created_at` / `updated_at` have no DB default; the repositories set them
+ *    on insert and update.
+ *  - There are NO foreign keys, and SQLite would not enforce them without
+ *    `PRAGMA foreign_keys=ON` anyway. Associations exist only as `relations()`
+ *    below (query-level, no DDL).
  */
 import { randomUUID } from 'node:crypto';
 import { relations, sql } from 'drizzle-orm';
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { isoDateTime } from './columns';
 
-/** UUID primary key, generated app-side exactly like Sequelize's UUIDV4 default. */
+/** UUID primary key, generated app-side. */
 const uuidPk = () => text('id').primaryKey().notNull().$defaultFn(() => randomUUID());
 
 /**
- * A legacy DATETIME column: TEXT holding ISO 8601 UTC, typed as `Date`.
- * See the header and F-39.
+ * A DATETIME column: TEXT holding ISO 8601 UTC, typed as `Date`.
  */
 const datetime = (name: string) => isoDateTime(name);
 
-/** Sequelize's automatic timestamps: NOT NULL, no DB default. */
+/** `created_at` and `updated_at`: NOT NULL, no DB default. */
 const timestamps = () => ({
     created_at: datetime('created_at').notNull(),
     updated_at: datetime('updated_at').notNull(),
@@ -52,7 +41,7 @@ const timestamps = () => ({
 
 
 /* ============================================================================
- * TABLES — column order matches the physical order in the legacy-migrated DB.
+ * TABLES
  * ========================================================================== */
 
 /** `users` (createUsers, dropUserEmails). `api_token` backs Kotlin `AuthToken`. */
@@ -65,7 +54,7 @@ export const users = sqliteTable('users', {
 
 /**
  * `mats` (createMats, addUsersToMats, createMatCodesTable, enforceMatCreatorId).
- * `judge_count` is NOT NULL DEFAULT 1 in the real DB (not nullable — F-41).
+ * `judge_count` is NOT NULL DEFAULT 1 in the real DB (not nullable).
  * `creator_id` is NOT NULL since enforceMatCreatorId; backs Kotlin `UserId`.
  */
 export const mats = sqliteTable('mats', {
@@ -108,10 +97,8 @@ export const matches = sqliteTable('matches', {
 
 /**
  * `rounds` (createRounds, replaceSubmissionWithWinnerOnRounds).
- * NOTE: no `rounds_match_id` index — createRounds added one, but the later
- * removeColumn table-rebuild silently dropped it (F-40). Faithful to the DB.
- * `stoppage` is declared BOOLEAN (stored `TINYINT(1)`, values 0/1/NULL);
- * boolean mode maps 0/1 losslessly (F-42).
+ * No index on `match_id`: a match has at most a few rounds.
+ * `stoppage` is a boolean (stored 0/1/NULL).
  */
 export const rounds = sqliteTable('rounds', {
     id:                 uuidPk(),
@@ -180,8 +167,7 @@ export const judges_matches = sqliteTable('judges_matches', {
 
 
 /* ============================================================================
- * RELATIONS — query-level only (no FKs exist). One entry per association the
- * legacy models declare or traverse; see the table in src/db/README.md.
+ * RELATIONS — query-level only (no FKs exist).
  * Where a table has several relations to the same target, `relationName`
  * pairs each `one` with its `many` inverse.
  * ========================================================================== */
@@ -236,9 +222,9 @@ export const matchesRelations = relations(matches, ({ one, many }) => ({
     blueCompetitor: one(users, { fields: [matches.blue_competitor_id], references: [users.id], relationName: 'match_blue_competitor' }),
     /** Match.belongsTo(Mat) — getMat() */
     mat:            one(mats,  { fields: [matches.mat_id],             references: [mats.id] }),
-    /** Match.belongsToMany(User, {as: 'judges', through: 'judges_matches'}) — via the join rows */
+    /** The match's judges, via the join rows. */
     judgesMatches:  many(judges_matches),
-    /** Match.hasMany(Round) — getRounds() (legacy sorts by created_at in JS) */
+    /** A match's rounds (the repositories sort by created_at). */
     rounds:         many(rounds),
 }));
 
@@ -248,13 +234,13 @@ export const judgesMatchesRelations = relations(judges_matches, ({ one }) => ({
 }));
 
 export const roundsRelations = relations(rounds, ({ one, many }) => ({
-    /** Round.belongsTo(Match) — getMatch() */
+    /** The round's match. */
     match:           one(matches, { fields: [rounds.match_id], references: [matches.id] }),
-    /** rounds.declared_winner_id -> users.id (read by scoring via id compare; no model association) */
+    /** rounds.declared_winner_id -> users.id (read by scoring via id compare) */
     declaredWinner:  one(users,   { fields: [rounds.declared_winner_id], references: [users.id], relationName: 'round_declared_winner' }),
-    /** Round.hasMany(RidingTimeVote) — getRidingTimeVotes() */
+    /** The round's votes. */
     ridingTimeVotes: many(riding_time_votes),
-    /** getPauses() — hand-written lookup on round_pauses.round_id (no Sequelize association) */
+    /** The round's pauses. */
     pauses:          many(round_pauses),
 }));
 

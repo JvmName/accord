@@ -1,18 +1,16 @@
 /**
- * `transaction()` for the Drizzle data-access layer (server-ts task 10),
- * replacing `BaseRecord.transaction(callback)`.
+ * `transaction()` for the Drizzle data-access layer.
  *
  * WHY NOT `db.transaction()`: Drizzle's bun-sqlite driver is synchronous. Its
  * `db.transaction(cb)` wraps `cb` in bun:sqlite's native transaction, which
  * COMMITs as soon as `cb` returns. With an `async` callback that is the first
  * `await`, so everything after it runs outside the transaction and a later
- * throw rolls nothing back. Every legacy call site (and every repository
- * function) is async, so this module drives BEGIN/COMMIT/ROLLBACK itself.
+ * throw rolls nothing back. Every repository function is async, so this
+ * module drives BEGIN/COMMIT/ROLLBACK itself.
  *
  * SEMANTICS
  *  - `transaction(db, async (tx) => ...)` runs the callback inside
- *    `BEGIN DEFERRED` (Sequelize's SQLite default; pass `{behavior}` to
- *    change) and COMMITs when it resolves. If it throws/rejects, the
+ *    `BEGIN DEFERRED` (pass `{behavior}` to change) and COMMITs when it resolves. If it throws/rejects, the
  *    transaction is ROLLED BACK and the error is rethrown unchanged.
  *  - Resolves to the callback's return value.
  *  - `tx` is the same Drizzle handle as `db` (one SQLite connection): pass it
@@ -29,9 +27,6 @@
  * through the queue. This only happens if the callback awaits something that
  * is not a database call (a sync driver resolves each query in a microtask, so
  * no other request runs in between). Keep callbacks to database work.
- *
- * The legacy `BaseRecord.transaction` was NOT atomic (its queries ran outside
- * the transaction) and always resolved to `undefined`.
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { sql } from 'drizzle-orm';

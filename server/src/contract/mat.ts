@@ -31,8 +31,8 @@ import { userSchema } from './user';
  *   - `id`, `name`, `creator_id` — always present, never null.
  *
  * Matches nested here carry the HTTP (non-leaking) user shape: `Mat` is never
- * the root of a WebSocket payload, and the `mat` embedded in one goes through
- * `Mat#toApiResponse` with no `includeMatches`.
+ * the root of a WebSocket payload, and the `mat` embedded in one is the bare mat
+ * (no `current_match` or `upcoming_matches`).
  */
 export const matSchema = z.strictObject({
     id: idSchema,

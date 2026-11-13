@@ -2,13 +2,12 @@
  * Request-state resolution: the current user, mat, mat code, match and (for
  * the riding-time routes) open round of a request.
  *
- * Resources are resolved from the PATH parameters only (F-73); a body or
+ * Resources are resolved from the PATH parameters only; a body or
  * query key of the same name no longer replaces them. Every route resolves
  * state the same way, the health check included.
  *
  * An exception here (in practice: a database failure) goes through the JSON
- * error handler like any other (F-77; legacy answered it with Express's HTML
- * 500, which the client cannot decode).
+ * error handler like any other (the client cannot decode an HTML 500).
  */
 import type { NextFunction, Request, Response } from 'express';
 import { findMatCodeByCode } from '../../db/repositories/matCodes';

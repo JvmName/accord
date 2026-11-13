@@ -27,18 +27,14 @@ import { userSchema } from './user';
  *   - `winner`, `started_at`, `ended_at` — present in all 33, nullable.
  *     A null `winner` on an ENDED match is a valid draw, not an error.
  *   - `break_started_at`, `break_duration`, `break_remaining` — present in all
- *     33, nullable. **F-20:** `break_remaining` is NOT WebSocket-only and is
- *     NOT always null over HTTP; `Match#toApiResponse` sets it
- *     unconditionally, so a plain `GET /match/:id` during a break returns a
- *     live countdown (`http.match.get.inBreak` → `break_remaining: 40`).
- *     `README.md`, `00-START-HERE.md` and `CLAUDE.md` all state the opposite.
+ *     33, nullable. `break_remaining` is computed on every render, over HTTP
+ *     as well as WebSocket, so a plain `GET /match/:id` during a break returns
+ *     a live countdown (`http.match.get.inBreak` → `break_remaining: 40`).
  *   - `id`, `creator_id`, `mat_id`, `red_competitor`, `blue_competitor` —
  *     always present, never null.
  *
- * `competitorUser` is parameterised only to accommodate F-22 (see `user.ts`):
- * `red_competitor`, `blue_competitor` and `winner` are unserialised Sequelize
- * instances, which is harmless over HTTP and leaks `api_token` over
- * WebSocket.
+ * `competitorUser` is a parameter so the same shape serves both transports;
+ * both use the safe user (`{ id, name }`).
  */
 const makeMatchSchema = <U extends z.ZodType, R extends z.ZodType>(competitorUser: U, round: R) =>
     z.strictObject({
@@ -54,8 +50,7 @@ const makeMatchSchema = <U extends z.ZodType, R extends z.ZodType>(competitorUse
         // Association-dependent — absent unless explicitly included.
         // Typed `unknown` to cut the Mat <-> Match inference cycle; Mat -> Match stays fully typed.
         mat: z.lazy((): z.ZodType<unknown> => matSchema).optional(),
-        // Match judges always go through `User#toApiResponse`, so they are
-        // safe even on the WebSocket path.
+        // Judges are always the safe user shape, on every transport.
         judges: z.array(userSchema).optional(),
         rounds: z.array(round).optional(),
 

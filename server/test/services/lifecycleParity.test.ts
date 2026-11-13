@@ -100,7 +100,7 @@ describe('lifecycle snapshot: harness', () => {
         expect(snap.rounds.length).toBeGreaterThanOrEqual(15);
         expect(snap.riding_time_votes.length).toBeGreaterThan(0);
         expect(snap.round_pauses.length).toBeGreaterThan(0);
-        // a Drizzle-baseline database: no legacy migration bookkeeping table
+        // a Drizzle-baseline database: no migration bookkeeping table
         expect(db.$client.query("SELECT count(*) AS n FROM sqlite_master WHERE name = 'migration_versions'").get().n).toBe(0);
         const { state } = await frozen('sanity');
         expect(state.audit.length).toBeGreaterThan(0);
@@ -148,7 +148,7 @@ describe('startMatch', () => {
 
 
 describe('endMatch (route: POST /match/:id/end)', () => {
-    it('active round 1: the round ends first, then the match ends with NO break (F-25.3)', async () => {
+    it('active round 1: the round ends first, then the match ends with NO break', async () => {
         const { state } = await frozen('endMatch.round1');
         const m = rowOf(state, 'matches', IDS['match:toEnd']);
         expect(m.ended_at).not.toBeNull();
@@ -204,7 +204,7 @@ describe('startRound (route: POST /match/:id/rounds)', () => {
     it.each([
         ['match:notStarted', 'Cannot start a round on a match that has not started'],
         ['match:done',       'Cannot start a round on a match that has ended'],
-    ])('%s: refused with "%s", nothing written (F-56)', async (key, message) => {
+    ])('%s: refused with "%s", nothing written', async (key, message) => {
         const { state, outcome } = await frozen(`startRound.refused:${key}`);
         expect(outcome).toEqual(fails(message));
         expect(state.audit).toEqual([]);
