@@ -15,13 +15,13 @@
  */
 import { afterEach, beforeEach, describe, expect, it, jest, mock, setSystemTime } from 'bun:test';
 
-// The lifecycle service the worker calls, with `endRound` wrapped in a spy.
+// The lifecycle service the worker calls, with `tryEndRound` wrapped in a spy.
 // `require` + `mock.module(require.resolve(...))` must precede the worker's require.
 const lifecyclePath = require.resolve('../../../src/services/matchLifecycle');
 const lifecycle     = require(lifecyclePath);
-const realEndRound  = lifecycle.endRound;
-const endRound      = jest.fn((...args) => realEndRound(...args));
-mock.module(lifecyclePath, () => ({ ...lifecycle, endRound }));
+const realTryEndRound  = lifecycle.tryEndRound;
+const tryEndRound   = jest.fn((...args) => realTryEndRound(...args));
+mock.module(lifecyclePath, () => ({ ...lifecycle, tryEndRound }));
 
 const { TechFallTrackerWorker } = require('../../../src/workers/techFallTrackerWorker');
 const { EVENTS }                = require('../../../src/ws/workerWebSocket');
@@ -75,7 +75,7 @@ describe('CHARACTERIZATION: TechFallTrackerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).not.toHaveBeenCalled();
+            expect(tryEndRound).not.toHaveBeenCalled();
             expect(world.writes()).toEqual([]);
         });
 
@@ -90,7 +90,7 @@ describe('CHARACTERIZATION: TechFallTrackerWorker', () => {
         // An ended round has a non-null ended_at, so the open-rounds query
         // never returns it. That is the ONLY thing preventing a second
         // end/emit: the worker itself has no "already ended" guard, and
-        // `endRound()` is called without `safe`, so it would throw on a second pass.
+        // `tryEndRound()` claims the round, so a second pass would find nothing to end.
         it('never re-ends a round that is no longer open (no double emit)', async () => {
             openRound(80);
             await worker.performJob();
@@ -124,7 +124,7 @@ describe('CHARACTERIZATION: TechFallTrackerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).not.toHaveBeenCalled();
+            expect(tryEndRound).not.toHaveBeenCalled();
             expect(world.row('rounds', ROUND).ended_at).toBeNull();
             expect(worker.notifyServer).not.toHaveBeenCalled();
         });
@@ -132,15 +132,15 @@ describe('CHARACTERIZATION: TechFallTrackerWorker', () => {
 
 
     describe('at or above the tech fall threshold', () => {
-        it('ends the round through endRound, with no options', async () => {
+        it('ends the round through tryEndRound, with no options', async () => {
             openRound(72); // exactly 24 points
 
             await worker.performJob();
 
-            expect(endRound).toHaveBeenCalledTimes(1);
+            expect(tryEndRound).toHaveBeenCalledTimes(1);
             // No `{ safe: true }`: the unsafe form, which throws if there is no
             // open round to end.
-            expect(endRound.mock.calls[0]).toEqual([worker.db, MATCH]);
+            expect(tryEndRound.mock.calls[0]).toEqual([worker.db, MATCH]);
             expect(world.row('rounds', ROUND).ended_at).toBe(W.NOW.toISOString());
         });
 
@@ -161,7 +161,7 @@ describe('CHARACTERIZATION: TechFallTrackerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).toHaveBeenCalledBefore(worker.notifyServer);
+            expect(tryEndRound).toHaveBeenCalledBefore(worker.notifyServer);
             expect(roundEndedWhenEmitted).toBe(W.NOW.toISOString());
         });
 

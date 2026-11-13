@@ -163,6 +163,27 @@ export async function updateMatch(db: DbOrTx, id: string, patch: MatchPatch): Pr
     return orNull(row);
 }
 
+/** Starts the match only if it has not started, and says whether this call did. */
+export async function claimMatchStart(db: DbOrTx, id: string, startedAt: Date): Promise<boolean> {
+    const claimed = await db.update(matches)
+        .set({ started_at: startedAt, updated_at: new Date() })
+        .where(and(eq(matches.id, id), isNull(matches.started_at)))
+        .returning({ id: matches.id });
+    return claimed.length > 0;
+}
+
+/**
+ * Ends the match and clears its break only if it has not ended, and says
+ * whether this call did.
+ */
+export async function claimMatchEnd(db: DbOrTx, id: string, endedAt: Date): Promise<boolean> {
+    const claimed = await db.update(matches)
+        .set({ ended_at: endedAt, break_started_at: null, break_duration: null, updated_at: new Date() })
+        .where(and(eq(matches.id, id), isNull(matches.ended_at)))
+        .returning({ id: matches.id });
+    return claimed.length > 0;
+}
+
 /**
  * `match.setJudges(users)` (`Match#start`). Sequelize `belongsToMany#set`
  * semantics: delete join rows for users not in `userIds`, insert rows for new

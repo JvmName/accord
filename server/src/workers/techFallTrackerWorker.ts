@@ -9,7 +9,7 @@ import { findOpenRounds } from '../db/repositories/rounds';
 import type { Round } from '../db/types';
 import type { Rules } from '../domain/types';
 import { roundOutcome, serializeMatch } from '../serialize';
-import { endRound } from '../services/matchLifecycle';
+import { tryEndRound } from '../services/matchLifecycle';
 import { EVENTS } from '../ws/workerWebSocket';
 import { Worker } from './worker';
 
@@ -59,7 +59,7 @@ export class TechFallTrackerWorker extends Worker {
         if (!hasReachedTechFallThreshold(graph, round)) return;
 
         logger.info(`Tech fall threshold reached: ending round ${label}`);
-        await endRound(this.db, graph.id);
+        if (!(await tryEndRound(this.db, graph.id))) return;
 
         // Rounds only: no mat and no judges in this payload.
         const ended = await findMatchGraph(this.db, graph.id);

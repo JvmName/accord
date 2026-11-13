@@ -5,27 +5,25 @@
  *
  * Plain async functions over the Drizzle handle: no classes, no association
  * caching, no WebSocket emission, no serialisation. One implementation for
- * both callers (route handlers, task 13b; workers, task 14).
+ * both callers (route handlers; workers).
  *
- * BEHAVIOUR IS THE LEGACY BEHAVIOUR, BUGS INCLUDED (behaviour-preservation
- * rule); every defect noticed is in FINDINGS.md, not fixed here. Pinned by the
- * legacy-vs-new parity harness in `test/services/`.
+ * Two connections (the web process and the worker process) write the same
+ * rows, so a command that changes a row claims the change with a conditional
+ * UPDATE and goes on only if its UPDATE changed a row. The commands are not
+ * transactions: a caller that needs a command's writes to be all-or-nothing
+ * (`startMatch`) wraps the call in `transaction()`.
  *
- * NO TRANSACTIONS (user decision 2026-10-11, FINDINGS F-50): the legacy
- * `Match.transaction()` around `start`/`end` was never atomic, so their steps
- * run here sequentially and unwrapped, exactly as they effectively ran.
- * Adopting `src/db/transaction.ts` is a task-18 behaviour change.
- *
- * Every command resolves to `undefined`, like the legacy methods; callers
- * re-read what they render.
+ * Every command resolves to `undefined` (`tryEndRound` to a boolean), like the
+ * legacy methods; callers re-read what they render.
  */
 import { present } from '../domain/present';
 import type { Match, User } from '../db/types';
 import type { DbOrTx } from '../db/repositories/internal';
 import { findMatJudges, findMatById } from '../db/repositories/mats';
-import { findMatchById, setMatchJudges, updateMatch } from '../db/repositories/matches';
+import { claimMatchEnd, claimMatchStart, findMatchById, setMatchJudges } from '../db/repositories/matches';
 import { findLastRound, insertRound } from '../db/repositories/rounds';
 import { findUserById } from '../db/repositories/users';
+import { CommandRefused } from './errors';
 import { finishRound } from './roundLifecycle';
 import type { Logger } from 'pino';
 
@@ -64,18 +62,18 @@ function callAccessor(this: Record<string, () => Promise<User | null>>, method: 
  *
  * 1. `match.started_at` set -> `Error("This match has already started")`
  *    (checked on the row passed in, as legacy checked the in-memory instance)
- * 2. `started_at = now`
+ * 2. `started_at = now`, only if the match has not started in the meantime
+ *    (otherwise `CommandRefused`)
  * 3. judges of the match's mat (ordered by user_id) copied onto the match with
  *    `belongsToMany#set` semantics (`setMatchJudges`). A missing mat throws a
- *    TypeError AFTER step 2 was written, as legacy.
- * 4. `startRound` (throws if an active round exists; steps 2-3 stay written).
+ *    TypeError
+ * 4. `startRound` (throws if an active round exists)
  *
- * Unwrapped: no transaction (F-50).
+ * Not atomic by itself: a throw after step 2 leaves the earlier writes.
  */
 export async function startMatch(db: DbOrTx, match: Pick<Match, 'id' | 'mat_id' | 'started_at'>): Promise<void> {
     if (match.started_at) throw new Error("This match has already started");
-
-    await updateMatch(db, match.id, { started_at: new Date() });
+    if (!(await claimMatchStart(db, match.id, new Date()))) throw new CommandRefused("This match has already started");
 
     const mat    = present(await findMatById(db, match.mat_id), 'the match\'s mat');
     const judges = await findMatJudges(db, mat.id);
@@ -92,24 +90,26 @@ export async function startMatch(db: DbOrTx, match: Pick<Match, 'id' | 'mat_id' 
  * 2. `started_at` unset -> `Error("This match has already not started")` (sic)
  * 3. end the last round if it is open, WITHOUT the match transition
  *    (`endRound({ safe: true, transition: false })`)
- * 4. `ended_at = now`, `break_started_at = null`, `break_duration = null`
+ * 4. `ended_at = now`, `break_started_at = null`, `break_duration = null`,
+ *    only if the match has not ended in the meantime (otherwise
+ *    `CommandRefused`)
  *
  * The round is ended first and without the transition so that ending the
- * match during the final round no longer re-enters `endMatch` and throws, and
- * no break is set on a match that is ending (F-54, F-25.3).
- *
- * Unwrapped: no transaction (F-50).
+ * match during the final round does not end the match twice, and no break is
+ * set on a match that is ending.
  */
 export async function endMatch(db: DbOrTx, match: Pick<Match, 'id' | 'started_at' | 'ended_at'>): Promise<void> {
     if (match.ended_at)    throw new Error("This match has already ended");
     if (!match.started_at) throw new Error("This match has already not started");
 
     await endRound(db, match.id, { safe: true, transition: false });
-    await updateMatch(db, match.id, {
-        ended_at:         new Date(),
-        break_started_at: null,
-        break_duration:   null,
-    });
+    if (!(await closeMatch(db, match.id))) throw new CommandRefused("This match has already ended");
+}
+
+
+/** Ends the match and clears its break; `false` when it had already ended. */
+export async function closeMatch(db: DbOrTx, matchId: string): Promise<boolean> {
+    return await claimMatchEnd(db, matchId, new Date());
 }
 
 
@@ -142,18 +142,24 @@ export interface EndRoundOptions {
 }
 
 /**
+ * Ends the match's LAST round if it is open, and says whether this call did:
+ * `false` when there is no round, it already ended, or another caller ended it
+ * first. The workers use this and emit only when it is `true`.
+ */
+export async function tryEndRound(db: DbOrTx, matchId: string, { transition }: Pick<EndRoundOptions, 'transition'> = {}): Promise<boolean> {
+    const lastRound = await findLastRound(db, matchId);
+    if (!lastRound || lastRound.ended_at) return false;
+    return await finishRound(db, lastRound, { transition });
+}
+
+/**
  * `Match#endRound({ safe } = {})`: ends the match's LAST round.
  *
- * No round, or the last round already ended: `safe` truthy -> resolve
- * silently; otherwise `Error("No available round to end")`. Callers pass:
- * `POST .../rounds/end` -> `{ safe: false }`; RoundTimer and TechFallTracker
- * workers -> nothing (falsy); `endMatch` -> `{ safe: true }`.
+ * No round, or the last round already ended (or ended by another caller during
+ * this call): `safe` truthy -> resolve silently; otherwise
+ * `Error("No available round to end")`. `POST .../rounds/end` passes
+ * `{ safe: false }`; `endMatch` passes `{ safe: true }`.
  */
 export async function endRound(db: DbOrTx, matchId: string, { safe, transition }: EndRoundOptions = {}): Promise<void> {
-    const lastRound = await findLastRound(db, matchId);
-    if (!lastRound || lastRound.ended_at) {
-        if (safe) return;
-        throw new Error("No available round to end");
-    }
-    await finishRound(db, lastRound, { transition });
+    if (!(await tryEndRound(db, matchId, { transition })) && !safe) throw new Error("No available round to end");
 }

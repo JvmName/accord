@@ -4,6 +4,7 @@
 import { routeResponses } from '../../contract/responses';
 import { createMatRequestSchema } from '../../contract/requests';
 import { findMatCodesForMat, insertMatCode } from '../../db/repositories/matCodes';
+import { transaction } from '../../db/transaction';
 import { findMatchGraphsByIds } from '../../db/repositories/matches';
 import { findIncompleteMatchesForMat, findMatJudges, insertMat } from '../../db/repositories/mats';
 import type { MatchGraph } from '../../db/repositories/matches';
@@ -27,11 +28,7 @@ function generateMatCode(): string {
     return new WordGenerator().getWords(MAT_CODE_WORDS).join('.');
 }
 
-/**
- * Any authenticated user may create a mat. The mat row and its two codes are
- * separate writes, not one transaction (the legacy transaction never wrapped
- * them either): a failed code insert leaves the mat behind.
- */
+/** Any authenticated user may create a mat. The mat row and its two codes are written in one transaction. */
 export const postMats = defineRoute({
     method:    'post',
     path:      '/mats',
@@ -43,13 +40,16 @@ export const postMats = defineRoute({
     handler: async ctx => {
         const { name, judge_count: judgeCount } = ctx.body;
 
-        const mat = await insertMat(ctx.db, {
-            creator_id:  ctx.currentUser.id,
-            name,
-            judge_count: judgeCount ?? DEFAULT_JUDGE_COUNT,
-        });
-        await insertMatCode(ctx.db, { mat_id: mat.id, code: generateMatCode(), role: MatCodes.ROLES.ADMIN });
-        await insertMatCode(ctx.db, { mat_id: mat.id, code: generateMatCode(), role: MatCodes.ROLES.VIEWER });
+        const mat = await transaction(ctx.db, async tx => {
+            const created = await insertMat(tx, {
+                creator_id:  ctx.currentUser.id,
+                name,
+                judge_count: judgeCount ?? DEFAULT_JUDGE_COUNT,
+            });
+            await insertMatCode(tx, { mat_id: created.id, code: generateMatCode(), role: MatCodes.ROLES.ADMIN });
+            await insertMatCode(tx, { mat_id: created.id, code: generateMatCode(), role: MatCodes.ROLES.VIEWER });
+            return created;
+        }, { behavior: 'immediate' });
 
         const judges = await findMatJudges(ctx.db, mat.id);
         const codes  = await findMatCodesForMat(ctx.db, mat.id);

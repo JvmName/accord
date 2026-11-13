@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `riding_time_votes_one_open_per_judge` ON `riding_time_votes` (`round_id`,`judge_id`) WHERE `ended_at` IS NULL;

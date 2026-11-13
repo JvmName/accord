@@ -129,7 +129,7 @@ function buildScenarios({ IDS, T0, NOW }) {
             addRound(add, C.r1, { start: 500 });
             addVote(add, C.v0, { round: C.r1, judge: IDS['user:judgeA'], competitor: IDS['user:red'],  start: 505, end: 510 });
             addVote(add, C.v1, { round: C.r1, judge: IDS['user:judgeA'], competitor: IDS['user:red'],  start: 520 });
-            addVote(add, C.v2, { round: C.r1, judge: IDS['user:judgeA'], competitor: IDS['user:blue'], start: 521 });
+            addVote(add, C.v2, { round: C.r1, judge: IDS['user:outsider'], competitor: IDS['user:blue'], start: 521 });
             addVote(add, C.v3, { round: C.r1, judge: IDS['user:judgeB'], competitor: IDS['user:red'],  start: 522 });
         },
     });

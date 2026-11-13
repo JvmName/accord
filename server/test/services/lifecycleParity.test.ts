@@ -157,10 +157,10 @@ describe('endMatch (route: POST /match/:id/end)', () => {
         expect(writes(state)).toEqual(['UPDATE rounds', 'UPDATE matches']);
     });
 
-    it('active FINAL round: votes closed, pause resumed, round ended, match ended, no error (F-54)', async () => {
+    it('active FINAL round: round ended, votes closed, pause resumed, match ended, no error', async () => {
         const { state, outcome } = await frozen('endMatch.finalRound');
         expect(outcome.ok).toBe(true);
-        expect(writes(state)).toEqual(['UPDATE riding_time_votes', 'UPDATE riding_time_votes', 'UPDATE round_pauses', 'UPDATE rounds', 'UPDATE matches']);
+        expect(writes(state)).toEqual(['UPDATE rounds', 'UPDATE riding_time_votes', 'UPDATE riding_time_votes', 'UPDATE round_pauses', 'UPDATE matches']);
         expect(rowOf(state, 'matches', C.match).ended_at).not.toBeNull();
     });
 
@@ -220,25 +220,25 @@ describe('endRound + finishRound (route: POST /match/:id/rounds/end)', () => {
         expect(writes(state)).toEqual(['UPDATE rounds', 'UPDATE matches']);
     });
 
-    it('open votes are closed first (vote close on end), then the round, then the break', async () => {
+    it('the round is claimed first, then its open votes are closed, then the break starts', async () => {
         const { state } = await frozen('endRound.openVotes');
         expect(rowsOf(state, 'riding_time_votes', (v) => v.round_id === IDS['round:open']).every((v) => v.ended_at !== null)).toBe(true);
-        expect(writes(state)).toEqual(['UPDATE riding_time_votes', 'UPDATE riding_time_votes', 'UPDATE rounds', 'UPDATE matches']);
+        expect(writes(state)).toEqual(['UPDATE rounds', 'UPDATE riding_time_votes', 'UPDATE riding_time_votes', 'UPDATE matches']);
     });
 
-    it('open pause is resumed before the round ends', async () => {
+    it('an open pause is resumed when the round ends', async () => {
         const { state } = await frozen('endRound.openPause');
         expect(rowOf(state, 'round_pauses', IDS['pause:paused-open']).resumed_at).toBe(new Date(NOW).toISOString());
-        expect(writes(state)).toEqual(['UPDATE round_pauses', 'UPDATE rounds', 'UPDATE matches']);
+        expect(writes(state)).toEqual(['UPDATE rounds', 'UPDATE round_pauses', 'UPDATE matches']);
     });
 
-    it('FINAL round: votes closed -> pause resumed -> round ended -> match ended -> endRound({safe:true}) returns silently', async () => {
+    it('FINAL round: round ended -> votes closed -> pause resumed -> match ended', async () => {
         const { state, outcome } = await frozen('endRound.finalRound');
         expect(outcome).toEqual({ ok: true, value: undefined });
         const m = rowOf(state, 'matches', C.match);
         expect(m.ended_at).toBe(new Date(NOW).toISOString());
         expect([m.break_started_at, m.break_duration]).toEqual([null, null]);
-        expect(writes(state)).toEqual(['UPDATE riding_time_votes', 'UPDATE riding_time_votes', 'UPDATE round_pauses', 'UPDATE rounds', 'UPDATE matches']);
+        expect(writes(state)).toEqual(['UPDATE rounds', 'UPDATE riding_time_votes', 'UPDATE riding_time_votes', 'UPDATE round_pauses', 'UPDATE matches']);
     });
 
     it('NO EARLY EXIT: red wins round 2 for a 2-0 lead, the match goes to a break, it does not end', async () => {
@@ -253,20 +253,21 @@ describe('endRound + finishRound (route: POST /match/:id/rounds/end)', () => {
         expect(writes(state)).toEqual(['UPDATE rounds']);
     });
 
-    it('never-started match with a 3rd round open: the round ends, then endMatch throws "has already not started"', async () => {
+    it('never-started match with a 3rd round open (not reachable through the routes): the round ends and so does the match', async () => {
         const { outcome, state } = await frozen('endRound.neverStarted');
-        expect(outcome).toEqual(fails('This match has already not started'));
+        expect(outcome).toEqual({ ok: true, value: undefined });
         expect(rowOf(state, 'rounds', C.r3).ended_at).not.toBeNull();
+        expect(rowOf(state, 'matches', C.match).ended_at).not.toBeNull();
     });
 
-    it('several open votes (incl. two by one judge) are all closed, in insertion order', async () => {
+    it('several open votes are all closed, in insertion order', async () => {
         const { state } = await frozen('endRound.severalOpenVotes');
         expect(state.audit.filter((e) => e.tbl === 'riding_time_votes').map((e) => e.row.id)).toEqual([C.v1, C.v2, C.v3]);
     });
 
-    it('two open pauses: only the LAST one is resumed, the earlier stays open after the round ends', async () => {
+    it('two open pauses: both are resumed when the round ends', async () => {
         const { state } = await frozen('endRound.twoOpenPauses');
-        expect(rowOf(state, 'round_pauses', C.p1).resumed_at).toBeNull();
+        expect(rowOf(state, 'round_pauses', C.p1).resumed_at).not.toBeNull();
         expect(rowOf(state, 'round_pauses', C.p2).resumed_at).not.toBeNull();
     });
 
@@ -287,7 +288,7 @@ describe('endRound + finishRound (route: POST /match/:id/rounds/end)', () => {
 
 
 describe('worker-driven paths (the query each job runs, then the command it calls)', () => {
-    it('TechFallTracker: an open round over the threshold is ended via endRound() (no safe)', async () => {
+    it('TechFallTracker: an open round over the threshold is ended via tryEndRound()', async () => {
         const { state } = await frozen('worker.techFall');
         expect(rowOf(state, 'rounds', IDS['round:wsTechFall']).ended_at).not.toBeNull();
         expect(rowOf(state, 'matches', IDS['match:wsTechFall']).break_duration).toBe(60);

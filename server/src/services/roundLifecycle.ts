@@ -4,17 +4,17 @@
  * `Round#isPaused` (`models/round.js`).
  *
  * Same rules as `matchLifecycle.ts`: plain async functions, no classes, no
- * caching, no WebSocket emission, no transactions (F-50), legacy behaviour
- * kept bugs included, every command resolves to `undefined`.
+ * caching, no WebSocket emission, conditional writes where two connections can
+ * race, every command resolves to `undefined` (`finishRound` to a boolean).
  */
 import { present } from '../domain/present';
 import type { Round, RoundPause } from '../db/types';
 import type { DbOrTx } from '../db/repositories/internal';
 import { findMatchById, updateMatch } from '../db/repositories/matches';
-import { findCurrentPause, findMatchRounds, insertRoundPause, setPauseResumed, updateRound } from '../db/repositories/rounds';
+import { claimRoundEnd, findCurrentPause, findMatchRounds, insertRoundPause, resumeOpenPauses, setPauseResumed, updateRound } from '../db/repositories/rounds';
 import { findOpenRoundVotes } from '../db/repositories/votes';
 import type { Rules } from '../domain/types';
-import { competitorForColor, endMatch } from './matchLifecycle';
+import { closeMatch, competitorForColor } from './matchLifecycle';
 import { endVote } from './ridingTimeVotes';
 import type { Logger } from 'pino';
 
@@ -34,50 +34,44 @@ export async function isRoundPaused(db: DbOrTx, roundId: string): Promise<boolea
 
 /**
  * `Round#end()` — the round side of ending a round. Reached only through
- * `endRound` (`Match#endRound`). ORDER IS LOAD-BEARING and is the legacy order:
+ * `endRound` / `tryEndRound`.
  *
- * 1. end every open vote of the round (insertion order), one `endVote` each
- * 2. if the round is paused, `resumeRound` (closes the open pause)
+ * 1. claim the end: `ended_at = now` only if the round is still open. A caller
+ *    that loses a race returns `false` and writes nothing else
+ * 2. end every open vote of the round, and resume every open pause, at that
+ *    same instant
  * 3. load the match
- * 4. `ended_at = now`
- * 5. count the match's rounds
- * 6. count == `maxRounds` -> `endMatch(match)` (the ONLY place a match ends
- *    on its own; never early at 2 wins: invariant, CLAUDE.md #10)
+ * 4. count the match's rounds
+ * 5. count == `maxRounds` -> end the match (the ONLY place a match ends on
+ *    its own; never early at 2 wins: invariant, CLAUDE.md #10)
  *    otherwise `d = getBreakDuration(count)`; `d > 0` -> set
  *    `break_started_at = now`, `break_duration = d` on the match
- *    (steps 5-6 are skipped with `{ transition: false }`, which `endMatch` uses)
+ *    (steps 4-5 are skipped with `{ transition: false }`, which `endMatch` uses)
  *
- * No guard against an already-ended round (legacy has none either; callers
- * guard, F-62). With several open pauses only the LAST is resumed (F-58).
- * The legacy `match.clearCachedAssociation('rounds')` after the break
- * protected the per-instance round cache; there is no cache here, so it
- * evaporates (recorded in the lifecycle inventory).
+ * Resolves to whether this call ended the round.
  */
-export async function finishRound(db: DbOrTx, round: Round, { transition = true }: { transition?: boolean } = {}): Promise<void> {
-    const ridingTimeVotes = await findOpenRoundVotes(db, round.id);
-    for (const vote of ridingTimeVotes) {
-        await endVote(db, vote);
-    }
+export async function finishRound(db: DbOrTx, round: Round, { transition = true }: { transition?: boolean } = {}): Promise<boolean> {
+    const endedAt = new Date();
+    if (!(await claimRoundEnd(db, round.id, endedAt))) return false;
 
-    if (await isRoundPaused(db, round.id)) await resumeRound(db, round);
+    for (const vote of await findOpenRoundVotes(db, round.id)) {
+        await endVote(db, vote, endedAt);
+    }
+    await resumeOpenPauses(db, round.id, endedAt);
 
     const match = present(await findMatchById(db, round.match_id), 'the round\'s match');
-
-    const endedAt = new Date();
-    await updateRound(db, round.id, { ended_at: endedAt });
-
     logger.info(`Round ended: match=${round.match_id} round=${round.id}`);
 
     // `endMatch` ends its last round without the transition: the match is
-    // being ended by the caller, so no second match end and no break (F-54).
-    if (!transition) return;
+    // being ended by the caller, so no second match end and no break.
+    if (!transition) return true;
 
     const allRounds = await findMatchRounds(db, match.id);
     logger.info(`Round transition: match=${round.match_id} completedRounds=${allRounds.length} maxRounds=${rules.maxRounds}`);
 
     if (allRounds.length == rules.maxRounds) {
         logger.info(`Match ending: match=${round.match_id} reason=max-rounds-reached`);
-        await endMatch(db, match);
+        await closeMatch(db, match.id);
     } else {
         const breakDuration = rules.getBreakDuration(allRounds.length);
         logger.info(`Break check: match=${round.match_id} breakDuration=${breakDuration}`);
@@ -89,6 +83,7 @@ export async function finishRound(db: DbOrTx, round: Round, { transition = true 
             logger.info(`Break started: match=${round.match_id} duration=${breakDuration}s`);
         }
     }
+    return true;
 }
 
 /**

@@ -24,22 +24,19 @@
  *    queue, so two concurrent requests never interleave BEGIN/COMMIT.
  *
  * CAVEAT (single connection): a query issued on the same `db` by code that is
- * NOT inside a transaction (e.g. another concurrent request) while one is open
- * executes inside that open transaction, and shares its commit or rollback.
- * Queries are not routed through the queue. Accepted for now; the server has
- * one connection per process (task 14/18 may revisit).
+ * NOT inside a transaction while one is open executes inside that open
+ * transaction, and shares its commit or rollback. Queries are not routed
+ * through the queue. This only happens if the callback awaits something that
+ * is not a database call (a sync driver resolves each query in a microtask, so
+ * no other request runs in between). Keep callbacks to database work.
  *
- * DIFFERENCES FROM THE LEGACY `BaseRecord.transaction` (FINDINGS F-50):
- * the legacy helper was NOT atomic (the callback's queries ran on Sequelize's
- * default connection, outside the transaction, with no CLS) and always
- * resolved to `undefined`. Call sites (MatsController#postIndex,
- * Match#start/end) ignore the return value and the `Transaction` argument.
- * Whether their ports use this real transaction (a behaviour change on error
- * paths) is decided by task 10b / 13a, not here.
+ * The legacy `BaseRecord.transaction` was NOT atomic (its queries ran outside
+ * the transaction) and always resolved to `undefined`.
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { sql } from 'drizzle-orm';
 import type { Db } from './index';
+import type { DbOrTx } from './repositories/internal';
 
 export type TransactionBehavior = 'deferred' | 'immediate' | 'exclusive';
 
@@ -53,16 +50,19 @@ interface ActiveTransaction {
     depth: number;
 }
 
+/** The connection behind a handle. Every handle in this codebase comes from `createDb`, which has it. */
+const clientOf = (db: DbOrTx): object & { inTransaction: boolean } => (db as Db).$client;
+
 const active = new AsyncLocalStorage<ActiveTransaction>();
 const queues = new WeakMap<object, Promise<void>>();
 
 /** Run `fn` atomically on `db`'s connection; see the module comment. */
 export async function transaction<T>(
-    db: Db,
-    fn: (tx: Db) => Promise<T> | T,
+    db: DbOrTx,
+    fn: (tx: DbOrTx) => Promise<T> | T,
     options: TransactionOptions = {},
 ): Promise<T> {
-    const client = db.$client;
+    const client = clientOf(db);
     const current = active.getStore();
 
     if (current && current.client === client) {
@@ -84,7 +84,7 @@ export async function transaction<T>(
         try {
             result = await active.run({ client, depth: 0 }, () => fn(db));
         } catch (err) {
-            if (db.$client.inTransaction) db.run(sql.raw('ROLLBACK'));
+            if (clientOf(db).inTransaction) db.run(sql.raw('ROLLBACK'));
             throw err;
         }
         db.run(sql.raw('COMMIT'));
@@ -95,7 +95,7 @@ export async function transaction<T>(
     }
 }
 
-async function savepoint<T>(db: Db, current: ActiveTransaction, fn: (tx: Db) => Promise<T> | T): Promise<T> {
+async function savepoint<T>(db: DbOrTx, current: ActiveTransaction, fn: (tx: DbOrTx) => Promise<T> | T): Promise<T> {
     const depth = current.depth + 1;
     const name  = `accord_sp${depth}`;
     db.run(sql.raw(`SAVEPOINT ${name}`));
@@ -112,7 +112,7 @@ async function savepoint<T>(db: Db, current: ActiveTransaction, fn: (tx: Db) => 
 }
 
 /** Whether the current async context is inside `transaction()` on `db`. */
-export function inTransaction(db: Db): boolean {
+export function inTransaction(db: DbOrTx): boolean {
     const current = active.getStore();
-    return Boolean(current && current.client === db.$client);
+    return Boolean(current && current.client === clientOf(db));
 }

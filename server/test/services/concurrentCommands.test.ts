@@ -3,8 +3,6 @@
  * file, the way the web process and the worker process do. Each pair is
  * started together and the two commands advance in step, so both read the
  * round as open before either writes.
- *
- * Marked `failing` until the commands claim their writes conditionally.
  */
 import { afterEach, beforeEach, describe, expect, it, jest } from 'bun:test';
 import fs from 'node:fs';
@@ -16,7 +14,8 @@ import { insertMatch } from '../../src/db/repositories/matches';
 import { insertMat } from '../../src/db/repositories/mats';
 import { insertRound, updateRound } from '../../src/db/repositories/rounds';
 import { insertUser } from '../../src/db/repositories/users';
-import { endRound } from '../../src/services/matchLifecycle';
+import { CommandRefused } from '../../src/services/errors';
+import { endMatch, endRound, startMatch } from '../../src/services/matchLifecycle';
 import { startRidingTime } from '../../src/services/ridingTimeVotes';
 import { RoundTimerWorker } from '../../src/workers';
 import { installAudit } from './support';
@@ -65,7 +64,7 @@ const roundEnds = () => audit().filter(({ tbl, op, row }) => tbl === 'rounds' &&
 const breakStarts = () => audit().filter(({ tbl, op, row }) => tbl === 'matches' && op === 'UPDATE' && row.break_started_at !== null);
 
 describe('two connections ending the same round', () => {
-    it.failing('end it once, and the loser is refused', async () => {
+    it('end it once, and the loser is refused', async () => {
         const { match } = await seed(0);
 
         const results = await Promise.allSettled([endRound(a, match.id), endRound(b, match.id)]);
@@ -76,7 +75,7 @@ describe('two connections ending the same round', () => {
         expect(breakStarts()).toHaveLength(1);
     });
 
-    it.failing('end the match once when it is the final round', async () => {
+    it('end the match once when it is the final round', async () => {
         const { match } = await seed(2);
 
         const results = await Promise.allSettled([endRound(a, match.id), endRound(b, match.id)]);
@@ -87,7 +86,7 @@ describe('two connections ending the same round', () => {
         expect(audit().filter(({ tbl, op, row }) => tbl === 'matches' && op === 'UPDATE' && row.ended_at !== null)).toHaveLength(1);
     });
 
-    it.failing('leave a worker that lost the race to end the round without a second break', async () => {
+    it('leave a worker that lost the race to end the round without a second break', async () => {
         const { match, open } = await seed(0);
         a.$client.run('UPDATE rounds SET created_at = ? WHERE id = ?', [new Date(Date.now() - 600_000).toISOString(), open.id]);
         const graph = (await findMatchGraph(a, match.id))!;
@@ -105,7 +104,7 @@ describe('two connections ending the same round', () => {
 
 
 describe('two connections starting riding time for the same judge', () => {
-    it.failing('open one vote, and the loser is refused', async () => {
+    it('open one vote, and the loser is refused', async () => {
         const { match, open } = await seed(0);
         const judgeId = match.creator_id;
 
@@ -113,5 +112,43 @@ describe('two connections starting riding time for the same judge', () => {
 
         expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
         expect(a.$client.query('SELECT count(*) AS n FROM riding_time_votes WHERE ended_at IS NULL').get()).toEqual({ n: 1 });
+    });
+});
+
+
+describe('a caller holding a stale row', () => {
+    it('cannot end a round the timer worker has just ended, and emits nothing', async () => {
+        const { match, open } = await seed(0);
+        a.$client.run('UPDATE rounds SET created_at = ? WHERE id = ?', [new Date(Date.now() - 600_000).toISOString(), open.id]);
+        const graph = (await findMatchGraph(a, match.id))!;
+        const worker = new RoundTimerWorker('token', { db: a });
+        worker.notifyServer = jest.fn();
+
+        await endRound(b, match.id);
+        a.$client.run('DELETE FROM zz_audit');
+        await worker.checkRoundTimer(open, graph);
+
+        expect(worker.notifyServer).not.toHaveBeenCalled();
+        expect(audit()).toEqual([]);
+    });
+
+    it('cannot start a match that another caller started', async () => {
+        const { match } = await seed(0);
+        a.$client.run('DELETE FROM rounds');
+        a.$client.run('UPDATE matches SET started_at = NULL WHERE id = ?', [match.id]);
+        await startMatch(b, { ...match, started_at: null });
+        a.$client.run('DELETE FROM zz_audit');
+
+        await expect(startMatch(a, { ...match, started_at: null })).rejects.toBeInstanceOf(CommandRefused);
+        expect(audit()).toEqual([]);
+    });
+
+    it('cannot end a match that another caller ended', async () => {
+        const { match } = await seed(0);
+        await endMatch(b, match);
+        a.$client.run('DELETE FROM zz_audit');
+
+        await expect(endMatch(a, match)).rejects.toBeInstanceOf(CommandRefused);
+        expect(audit()).toEqual([]);
     });
 });

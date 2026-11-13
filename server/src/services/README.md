@@ -26,15 +26,19 @@ the DB at the point the legacy code read it; there is no association cache.
 
 Rules:
 
-- **Legacy behaviour, bugs included.** Same preconditions in the same order,
-  same error class and message, same writes in the same order, every command
-  resolves to `undefined`. Defects are in `FINDINGS.md` (F-54..F-62), not
-  fixed. The callers keep their own pre-checks (e.g. the result window 422 of
+- **Legacy behaviour, with the fixes recorded in `FINDINGS.md`** (F-54..F-62,
+  task 18). Every command resolves to `undefined`, except `tryEndRound` and
+  `finishRound`, which say whether they ended the round. The callers keep their own pre-checks (e.g. the result window 422 of
   `PATCH .../rounds/result` is the route's, not `setRoundResult`'s).
-- **No transactions** (user decision 2026-10-11, F-50): legacy
-  `Match.transaction()` was never atomic, so `startMatch`/`endMatch` run their
-  steps sequentially and unwrapped. `src/db/transaction.ts` is not used here;
-  real atomicity is a task-18 change.
+- **Conditional writes, not transactions.** The web process and the worker
+  process write the same rows, so a command that ends a round, ends a match or
+  starts a match claims it with `UPDATE ... WHERE <not yet done>` and goes on
+  only if a row changed (`claimRoundEnd`, `claimMatchEnd`, `claimMatchStart`).
+  The loser of a race writes nothing: `endRound` throws "No available round to
+  end" (or returns with `safe`), `startMatch` / `endMatch` throw
+  `CommandRefused` (a 400). The workers call `tryEndRound` and emit only when
+  they ended the round. A route that needs all-or-nothing wraps the call in
+  `transaction()` (`POST /mats`, `POST /match/:id/start`).
 - **No WebSocket emission, no serialisation.** Workers emit; task 11 renders.
 - ES `export` like the repositories; only new code loads these, and they load
   through `require()` under bun (`test/services/modules.test.ts`).

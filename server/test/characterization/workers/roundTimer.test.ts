@@ -15,13 +15,13 @@
  */
 import { afterEach, beforeEach, describe, expect, it, jest, mock, setSystemTime } from 'bun:test';
 
-// The lifecycle service the worker calls, with `endRound` wrapped in a spy.
+// The lifecycle service the worker calls, with `tryEndRound` wrapped in a spy.
 // `require` + `mock.module(require.resolve(...))` must precede the worker's require.
 const lifecyclePath = require.resolve('../../../src/services/matchLifecycle');
 const lifecycle     = require(lifecyclePath);
-const realEndRound  = lifecycle.endRound;
-const endRound      = jest.fn((...args) => realEndRound(...args));
-mock.module(lifecyclePath, () => ({ ...lifecycle, endRound }));
+const realTryEndRound  = lifecycle.tryEndRound;
+const tryEndRound   = jest.fn((...args) => realTryEndRound(...args));
+mock.module(lifecyclePath, () => ({ ...lifecycle, tryEndRound }));
 
 const { RoundTimerWorker }     = require('../../../src/workers/roundTimerWorker');
 const { EVENTS }               = require('../../../src/ws/workerWebSocket');
@@ -73,7 +73,7 @@ describe('CHARACTERIZATION: RoundTimerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).not.toHaveBeenCalled();
+            expect(tryEndRound).not.toHaveBeenCalled();
             expect(world.writes()).toEqual([]);
         });
 
@@ -104,7 +104,7 @@ describe('CHARACTERIZATION: RoundTimerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).not.toHaveBeenCalled();
+            expect(tryEndRound).not.toHaveBeenCalled();
             expect(worker.notifyServer).not.toHaveBeenCalled();
         });
 
@@ -116,7 +116,7 @@ describe('CHARACTERIZATION: RoundTimerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).not.toHaveBeenCalled();
+            expect(tryEndRound).not.toHaveBeenCalled();
         });
     });
 
@@ -127,7 +127,7 @@ describe('CHARACTERIZATION: RoundTimerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).toHaveBeenCalledTimes(1);
+            expect(tryEndRound).toHaveBeenCalledTimes(1);
         });
 
 
@@ -136,17 +136,17 @@ describe('CHARACTERIZATION: RoundTimerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).toHaveBeenCalledTimes(1);
+            expect(tryEndRound).toHaveBeenCalledTimes(1);
         });
 
 
-        it('ends the round through endRound with no options', async () => {
+        it('ends the round through tryEndRound with no options', async () => {
             openRound(200);
 
             await worker.performJob();
 
             // No `{ safe: true }`: the unsafe form.
-            expect(endRound.mock.calls[0]).toEqual([worker.db, MATCH]);
+            expect(tryEndRound.mock.calls[0]).toEqual([worker.db, MATCH]);
             expect(ended()).toBe(true);
         });
 
@@ -169,7 +169,7 @@ describe('CHARACTERIZATION: RoundTimerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).toHaveBeenCalledBefore(worker.notifyServer);
+            expect(tryEndRound).toHaveBeenCalledBefore(worker.notifyServer);
             expect(roundEndedWhenEmitted).toBe(W.NOW.toISOString());
         });
 
@@ -216,7 +216,7 @@ describe('CHARACTERIZATION: RoundTimerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).not.toHaveBeenCalled();
+            expect(tryEndRound).not.toHaveBeenCalled();
             expect(worker.notifyServer).not.toHaveBeenCalled();
         });
 
@@ -227,7 +227,7 @@ describe('CHARACTERIZATION: RoundTimerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).not.toHaveBeenCalled();
+            expect(tryEndRound).not.toHaveBeenCalled();
         });
 
 
@@ -237,7 +237,7 @@ describe('CHARACTERIZATION: RoundTimerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).toHaveBeenCalledTimes(1);
+            expect(tryEndRound).toHaveBeenCalledTimes(1);
         });
 
 
@@ -250,7 +250,7 @@ describe('CHARACTERIZATION: RoundTimerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).not.toHaveBeenCalled();
+            expect(tryEndRound).not.toHaveBeenCalled();
         });
 
 
@@ -263,7 +263,7 @@ describe('CHARACTERIZATION: RoundTimerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).toHaveBeenCalledTimes(1);
+            expect(tryEndRound).toHaveBeenCalledTimes(1);
         });
 
 
@@ -275,7 +275,7 @@ describe('CHARACTERIZATION: RoundTimerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).toHaveBeenCalledTimes(1);
+            expect(tryEndRound).toHaveBeenCalledTimes(1);
         });
 
 
@@ -290,7 +290,7 @@ describe('CHARACTERIZATION: RoundTimerWorker', () => {
 
             await worker.performJob();
 
-            expect(endRound).toHaveBeenCalledTimes(1);
+            expect(tryEndRound).toHaveBeenCalledTimes(1);
         });
     });
 

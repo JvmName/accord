@@ -5,6 +5,8 @@ import { routeResponses } from '../../contract/responses';
 import { createMatchRequestSchema } from '../../contract/requests';
 import { insertMatch } from '../../db/repositories/matches';
 import { findUserById, insertUser } from '../../db/repositories/users';
+import { transaction } from '../../db/transaction';
+import { CommandRefused } from '../../services/errors';
 import { endMatch, startMatch } from '../../services/matchLifecycle';
 import type { User } from '../../db/types';
 import { present } from '../../domain/present';
@@ -65,9 +67,9 @@ export const getMatch = defineRoute({
 });
 
 /**
- * Master only. Copies the mat's judges onto the match and opens round one.
- * Errors after the first write (e.g. a round already open) answer 500 and
- * leave the earlier writes in place.
+ * Master only. Copies the mat's judges onto the match and opens round one, in
+ * one transaction: an error (answered 500) leaves the match unstarted. A
+ * second start that loses the race answers 400.
  */
 export const postStartMatch = defineRoute({
     method:    'post',
@@ -81,16 +83,20 @@ export const postStartMatch = defineRoute({
         const match = ctx.currentMatch;
         if (match.started_at) return ctx.renderErrors({ matchId: ['match has already started'] });
 
-        await startMatch(ctx.db, match);
+        try {
+            await transaction(ctx.db, tx => startMatch(tx, match), { behavior: 'immediate' });
+        } catch (err) {
+            if (err instanceof CommandRefused) return ctx.renderErrors({ matchId: [err.message] });
+            throw err;
+        }
         logger.info(`Match started: match=${match.id} by user=${ctx.currentUser.id}`);
         return { match: await renderMatch(ctx.db, match.id, FULL_MATCH) };
     },
 });
 
 /**
- * Master only. Ends the match and its open round. Ending during the final
- * round writes everything and then fails with a 500 ("This match has already
- * ended"), because ending that round ends the match a second time.
+ * Master only. Ends the match and its open round, in any round. A second end
+ * that loses the race answers 400.
  */
 export const postEndMatch = defineRoute({
     method:    'post',
@@ -105,7 +111,12 @@ export const postEndMatch = defineRoute({
         if (!match.started_at) return ctx.renderErrors({ matchId: ['this match has not started'] });
         if (match.ended_at)    return ctx.renderErrors({ matchId: ['this match has already ended'] });
 
-        await endMatch(ctx.db, match);
+        try {
+            await endMatch(ctx.db, match);
+        } catch (err) {
+            if (err instanceof CommandRefused) return ctx.renderErrors({ matchId: [err.message] });
+            throw err;
+        }
         logger.info(`Match ended: match=${match.id} by user=${ctx.currentUser.id}`);
         return { match: await renderMatch(ctx.db, match.id, FULL_MATCH) };
     },

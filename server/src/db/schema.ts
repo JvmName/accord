@@ -132,6 +132,7 @@ export const riding_time_votes = sqliteTable('riding_time_votes', {
     ...timestamps(),
 }, (t) => [
     index('riding_time_votes_round_id').on(t.round_id),
+    uniqueIndex('riding_time_votes_one_open_per_judge').on(t.round_id, t.judge_id).where(sql`\`ended_at\` IS NULL`),
 ]);
 
 /** `round_pauses` (createRoundPauses). Open pause = `resumed_at` NULL. */

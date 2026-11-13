@@ -8,7 +8,7 @@ import { findMatchGraph, findMatchGraphsByIds, type MatchGraph } from '../db/rep
 import { findOpenRounds } from '../db/repositories/rounds';
 import type { Round } from '../db/types';
 import { roundMaxDuration, roundTimeRemaining, serializeMatch } from '../serialize';
-import { endRound } from '../services/matchLifecycle';
+import { tryEndRound } from '../services/matchLifecycle';
 import { EVENTS } from '../ws/workerWebSocket';
 import { Worker } from './worker';
 
@@ -36,7 +36,7 @@ export class RoundTimerWorker extends Worker {
         if (timeRemaining !== 0) return;
 
         logger.info(`Round timer expired: ending round ${label}`);
-        await endRound(this.db, graph.id);
+        if (!(await tryEndRound(this.db, graph.id))) return;
 
         // Rounds only: no mat and no judges in this payload.
         const ended = await findMatchGraph(this.db, graph.id);

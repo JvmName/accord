@@ -5,13 +5,14 @@ import { describe, expect, it } from 'bun:test';
  * The services use ES `export`, like the task-10 repositories. Only new code
  * loads them, but they must still load through `require()` under bun (the
  * legacy stack and these JS tests are CommonJS). They must not depend on the
- * legacy ORM, and must not use the transaction helper (F-50: ported unwrapped).
+ * legacy ORM, and must not use the transaction helper (the routes that need
+ * one wrap the call).
  */
 import fs from 'fs';
 import path from 'path';
 
 const SERVICES = {
-    matchLifecycle:  ['competitorForColor', 'endMatch', 'endRound', 'startMatch', 'startRound'],
+    matchLifecycle:  ['closeMatch', 'competitorForColor', 'endMatch', 'endRound', 'startMatch', 'startRound', 'tryEndRound'],
     roundLifecycle:  ['finishRound', 'isRoundPaused', 'pauseRound', 'resumeRound', 'setRoundResult'],
     ridingTimeVotes: ['endRidingTime', 'endVote', 'startRidingTime'],
 };
@@ -27,11 +28,11 @@ describe('src/services modules', () => {
     it('import the legacy ORM, the transaction helper, or WebSocket code: never', () => {
         const dir = path.join(__dirname, '../../src/services');
         const files = fs.readdirSync(dir).filter((f) => f.endsWith('.ts'));
-        expect(files.sort()).toEqual(['matchLifecycle.ts', 'ridingTimeVotes.ts', 'roundLifecycle.ts']);
+        expect(files.sort()).toEqual(['errors.ts', 'matchLifecycle.ts', 'ridingTimeVotes.ts', 'roundLifecycle.ts']);
         for (const f of files) {
             const src = fs.readFileSync(path.join(dir, f), 'utf8');
             const specifiers = [...src.matchAll(/(?:from\s+|require\()\s*['"]([^'"]+)['"]/g)].map((m) => m[1]);
-            expect(specifiers.length).toBeGreaterThan(0);
+            if (f !== 'errors.ts') expect(specifiers.length).toBeGreaterThan(0);
             for (const s of specifiers) {
                 expect({ f, s, legacy: /(^|\/)models\/|lib\/activeRecord|sequelize|socket\.io|webSocket|db\/transaction/i.test(s) })
                     .toEqual({ f, s, legacy: false });

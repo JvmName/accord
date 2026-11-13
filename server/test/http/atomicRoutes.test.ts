@@ -1,8 +1,6 @@
 /**
  * Routes that write several rows leave nothing behind when a later write
  * fails. The failure is forced with a trigger on the test database.
- *
- * Marked `failing` until the routes write inside one transaction.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 
@@ -31,7 +29,7 @@ beforeAll(async () => {
 afterAll(() => booted?.server.close());
 
 describe('a route whose later write fails', () => {
-    it.failing('POST /mats leaves no mat behind when a code cannot be written', async () => {
+    it('POST /mats leaves no mat behind when a code cannot be written', async () => {
         const token = await createUser('creator');
         const mats  = count('mats');
         sql().run("CREATE TRIGGER fail_viewer_code BEFORE INSERT ON mat_codes WHEN NEW.role = 'viewer' BEGIN SELECT RAISE(ABORT, 'forced'); END");
@@ -46,7 +44,7 @@ describe('a route whose later write fails', () => {
         expect(count('mat_codes')).toBe(0);
     });
 
-    it.failing('POST /match/:id/start leaves the match unstarted when its first round cannot be written', async () => {
+    it('POST /match/:id/start leaves the match unstarted when its first round cannot be written', async () => {
         const master = await createUser('master');
         const mat    = (await request('POST', '/mats', { token: master, body: { name: 'Mat' } })).body.data.mat;
         const code   = mat.codes.find((c: { role: string }) => c.role === 'admin').code;

@@ -16,13 +16,13 @@ import { findOpenVoteForJudge, insertRidingTimeVote, setVoteEnded } from '../db/
 import { competitorForColor } from './matchLifecycle';
 
 /**
- * `RidingTimeVote#end()`: `ended_at = new Date()` and save. No guard: an
+ * `RidingTimeVote#end()`: `ended_at = endedAt` (now) and save. No guard: an
  * already-ended vote gets a new `ended_at` (legacy overwrites too). Callers:
  * `endRidingTime`, `finishRound` (vote close on round end), and the mat
  * `leave` route (judge leaving mid-round, `usersController.js:153`).
  */
-export async function endVote(db: DbOrTx, vote: Pick<RidingTimeVote, 'id'>): Promise<void> {
-    await setVoteEnded(db, vote.id, new Date());
+export async function endVote(db: DbOrTx, vote: Pick<RidingTimeVote, 'id'>, endedAt: Date = new Date()): Promise<void> {
+    await setVoteEnded(db, vote.id, endedAt);
 }
 
 /**
@@ -44,11 +44,17 @@ export async function startRidingTime(db: DbOrTx, round: Pick<Round, 'id' | 'mat
 
     const match      = present(await findMatchById(db, round.match_id), 'the round\'s match');
     const competitor = present(await competitorForColor(db, match, riderColor), 'the rider');
-    await insertRidingTimeVote(db, {
-        competitor_id: competitor.id,
-        judge_id:      judgeId,
-        round_id:      round.id,
-    });
+    try {
+        await insertRidingTimeVote(db, {
+            competitor_id: competitor.id,
+            judge_id:      judgeId,
+            round_id:      round.id,
+        });
+    } catch (err) {
+        // The judge's other request opened a vote after the check above.
+        if ((err as Error).message.startsWith('UNIQUE constraint failed')) throw new Error(`Riding time is already active`);
+        throw err;
+    }
 }
 
 /** `Round#endRidingTime(judge)`: ends the judge's FIRST open vote in the round, whatever its competitor. */

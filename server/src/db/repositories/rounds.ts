@@ -90,6 +90,25 @@ export async function updateRound(db: DbOrTx, id: string, patch: RoundPatch): Pr
     return orNull(row);
 }
 
+/**
+ * Ends the round only if it is still open, and says whether this call did.
+ * Of two callers racing to end a round, exactly one gets `true`.
+ */
+export async function claimRoundEnd(db: DbOrTx, id: string, endedAt: Date): Promise<boolean> {
+    const claimed = await db.update(rounds)
+        .set({ ended_at: endedAt, updated_at: new Date() })
+        .where(and(eq(rounds.id, id), isNull(rounds.ended_at)))
+        .returning({ id: rounds.id });
+    return claimed.length > 0;
+}
+
+/** Closes every open pause of the round at `resumedAt`. */
+export async function resumeOpenPauses(db: DbOrTx, roundId: string, resumedAt: Date): Promise<void> {
+    await db.update(round_pauses)
+        .set({ resumed_at: resumedAt, updated_at: new Date() })
+        .where(and(eq(round_pauses.round_id, roundId), isNull(round_pauses.resumed_at)));
+}
+
 /** `new RoundPause({round_id, paused_at}).save()` (`Round#pause`). */
 export async function insertRoundPause(db: DbOrTx, values: { round_id: string; paused_at: Date; id?: string }): Promise<RoundPause> {
     const [row] = await db.insert(round_pauses).values({

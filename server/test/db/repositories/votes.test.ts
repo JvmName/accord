@@ -43,8 +43,8 @@ describe('reads', () => {
         expect(await Votes.findOpenVoteForJudge(db, 'r2', ID.judgeB)).toBeNull();
     });
 
-    it('findOpenVoteForJudge picks the first open one in insertion order if several exist', async () => {
-        insertRows(db, 'riding_time_votes', [vote('v-later', 'r1', ID.judgeB, 100)]);
+    it('the database refuses a second open vote for the same judge in a round', async () => {
+        expect(() => insertRows(db, 'riding_time_votes', [vote('v-later', 'r1', ID.judgeB, 100)])).toThrow(/UNIQUE constraint failed/);
         expect((await Votes.findOpenVoteForJudge(db, 'r1', ID.judgeB))!.id).toBe('v3');
     });
 });
