@@ -1,5 +1,5 @@
 /**
- * drizzle-kit configuration (server-ts task 09). SQLite only (FINDINGS F-37).
+ * drizzle-kit configuration. SQLite only.
  *
  * Run drizzle-kit through the package scripts (`bun run db:generate`,
  * `db:studio`), which invoke it as `bunx --bun

@@ -4,7 +4,7 @@
   // no compilation/emit step in this project. `tsc --noEmit` only ever
   // verifies types; it never produces the files that run. Do not add an
   // `emit`/`build`/`tsc` step to any script that ships code — that is bun's
-  // job, not tsc's. (server-ts task 03)
+  // job, not tsc's.
   "compilerOptions": {
     "target": "ES2022",
     // CommonJS is deliberate — do NOT "modernize" to ESM; the server and its
