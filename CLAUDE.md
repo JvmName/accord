@@ -19,19 +19,23 @@ Accord is a distributed application for tracking "riding time" (controlled grapp
 cd server
 
 # Development
-bun run start                # Start the server and its worker
+bun run start                # Start the server; it spawns the worker (bin/worker.ts)
 bun run dev                  # Same, reloading on file changes
 
-# Testing
+# Checks (CI runs both)
+bun run typecheck            # tsc over src/lib/bin (strict) and over test/ (relaxed)
 bun run test                 # Run all tests with coverage
 bun run test -- <file>       # Run specific test file
 
 # Database migrations
 bun run db:generate          # Generate a new migration from src/db/schema.ts
 bun run db:migrate           # Apply pending Drizzle migrations
+
+# API documents (generated from src/contract; commit the result)
+bun run generate:openapi     # Rewrites server/openapi.json
 ```
 
-**Never run a bare `bun test`.** It skips the `--isolate` flag that the `test` script supplies. bun shares one module registry across all test files without it, and the suite's `mock.module()` doubles for `sequelize` / `lib/activeRecord` then contaminate each other — a bare `bun test` gives 187 pass / 61 fail while every file passes alone. Worse, the same contamination can make an assertion pass while testing nothing.
+**Never run a bare `bun test`.** It skips the `--isolate` flag that the `test` script supplies. bun shares one module registry across all test files without it, and the suite's `mock.module()` doubles then contaminate each other — a bare `bun test` fails tests that pass when each file runs alone. Worse, the same contamination can make an assertion pass while testing nothing.
 
 ### Android App (Kotlin/Gradle)
 
@@ -54,7 +58,7 @@ cd app
 
 ### Core Consensus Algorithm
 
-The application's defining feature is **threshold-based consensus** for tracking control time (`/server/lib/ridingTime.js`):
+The application's defining feature is **threshold-based consensus** for tracking control time (`/server/src/domain/ridingTime.ts`):
 
 - **Vote Threshold**: Single judge: threshold = 1. Multiple judges: threshold = 2 (always, regardless of judge count)
 - **Control Recognition**: Control is only counted when active votes ≥ threshold
@@ -80,20 +84,21 @@ RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
 
 ### Real-Time Updates (WebSocket)
 
-- **Server**: Socket.IO with room-based broadcasting (`/server/lib/server/webSocketServer.js`)
+- **Server**: Socket.IO with room-based broadcasting (`/server/src/ws/webSocketServer.ts`)
   - Each match has its own room: `match:${matchId}`
   - Clients authenticate with `socket.handshake.auth.apiToken` (a string naming a user); the worker with `socket.handshake.query.workerToken`, which must equal the server's `workerToken`. Any other handshake is refused with a `connect_error` (`unauthorized`). Only `match.join` / `match.leave` exist for clients; there are no generic room events.
   - Payloads are the same safe `Match` shape the HTTP routes render: competitors are `{ id, name }`, never `api_token`.
 
-- **Worker process** (`/server/bin/worker.ts`, token from `WORKER_TOKEN` or the first argument): Separate process that connects via WebSocket using `workerToken`. Runs four background jobs:
+- **Worker process** (`/server/bin/worker.ts`, spawned by `bin/www.ts`, token from `WORKER_TOKEN` or the first argument): Separate process, with its own SQLite connection, that connects via WebSocket using `workerToken`. Runs four background jobs (`/server/src/workers/`):
   - `MatchUpdateWorker`: Ticks every **250ms**. Broadcasts `match.update` for every open (not-yet-ended) round **and** for every match currently in a break, throttled to ~1s. Also tracks active match IDs across ticks — when a match exits the active set (just ended), immediately broadcasts one final `match.update` so judges receive the ended state without waiting for their local countdown to expire. The other three workers tick every 1 second:
   - `TechFallTrackerWorker`: Checks open rounds for tech fall threshold; if reached, ends the round in the DB and broadcasts `round.tech-fall`
   - `BreakTransitionWorker`: Checks matches in break state; when break expires, starts the next round and broadcasts `break.ended`
   - `RoundTimerWorker`: Checks open rounds for timer expiry; if elapsed time (minus pauses) ≥ max duration, ends the round and broadcasts `match.update`
-  - **Critical**: Controllers never emit WebSocket events directly — all WebSocket emissions go through the worker process exclusively.
-  - **Warning**: An unhandled exception in any worker's `performJob()` will silently kill that worker — it stops re-queuing with no log output. Always handle errors inside `performJob()` or the affected rounds/matches will never auto-advance.
+  - **Critical**: Route handlers never emit WebSocket events directly — all WebSocket emissions go through the worker process exclusively.
+  - **Errors in a job**: `Worker._performJob` logs a throw from `performJob()` and queues the next tick, so one bad round does not stop the worker.
+  - **Races**: the web process and the worker write the same rows. Ending a round, ending a match and starting a match are claimed with a conditional `UPDATE ... WHERE <not yet done>` (`claimRoundEnd`, `claimMatchEnd`, `claimMatchStart`); the caller that loses writes nothing. `RoundTimerWorker` and `TechFallTrackerWorker` call `tryEndRound` and emit only if they ended the round, so a tech fall in the same second as the timer, or a master tap as the timer fires, ends the round once.
 
-- **Break lifecycle**: When a round ends and the match is not over, `Round.end()` sets `break_started_at` and `break_duration` on the match. `MatchUpdateWorker` picks this up within 1 second and starts broadcasting `match.update` with `break_remaining` (computed seconds). `BreakTransitionWorker` auto-starts the next round when elapsed >= `break_duration` and emits `break.ended`.
+- **Break lifecycle**: When a round ends and the match is not over, `finishRound` (`/server/src/services/roundLifecycle.ts`) sets `break_started_at` and `break_duration` on the match. `MatchUpdateWorker` picks this up within 1 second and starts broadcasting `match.update` with `break_remaining` (computed seconds). `BreakTransitionWorker` auto-starts the next round when elapsed >= `break_duration` and emits `break.ended`.
 
 - **Server→Client events** (all carry the full Match payload):
   - `match.update` — periodic score/state updates while a round is active or a break is in progress
@@ -106,26 +111,30 @@ RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
 
 ### Server Architecture
 
-**Custom ORM**: `BaseRecord` class (`/server/lib/activeRecord/baseRecord.js`) wraps Sequelize
-- Models extend BaseRecord: `User`, `Mat`, `Match`, `Round`, `RidingTimeVote`
-- Database schemas in `/server/config/db/schemas/`
-- Migrations in `/server/config/db/migrations/`
+**Layers** (all in `/server/src`, TypeScript, bun):
+- `db/`: Drizzle ORM over bun:sqlite. `schema.ts` is the schema; `repositories/` are plain query functions (no model classes, no association caching); `transaction.ts` is the transaction helper.
+- `services/`: the lifecycle commands (`matchLifecycle`, `roundLifecycle`, `ridingTimeVotes`), shared by routes and workers.
+- `domain/`: pure rules and scoring (`ridingTime`, `scoring`, `rules/`, `matCode`).
+- `serialize/`: renders stored rows into the wire payloads. `contract/`: the Zod schemas that `openapi.json` and the AsyncAPI document are generated from.
+- `http/`: Express 5 routes declared with `defineRoute`; `ws/`: Socket.IO; `workers/`: the background jobs.
+- Migrations are generated into `/server/drizzle/` by `bun run db:generate`.
 
 **Request Flow**:
 ```
-Express Route → Controller → Authenticate → Authorize → Execute → Render JSON
+requestState (resolve the user, mat, match, round) → authorize (the route's gate)
+  → validate (path, query and body parsed by Zod) → handler → render JSON / errorMiddleware
 ```
 
-**Authorization Levels** (`/server/lib/server/authorizer.js`):
+**Authorization Levels** (`/server/src/http/permissions.ts`, applied by `http/middleware/authorize.ts`):
 - `judge`: User must be in Match's judges list
-- `manage`: Match creator permissions
-- `pause`: Judges or managers can pause/resume a round
-- `view`: Public access
+- `manage`: Match creator permissions (the master)
+- `pause`: `can()` grants managers and judges, but every route that uses it also requires `manage`, so **only the master can pause or resume a round**. This is intended.
+- `view`: Public access to a mat (`GET /mat/:matId` takes no token on purpose); `GET /match/:id` needs a token.
 
-**Key Controllers**:
-- `/server/controllers/matsController.js` - Mat CRUD, judge/viewer management
-- `/server/controllers/matchesController.js` - Match lifecycle, round management
-- `/server/routes/mat/` and `/server/routes/match/` - Route definitions
+**Key route files** (`/server/src/http/routes/`, listed in `routes/index.ts`):
+- `mats.ts`, `matUsers.ts` - Mat creation and reads, judge/viewer join and leave
+- `matches.ts`, `rounds.ts`, `ridingTimeVotes.ts` - Match lifecycle, round management, votes
+- `requests.ts` - the Zod schemas for every request part
 
 ### Android App Architecture
 
@@ -158,10 +167,10 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 
 ### Key Data Models
 
-**Server** (JavaScript with Sequelize):
+**Server** (Drizzle, `/server/src/db/schema.ts`):
 - `User`: `id`, `name`, `api_token`
-- `Mat`: `id`, `name`, `judge_count` (optional, no longer required on creation), `creator_id`
-- `Match`: `id`, `mat_id`, `creator_id`, `red_competitor_id`, `blue_competitor_id`, `red_score`, `blue_score`, `started_at`, `ended_at`, `break_started_at`, `break_duration`
+- `Mat`: `id`, `name`, `judge_count` (1 when omitted on creation), `creator_id`
+- `Match`: `id`, `mat_id`, `creator_id`, `red_competitor_id`, `blue_competitor_id`, `red_score`, `blue_score` (stored but never sent; scores are computed from votes), `started_at`, `ended_at`, `break_started_at`, `break_duration`
 - `Round`: `id`, `match_id`, `ended_at`, `declared_winner_id`, `stoppage`
 - `RidingTimeVote`: `id`, `round_id`, `judge_id`, `competitor_id`, `ended_at`
 - `RoundPause`: `id`, `round_id`, `paused_at`, `resumed_at`
@@ -183,7 +192,7 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 
 5. **Room-Based Broadcasting**: WebSocket rooms keep server scalable; all interested clients receive updates atomically
 
-6. **Match Extensions in `models_ext.kt`**: All winner/score derivation from `Match` belongs in `/app/shared/src/commonMain/kotlin/dev/jvmname/accord/network/models_ext.kt`, not inlined in presenters. Key extensions: `Match.winner(roundIndex)`, `Match.winnerCompetitor`, `Match.roundScore()`, `Match.toMatchResult()`. `toMatchResult()` always returns a non-null `MatchResult` for any ended match — do NOT add a `winner ?: return null` guard; a null winner on an ended match is a valid draw. `Match.merge(other)` handles cache updates — some HTTP endpoints return partial payloads (omitting `judges`, `mat`, etc.) and merge preserves cached values for those. `break_remaining` is a worker-computed field that is only present in WebSocket `match.update` payloads — HTTP responses always return it as `null`. `merge` uses `if (breakStartedAt != null) breakRemaining ?: other.breakRemaining else null` to preserve the last WebSocket value during an active break and clear it once the break ends.
+6. **Match Extensions in `models_ext.kt`**: All winner/score derivation from `Match` belongs in `/app/shared/src/commonMain/kotlin/dev/jvmname/accord/network/models_ext.kt`, not inlined in presenters. Key extensions: `Match.winner(roundIndex)`, `Match.winnerCompetitor`, `Match.roundScore()`, `Match.toMatchResult()`. `toMatchResult()` always returns a non-null `MatchResult` for any ended match — do NOT add a `winner ?: return null` guard; a null winner on an ended match is a valid draw. `Match.merge(other)` handles cache updates — some HTTP endpoints return partial payloads (omitting `judges`, `mat`, etc.) and merge preserves cached values for those. `break_remaining` (seconds left in a break) is computed on every render, over HTTP as well as WebSocket, and is `null` outside a break. `merge` uses `if (breakStartedAt != null) breakRemaining ?: other.breakRemaining else null` to preserve the last WebSocket value during an active break and clear it once the break ends.
 
 7. **`MatchResult` is shared across screens**: Defined in `JudgeSessionScreen.kt` but imported by `MasterSessionScreen.kt` as well. Has `winConditions: String` and `roundWinners: List<Competitor>`. Empty `roundWinners` means all rounds were tied (draw); `toText()` handles this case.
 
@@ -193,7 +202,7 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 
 10. **All rounds always play out**: A match always runs all `maxRounds` (3) rounds — there is no early exit when a competitor reaches 2 wins. The match winner is determined by best-2-of-3 only after all 3 rounds have completed. `Match.getWinner()` returns `null` while rounds are still in progress. Do not reintroduce early-exit logic in `Round.end()` or `Match.getWinner()`.
 
-11. **End-round method routing**: `RoundController.endRound(winner, submission, stoppage)` — `winner` doubles as submitter (submission path) or stopper (stoppage path). `MasterSession` routes to the correct `MatchManager.endRound` overload based on the `stoppage` flag. The server API uses `{ submission, submitter }` for submissions and `{ stoppage: true, stopper }` for stoppages.
+11. **End-round overloads are client-side**: `RoundController.endRound(winner, submission, stoppage)` — `winner` doubles as submitter (submission path) or stopper (stoppage path). `MasterSession` routes to the correct `MatchManager.endRound` overload based on the `stoppage` flag, and every overload sends the same `{ winner, stoppage }` to `PATCH rounds/result` (see 12). The server has no `submission`, `submitter` or `stopper` parameter.
 
 12. **Two-step end-round flow**: Ending a round is split into two API calls. `POST /match/:matchId/rounds/end` (no body) stops the clock and starts the break immediately. `PATCH /match/:matchId/rounds/result` `{ winner: "red"|"blue"|null, stoppage: boolean }` records who won — this is only valid during the break or after the match has ended. On the client: `MasterSessionEvent.EndRound` (data object) calls `session.endRound()` and opens the dialog; `MasterSessionEvent.RecordRoundResult(winner, stoppage)` calls `session.recordRoundResult()`. Dismissing the dialog without confirming leaves the result null on the server.
 
@@ -201,59 +210,63 @@ Express Route → Controller → Authenticate → Authorize → Execute → Rend
 
 ### Server Tests
 
-Tests run on **`bun test`** (Jest, `jest-express` and `jest-extended` were removed). 18 files, 281 tests.
+Tests are TypeScript (`server/test/**/*.test.ts`) and run on **`bun test`**.
 
 ```bash
 cd server
 bun run test                        # Run all tests with coverage
-bun run test -- ridingTime.test.js  # Run specific test
+bun run test -- ridingTime.test.ts  # Run specific test
 ```
 
 **Always `bun run test`, never a bare `bun test`** — see the Commands section above for why.
 
-Config lives in `server/bunfig.toml`: it preloads `test/setup.js` and excludes `**/helpers/**` and `**/models/**` from coverage. Those patterns are **globs**, not Jest's substring patterns — `/helpers/` would match nothing.
+Config lives in `server/bunfig.toml`: it preloads `test/setup.ts` and excludes `**/helpers/**` from coverage. That pattern is a **glob**, not Jest's substring pattern — `/helpers/` would match nothing.
 
-`test/setup.js` supplies two things the runner doesn't:
-- a `toHaveBeenCalledBefore` matcher (used by `applicationServer.test.js`; `bun:test` doesn't ship it)
-- a `require.cache` patch stripping pino's `pino-pretty` worker transport, which `--isolate` would otherwise kill mid-run
+`test/setup.ts` supplies one thing the runner doesn't: a `toHaveBeenCalledBefore` matcher (`bun:test` doesn't ship it).
+
+Two typecheck configs: `tsconfig.json` (src, lib, bin: `strict`, `noUncheckedIndexedAccess`, unused locals and parameters are errors) and `tsconfig.test.json` (the same, with `noImplicitAny`, unused checks and `noUncheckedIndexedAccess` off for tests). `bun run typecheck` runs both. TypeScript is pinned to 5.9.3: an unpinned `bun add -d typescript` resolves to 7.x, which removes `moduleResolution: "node"`.
 
 **Writing tests under bun — the non-obvious parts:**
-- `mock.module()` **does not hoist** like `jest.mock()`. It must appear above the `require()` of the module under test, or the real implementation is used and the test passes while asserting nothing.
+- `mock.module()` **does not hoist** like `jest.mock()`. It must appear above the `require()` of the module under test, or the real implementation is used and the test passes while asserting nothing. That is why the tests that mock use `require()` after the mock instead of `import`.
 - `mock.module('somepkg', …)` with a **bare package specifier silently does nothing.** Use `mock.module(require.resolve('somepkg'), …)`.
-- A module whose CJS export is a bare function can't be mocked at all — prime `require.cache` instead (see `baseRecord.test.js`). Export named bindings from new mockable seams.
-- `spyOn(target, prop, 'get')` is unimplemented — use `TestHelpers.spyOnGetter()` from `test/helpers/spy.js`.
+- **A TS `import` of a package with both CJS and ESM builds is a different module from `require()` of it** (`socket.io`, `socket.io-client`), so the mock above misses it. `src/workers/worker.ts` and `src/ws/webSocketServer.ts` therefore `require()` those two packages. Keep `require()` for any package a test mocks.
+- A module whose CJS export is a bare function can't be mocked at all — prime `require.cache` instead. Export named bindings from new mockable seams.
+- A TS file that mixes `import` with `module.exports` fails under bun ("Cannot use import statement with CommonJS-only features"). `src/domain/*` and `lib/{constants,logger}` are CommonJS and use `require` for their own dependencies.
+- `spyOn(target, prop, 'get')` is unimplemented — use `spyOnGetter()` from `test/helpers/spy.ts`.
 - `expect(asyncFn).rejects` needs a promise: `expect((async () => { … })()).rejects`.
 - `new mockFn()` returns the mock's return value, not a fresh instance.
 
+**Frozen fixtures and goldens are protected instruments.** `test/fixtures/frozen/*.jsonl` (lifecycle writes, worker emissions, repository reads, permissions, error rendering) and `test/contract/goldens/*.json` (every HTTP and WebSocket payload) record what the server does. Do not regenerate them to turn a red test green: a diff is a behavior change, so read it entry by entry first. Regenerate with `bun run test:update-fixtures` (`--check` verifies), and goldens with `CAPTURE_GOLDENS=1 bun test --isolate test/contract/capture.test.ts` (`git rm` a golden's old file when its case is renamed).
+
 Key test areas:
-- `/server/test/ridingTime.test.js` - Consensus algorithm tests
-- `/server/test/server/` - Server framework, WebSocket, authorization
-- `/server/test/activeRecord/` - ORM layer tests
-- `/server/test/http/` - HTTP client tests
+- `/server/test/ridingTime.test.ts`, `domain/`, `rules/` - Consensus algorithm, scoring, rules
+- `/server/test/services/` - Lifecycle commands, including two connections racing (`concurrentCommands.test.ts`)
+- `/server/test/http/` - Routes over real HTTP, authorization, request validation, error shapes
+- `/server/test/contract/` - Goldens and the generated OpenAPI document
+- `/server/test/ws/`, `workers/`, `characterization/workers/` - WebSocket tier and the background jobs
+- `/server/test/db/` - Schema, repositories, transactions, the busy timeout
 
 ## Database
 
-- **Development/Testing**: SQLite (`database.sqlite` in `/server`)
-- **Schema Management**: Sequelize migrations in `/server/config/db/migrations/`
-- **ORM**: Custom `BaseRecord` wrapper around Sequelize models
-
-Migration naming convention: `<description>_<timestamp>.js`
+- **Development/Testing**: SQLite at `DATABASE_PATH`, else `/server/config/db/database.<NODE_ENV>.sqlite`
+- **Schema**: `/server/src/db/schema.ts` (Drizzle). Change it, then `bun run db:generate` writes a migration into `/server/drizzle/`, and `bun run db:migrate` (`bin/migrate.ts`) applies it. Commit the generated SQL and `drizzle/meta/`.
+- **Access**: repository functions in `/server/src/db/repositories/`, no ORM models. A missing row is `null`.
+- **Connections**: the web process and the worker each open their own connection, with a 1000 ms `busy_timeout`. Lifecycle commands rely on conditional `UPDATE`s, not locks; `POST /mats` and `POST /match/:id/start` wrap their writes in `transaction()` (`src/db/transaction.ts`, `BEGIN IMMEDIATE`). Keep a transaction's callback to database work.
 
 ## API Authentication
 
-All endpoints except `POST /users` require authentication via `x-api-token` header. API token is returned on user creation.
+Endpoints require authentication via the `x-api-token` header, except `POST /users` (the token is returned on user creation), `GET /mat/:matId` (public on purpose), and `POST /mat/:matCode/join` (an anonymous join creates the user and returns its token). The health check and the development docs routes are open too.
 
 WebSocket authentication uses `socket.handshake.auth.apiToken`.
 
 ## Common Development Tasks
 
-### Adding a New Model (Server)
+### Changing the Schema (Server)
 
-1. Create migration: `bun run db:create_migration`
-2. Define schema in migration file (`/server/config/db/migrations/`)
-3. Run migration: `bun run db:migrate`
-4. Create model class extending `BaseRecord` in `/server/models/`
-5. Add schema definition in `/server/config/db/schemas/default.js`
+1. Edit `/server/src/db/schema.ts`
+2. `bun run db:generate`, then `bun run db:migrate`
+3. Add or update the repository functions in `/server/src/db/repositories/` and the row types in `src/db/types.ts`
+4. If the field reaches the wire, update the Zod schema in `/server/src/contract/`, the serializer in `/server/src/serialize/`, and run `bun run generate:openapi`
 
 ### Adding a New Screen (Android)
 
@@ -267,12 +280,11 @@ WebSocket authentication uses `socket.handshake.auth.apiToken`.
 
 ### Adding a New API Endpoint (Server)
 
-1. Add route in `/server/routes/<domain>/index.js`
-2. Create controller method in `/server/controllers/<domain>Controller.js`
-3. Use `authorizer.authorize(req, <permission>)` for auth checks
-4. Return JSON via `res.json({ ... })`
-5. Update `/server/README.md` with endpoint documentation
-
+1. Declare the route with `defineRoute` in `/server/src/http/routes/<domain>.ts`: method, path, `authorize` gate, request schemas (`routes/requests.ts`), response, handler. Add it to the list in `routes/index.ts`
+2. Put multi-step changes in a service (`/server/src/services/`), not in the handler
+3. Return the payload from the handler; the envelope (`{ data, status }`) is added for you. Refuse with `ctx.renderErrors({ field: ['message'] }, status?)`
+4. Add the response schema in `/server/src/contract/`, run `bun run generate:openapi`, and add the route to `test/characterization/fixtures/routeTable.txt` and the authorization matrix (`routeTable.test.ts` and `authorizationParity.test.ts` fail until you do)
+5. Update `/server/README.md` if the endpoint is client-facing, and capture a golden for it
 
 ## Kotlin/Wasm JS Interop (wasmJsMain)
 

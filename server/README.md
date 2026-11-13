@@ -1,6 +1,9 @@
 # API Endpoints
-Currently, all endpoints except user creation require authentication via an API token
-in the `x-api-token` header. This API token is returned via the user creation endpoint.
+The generated `openapi.json` (served at `/docs` in development) is the complete reference; this file is a summary.
+
+Every response is an envelope: `{ "status": "ok", "data": { ... } }`. Errors are `{ "status": "bad request" | "unauthorized" | "not found" | "unprocessable entity", "data": { "errors": { "field": ["message"] } } }` (`data` is `null` for a plain 401 or 404).
+
+All endpoints require an API token in the `x-api-token` header, except `POST /users` (the token is returned there), `GET /mat/:matId`, and `POST /mat/:matCode/join` (an anonymous join creates the user and returns its token). The response examples below show the `data` part.
 
 ## Users
 
@@ -22,7 +25,7 @@ in the `x-api-token` header. This API token is returned via the user creation en
 ### Create a Mat ###
 `POST /mats`
 ##### request parameters
-`name`, `judge_count`
+`name`, `judge_count` (optional, 1 to 3; default 1)
 #### response
 ```
 {
@@ -106,8 +109,8 @@ in the `x-api-token` header. This API token is returned via the user creation en
 
 ### End a Round
 `POST /match/:matchId/rounds/end`
-##### request parameters
-`winner` ("red" or "blue", optional), `stoppage` (boolean, optional)
+
+Master only. Takes no parameters: it stops the clock and starts the break. Record who won with "Set a Round Result".
 ##### response
 ```
 {
@@ -124,6 +127,29 @@ in the `x-api-token` header. This API token is returned via the user creation en
 }
 ```
 
+### Set a Round Result
+`PATCH /match/:matchId/rounds/result`
+
+Master only. Valid only during the break or after the match has ended.
+##### request parameters
+`winner` ("red" or "blue", optional; omit to clear the result), `stoppage` (boolean, optional)
+##### response
+```
+{
+  "match": MATCH_PAYLOAD (includes `mat` and `rounds`)
+}
+```
+
+### Pause or Resume a Round
+`POST /match/:matchId/rounds/pause`, `POST /match/:matchId/rounds/resume`
+
+Master only (judges cannot pause). Answers 422 when there is no active round, or the round is not paused.
+
+### Start or End Riding Time
+`POST /match/:matchId/ridingTime` with `rider` ("red" or "blue"), and `DELETE /match/:matchId/ridingTime`
+
+A judge's vote that a competitor has control. `DELETE` ends the judge's open vote; `rider` is ignored there.
+
 ### End a Match
 `POST /match/:matchId/end`
 ##### response
@@ -134,7 +160,7 @@ in the `x-api-token` header. This API token is returned via the user creation en
 ```
 
 ### Get a Match
-`GET /match/:matchId`
+`GET /match/:matchId` (any authenticated user)
 ##### response
 ```
 {
@@ -158,7 +184,9 @@ const socket = io(apiRoot, {
 Once connected to the web socket server, emit the event `match.join` with the `matchId` as the only argument.
 
 ## Listening for Match Updates
-Listen to the event `match.update` to receive updates every second for a match. The event payload will be the `MATCH_PAYLOAD` with `mat`, `judges`, and `rounds`.
+Listen to the event `match.update` to receive updates about once a second while a round is open or a break is running. The payload is the `MATCH_PAYLOAD` with `rounds`. Two more events carry the same payload: `round.tech-fall` (a competitor reached the tech-fall score and the round ended) and `break.ended` (the next round has started).
+
+A handshake without a valid `auth.apiToken` is refused with a `connect_error` (`unauthorized`).
 
 
 # Response Payloads
@@ -181,10 +209,10 @@ Listen to the event `match.update` to receive updates every second for a match. 
     "judges": [USER_PAYLOAD],            // only included in some requests
     "current_match": MATCH_PAYLOAD,      // only included in some requests
     "upcoming_matches": [MATCH_PAYLOAD], // only included in some requests
-    "codes": [                           // only included on mat creation
+    "codes": [                           // only included on mat creation; the admin code adds judges
         {
             "code": "pig.eagle.camel",
-            "role": "judge"
+            "role": "admin"
         },
         {
             "code": "donkey.sea_cucumber.spider",
@@ -202,6 +230,10 @@ Listen to the event `match.update` to receive updates every second for a match. 
     "mat_id": "1222e44d-5463-4932-9f95-795641c6010e",
     "started_at": null,
     "ended_at": null,
+    "break_started_at": null,
+    "break_duration": null,       // seconds
+    "break_remaining": null,      // seconds left in a break, computed on every render; null outside a break
+    "winner": USER_PAYLOAD,       // null until all three rounds have ended, or on a draw
     "red_competitor": USER_PAYLOAD,
     "blue_competitor": USER_PAYLOAD,
     "mat": MAT_PAYLOAD,       // only included in some requests
@@ -214,21 +246,20 @@ Listen to the event `match.update` to receive updates every second for a match. 
 ```
 {
     "id": "c7b62fb7-9a67-4926-a23f-17dcd58a3f75",
-    "started_at": 1767246227927,
-    "ended_at": 1767251747838,
-    "ridingTime": {
-        "086d09e1-6909-464c-8518-ca8eccb3edf2": 384.867,
+    "started_at": "2026-01-01T12:08:10.000Z",
+    "ended_at": "2026-01-01T12:09:40.000Z",   // null while the round is open
+    "max_duration": 180,                      // seconds
+    "time_remaining": null,                   // seconds; null once ended
+    "paused": false,
+    "score": {                                // points per competitor id (one point per 3 seconds of control)
+        "086d09e1-6909-464c-8518-ca8eccb3edf2": 2,
         "c160ec24-895f-4f70-9563-2a17c046d400": 0
     },
     "result": {
-        "winner": {
-            "id": "086d09e1-6909-464c-8518-ca8eccb3edf2",
-            "name": "Mark",
-            "email": "mark@marklilien.com"
-        },
+        "winner": USER_PAYLOAD,               // null for a tie
         "method": {
-            "type": "riding_time",
-            "value": 384.867
+            "type": "points",   // or "submission", "stoppage", "tie"
+            "value": "2"                      // points as a string; null for a submission or stoppage
         }
     }
 }
