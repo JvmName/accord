@@ -6,12 +6,7 @@
 *.log
 .idea/
 *.iml
-.ai/*
-!.ai/plans/
-.ai/plans/*
-!.ai/plans/server-ts/
-.ai/plans/server-ts/*
-!.ai/plans/server-ts/artifacts/
+.ai/
 
 # ============================================================================
 # Android / Gradle
