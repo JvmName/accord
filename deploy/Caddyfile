@@ -1,9 +1,16 @@
 {
-	admin off
+	email {$ACME_EMAIL}
 }
 
-:8080 {
-	root * .
+# The API. Caddy proxies WebSockets without extra configuration.
+{$API_HOST} {
+	encode gzip
+	reverse_proxy api:3000
+}
+
+# The web client: the static files of the newest release (see deploy/README.md).
+{$WEB_HOST} {
+	root * /srv/web/current
 	encode gzip
 
 	@notFile not file
@@ -13,6 +20,5 @@
 
 	header Content-Security-Policy "default-src 'self'; img-src 'self' data: https: *; style-src 'self' 'unsafe-inline' https: *; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https: *; font-src 'self' data: https: *; connect-src 'self' https: *; media-src 'self' https: *; object-src 'none'; frame-src 'self' https: *;"
 	header X-Content-Type-Options "nosniff"
-	header X-XSS-Protection "1; mode=block"
 	header Referrer-Policy "strict-origin-when-cross-origin"
 }

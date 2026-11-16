@@ -368,24 +368,16 @@ NEVER run these via Bash. Always use run_task MCP tool.
 
 ## Deployment
 
-The project deploys two services to Railway, both triggered by GHA on push to `main`:
+One VPS runs everything (`/deploy`): Docker Compose with the API image (the web process, which starts its supervised worker, plus SQLite on a host directory) and Caddy, which terminates TLS, proxies the API hostname and serves the web client's static files. `deploy/README.md` is the runbook; `deploy/ansible/site.yml` prepares a fresh box.
 
-- **API server** (`.github/workflows/server-deploy.yml`): triggers on `server/package.json` change (version bump). Uses `railway up` from repo root with `railway.json` at root.
-- **Web client** (`.github/workflows/android-release.yml`, `web-deploy` job): triggers alongside the Android release on `app/gradle.properties` change (version bump). Builds `:shared:wasmJsBrowserDistribution` via Gradle, copies `app/shared/railway.web.json` into the output as `railway.json`, then runs `railway up` from `app/shared/build/dist/wasmJs/productionExecutable/`.
-
-**Version bumping**: `VERSION_NAME` and `VERSION_CODE` in `app/gradle.properties` are the single source of truth for the app version. They flow into `androidApp` `versionName`/`versionCode`, the shared `BuildConfig.VERSION_NAME` (displayed in the UI on `MainContent`), and the GHA release tag. To cut a new release, bump both values there. The API server version is separately managed via `server/package.json`.
-
-**Key Railway CLI behavior**: `railway up` uploads from the **git repository root**, not the current working directory, when run from inside a git repo. This means running it from `app/shared/build/dist/wasmJs/productionExecutable/` would upload the entire monorepo. In CI, the `web-deploy` job has no checkout step, so `railway up` correctly uploads only the artifact directory. For local web deploys, copy artifacts outside the git tree first: `cp -r app/shared/build/dist/wasmJs/productionExecutable/ /tmp/wasm-deploy/` and then `railway up --project <id> --environment <id>` from `/tmp/wasm-deploy/`.
-
-**Web client static serving**: The web client uses Caddy (not nginx). The workflow bundles three files into the wasm build output: `Staticfile` (triggers Railpack's staticfile provider, which installs Caddy), `Caddyfile.override` (our custom config with correct CSP headers), and `railway.json`. The service-level start command is set to `caddy run --config /app/Caddyfile.override --adapter caddyfile`, which overrides the Railpack-generated `/app/Caddyfile`. Do not remove `Staticfile` (Caddy won't be installed) and do not rename `Caddyfile.override` to `Caddyfile` (Railpack overwrites it with its own generated config at build time). `app/shared/railway.web.json` must use `"builder": "RAILPACK"` — do not switch to `"NIXPACKS"`, as Nixpacks installs Caddy but does not wire it into PATH, causing `caddy: command not found` at runtime. Do not add `buildEnvironment: "V3"` to `app/shared/railway.web.json` — it causes "Railpack could not determine how to build the app" for static sites.
-
-**`railway up --detach` vs `--ci`**: Both workflows use `--detach`. Do not switch to `--ci` — `--ci` respects `watchPatterns` on the service config and will skip the deploy if it judges no watched files changed. `--detach` always builds. The CI trigger paths (`paths:` in the workflow) already handle the "when to deploy" logic, making watch patterns redundant. The Railway service must also have no watchPatterns set in the dashboard — a `/app` watch pattern will silently skip all web client deploys since the uploaded artifact directory contains no `/app` path.
-
-**CSP for WebAssembly**: The Caddyfile must include `'wasm-unsafe-eval'` in `script-src`, or the browser will block `.wasm` instantiation. This is not a CORS issue — it's a distinct CSP directive. The browser error is `CompileError: call to WebAssembly.instantiateStreaming() blocked by CSP`.
-
-**CORS**: The API server allows `http://localhost:8080` for local dev and reads `WEB_ORIGIN` env var for the production web client URL. Set `WEB_ORIGIN=https://<web-service-domain>` on the Railway API service.
-
-**Required GitHub secrets**: `RAILWAY_TOKEN`, `RAILWAY_SERVICE_ID` (API), `RAILWAY_WEB_SERVICE_ID` (web client).
+- **API** (`.github/workflows/server-deploy.yml`): triggers on a `server/package.json` change to `main` (version bump). It runs the tests, builds `server/Dockerfile`, pushes `ghcr.io/<owner>/accord-server:<version>` and, if the repository variable `VPS_HOST` is set, deploys it over SSH (`docker compose pull && up -d`) and waits for the container to be healthy. The container runs `bun run bin/migrate.ts` before the server starts.
+- **Web client** (`.github/workflows/android-release.yml`, `web-deploy` job): triggers alongside the Android release on an `app/gradle.properties` change. It builds `:shared:wasmJsBrowserDistribution`, copies the files into `/srv/web/releases/<sha>` and points `/srv/web/current` at them. Also gated on `VPS_HOST`, so a version bump while no server exists still builds and releases.
+- **Version bumping**: `VERSION_NAME` and `VERSION_CODE` in `app/gradle.properties` are the single source of truth for the app version. They flow into `androidApp` `versionName`/`versionCode`, the shared `BuildConfig.VERSION_NAME` (displayed in the UI on `MainContent`), and the GHA release tag. To cut a new release, bump both values there. The API server version is separately managed via `server/package.json`.
+- **GitHub settings**: variables `VPS_HOST` (empty or unset turns deploys off), `VPS_USER` (default `deploy`) and `VPS_KNOWN_HOSTS`; secret `DEPLOY_SSH_KEY`.
+- **CSP for WebAssembly**: the web block of `deploy/Caddyfile` must include `'wasm-unsafe-eval'` in `script-src`, or the browser will block `.wasm` instantiation. The browser error is `CompileError: call to WebAssembly.instantiateStreaming() blocked by CSP`.
+- **CORS**: the API allows `http://localhost:8080` for local dev and reads `WEB_ORIGIN` for the production web client (set from `WEB_HOST` in `deploy/compose.yaml`).
+- **Monitoring**: set `HEARTBEAT_URL` in `/srv/accord/.env` to a dead-man's-switch URL; the worker requests it once a minute while connected. An external uptime monitor should also check the API and web hostnames.
+- **Clients**: release builds call `https://rdk.api.jvmname.dev` (`BASE_URL` in `app/shared/build.gradle.kts`). `-Paccord.baseUrl=...` points a build elsewhere.
 
 ## Plans
 

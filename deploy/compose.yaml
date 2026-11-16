@@ -1,0 +1,51 @@
+# The whole stack on one VPS: the API (which starts its own worker) and Caddy.
+# Copied to /srv/accord by the Ansible playbook. Settings come from /srv/accord/.env.
+services:
+  api:
+    image: ${API_IMAGE:-ghcr.io/jvmname/accord-server}:${API_TAG:-latest}
+    container_name: accord-api
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      WEB_ORIGIN: https://${WEB_HOST}
+      HEARTBEAT_URL: ${HEARTBEAT_URL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - /srv/accord/data:/data
+    expose:
+      - "3000"
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  caddy:
+    image: caddy:2
+    container_name: accord-caddy
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      API_HOST: ${API_HOST}
+      WEB_HOST: ${WEB_HOST}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /srv/web:/srv/web:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -56,20 +56,78 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
+  # Builds and pushes the image on every new version. The deploy steps run only
+  # when the repository variable VPS_HOST is set, so a version bump while there
+  # is no server still builds, and still makes the release.
   deploy:
     needs: prepare
     if: needs.prepare.outputs.exists == 'false'
     runs-on: ubuntu-latest
-    container: ghcr.io/railwayapp/cli:latest
+    permissions:
+      contents: read
+      packages: write
     env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      VERSION: ${{ needs.prepare.outputs.version }}
 
     steps:
       - uses: actions/checkout@v5
 
-      - name: Deploy to Railway
-#        working-directory: server
-        run: railway up --service=${{ secrets.RAILWAY_SERVICE_ID }} --detach
+      - name: Name the image
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/accord-server" >> "$GITHUB_ENV"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push the image
+        uses: docker/build-push-action@v6
+        with:
+          context: server
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ env.VERSION }}
+            ${{ env.IMAGE }}:latest
+
+      - name: Set up ssh
+        if: vars.VPS_HOST != ''
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          echo "${{ vars.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Deploy
+        if: vars.VPS_HOST != ''
+        env:
+          TARGET: ${{ vars.VPS_USER || 'deploy' }}@${{ vars.VPS_HOST }}
+        run: |
+          # The token goes over stdin, so it never shows up in a process list.
+          printf '%s' "${{ secrets.GITHUB_TOKEN }}" | ssh -i ~/.ssh/id_deploy "$TARGET" "
+            set -e
+            docker login ghcr.io -u '${{ github.actor }}' --password-stdin
+            cd /srv/accord
+            sed -i '/^API_TAG=/d' .env
+            echo 'API_TAG=$VERSION' >> .env
+            docker compose pull api
+            docker compose up -d
+            docker logout ghcr.io
+          "
+
+      - name: Wait until the server is healthy
+        if: vars.VPS_HOST != ''
+        env:
+          TARGET: ${{ vars.VPS_USER || 'deploy' }}@${{ vars.VPS_HOST }}
+        run: |
+          ssh -i ~/.ssh/id_deploy "$TARGET" '
+            for i in $(seq 1 30); do
+              [ "$(docker inspect --format "{{.State.Health.Status}}" accord-api)" = healthy ] && exit 0
+              sleep 2
+            done
+            docker logs --tail 50 accord-api
+            exit 1
+          '
 
   release:
     needs: [prepare, deploy]

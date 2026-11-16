@@ -61,4 +61,4 @@ The client (`app/shared/.../network/`) decodes these bytes exactly; `test/contra
 
 - **Scale.** Sized for about 2 mats with 3 judges each. At that size the default rollback journal and the 1 s busy timeout are enough; WAL is not enabled and `rounds.match_id` has no index. Revisit both if the load changes.
 - **Development validator.** In development the server checks requests and responses against `openapi.json` (`ACCORD_OPENAPI_VALIDATION`); it never runs in production.
-- **Production hosting and cutover** are not decided here; see the deployment section of `CLAUDE.md`.
+- **Hosting.** One VPS runs the API container and Caddy; see the deployment section of `CLAUDE.md` and `deploy/README.md`.

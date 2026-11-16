@@ -1,0 +1,137 @@
+# Prepares a fresh Ubuntu 24.04 VPS to run the stack. Safe to run again.
+#   ansible-playbook -i inventory.ini -e @vars.yml site.yml
+# Needs the community.general and ansible.posix collections (both are in the `ansible` package).
+- name: Accord server
+  hosts: accord
+  become: true
+  vars:
+    deploy_user: deploy
+    app_dir: /srv/accord
+    web_dir: /srv/web
+  tasks:
+    - name: Install packages
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+        upgrade: safe
+        name:
+          - docker.io
+          - docker-compose-v2
+          - ufw
+          - fail2ban
+          - unattended-upgrades
+          - sqlite3
+          - rsync
+          - curl
+
+    - name: Create the deploy user
+      ansible.builtin.user:
+        name: "{{ deploy_user }}"
+        shell: /bin/bash
+        groups: docker
+        append: true
+
+    - name: Authorize the deploy workflow and the admin keys
+      ansible.posix.authorized_key:
+        user: "{{ deploy_user }}"
+        key: "{{ item }}"
+      loop: "{{ [deploy_ssh_public_key] + admin_ssh_public_keys }}"
+
+    # Keys are in place above, so turning passwords off cannot lock anyone out.
+    - name: Only allow key logins, and not as root
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/99-accord.conf
+        content: |
+          PasswordAuthentication no
+          PermitRootLogin no
+        mode: "0644"
+      notify: Restart ssh
+
+    - name: Firewall, default deny
+      community.general.ufw:
+        state: enabled
+        policy: deny
+        direction: incoming
+
+    - name: Firewall, allow ssh, http and https
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop: ["22", "80", "443"]
+
+    - name: Firewall, allow http/3
+      community.general.ufw:
+        rule: allow
+        port: "443"
+        proto: udp
+
+    - name: Install security updates automatically
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";
+        mode: "0644"
+
+    - name: Make the application directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        group: "{{ item.owner }}"
+        mode: "0755"
+      loop:
+        - { path: "{{ app_dir }}", owner: "{{ deploy_user }}" }
+        - { path: "{{ app_dir }}/backups", owner: "{{ deploy_user }}" }
+        - { path: "{{ web_dir }}", owner: "{{ deploy_user }}" }
+        - { path: "{{ web_dir }}/releases", owner: "{{ deploy_user }}" }
+
+    # The container runs as uid 1000 (the `bun` user of the image).
+    - name: Make the database directory, owned by the container user
+      ansible.builtin.file:
+        path: "{{ app_dir }}/data"
+        state: directory
+        owner: "1000"
+        group: "1000"
+        mode: "0755"
+
+    - name: Copy the compose file, Caddyfile and backup script
+      ansible.builtin.copy:
+        src: "../{{ item.src }}"
+        dest: "{{ app_dir }}/{{ item.src }}"
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { src: compose.yaml, mode: "0644" }
+        - { src: Caddyfile, mode: "0644" }
+        - { src: backup.sh, mode: "0755" }
+
+    - name: Write the environment file, keeping the image tag the deploys set
+      ansible.builtin.copy:
+        dest: "{{ app_dir }}/.env"
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: "0640"
+        force: false
+        content: |
+          WEB_HOST={{ web_host }}
+          API_HOST={{ api_host }}
+          ACME_EMAIL={{ acme_email }}
+          API_TAG=latest
+          HEARTBEAT_URL={{ heartbeat_url }}
+
+    - name: Back up the database every night
+      ansible.builtin.cron:
+        name: accord database backup
+        user: "{{ deploy_user }}"
+        minute: "15"
+        hour: "3"
+        job: "{{ app_dir }}/backup.sh"
+
+  handlers:
+    - name: Restart ssh
+      ansible.builtin.service:
+        name: ssh
+        state: restarted
