@@ -1,0 +1,32 @@
+{
+  "name": "http.mat.leave.judge",
+  "route": "DELETE /mat/{matCode}/join",
+  "why": "Leaving via the admin code removes the caller as a judge and returns the updated mat.",
+  "request": {
+    "method": "DELETE",
+    "path": "/mat/<code:join-admin>/join",
+    "as": "joiner",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "mat": {
+          "creator_id": "<user:creator>",
+          "id": "<mat:join>",
+          "judge_count": 2,
+          "judges": [
+            {
+              "id": "<user:judgeA>",
+              "name": "Jordan Judge"
+            }
+          ],
+          "name": "Join Mat"
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "http.mat.join.soloMatchInProgress.400",
+  "route": "POST /mat/{matCode}/join",
+  "why": "Joining as a judge while the mat has a live match with exactly ONE judge is refused: a second judge mid-match would change the consensus threshold from 1 to 2 and silently rewrite the running score.",
+  "request": {
+    "method": "POST",
+    "path": "/mat/<code:solo-admin>/join",
+    "as": "outsider",
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matCode": [
+            "cannot join a solo match in progress"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}

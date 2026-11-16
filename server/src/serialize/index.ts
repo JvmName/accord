@@ -1,0 +1,95 @@
+/**
+ * The serialization layer: repository rows + domain results in, plain wire
+ * objects (the `src/contract` schemas) out.
+ *
+ * Every mapper is a pure function; the only implicit input, the wall clock, is
+ * injectable (`{ now }`). Nothing here touches the database, and nothing in
+ * `src/db` knows about wire shapes.
+ *
+ * The HTTP routes and the worker jobs render with these.
+ */
+import type { z } from 'zod';
+import { loadConfig } from '../config';
+import {
+    matCodeSchema,
+    matSchema,
+    matchSchema,
+    roundSchema,
+    userSchema,
+} from '../contract';
+
+export { serializeNullableUser, serializeUser, serializeUsers } from './user';
+export type { UserInput } from './user';
+export { serializeMatCode } from './matCode';
+export type { MatCodeInput } from './matCode';
+export { serializeMat, splitIncompleteMatches } from './mat';
+export type { MatInput, MatRenderOptions } from './mat';
+export { matchBreakRemaining, matchWinner, serializeMatch } from './match';
+export type { MatchInput, MatchRenderOptions } from './match';
+export { currentPause, roundMaxDuration, roundOutcome, roundTimeRemaining, serializeRound } from './round';
+export type { RoundInput, RoundMatchContext, RoundOutcome } from './round';
+export { resolveNow, wireTime } from './values';
+export type { ClockOptions } from './values';
+
+
+/* ----------------------------------------------------------------------------
+ * Opt-in runtime contract check
+ * ------------------------------------------------------------------------- */
+
+/** Each mapper's output schema. */
+export const wireSchemas = {
+    user:        userSchema,
+    matCode:     matCodeSchema,
+    mat:         matSchema,
+    match:       matchSchema,
+    round:       roundSchema,
+} as const;
+
+export type WireKind = keyof typeof wireSchemas;
+export type WireOf<K extends WireKind> = z.infer<(typeof wireSchemas)[K]>;
+
+/** A mapper produced something its wire schema rejects. */
+export class WireContractError extends Error {
+    readonly kind: WireKind;
+    readonly issues: readonly z.core.$ZodIssue[];
+
+    constructor(kind: WireKind, issues: readonly z.core.$ZodIssue[]) {
+        const summary = issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ');
+        super(`wire contract violation (${kind}): ${summary}`);
+        this.name   = 'WireContractError';
+        this.kind   = kind;
+        this.issues = issues;
+    }
+}
+
+/**
+ * Parse `value` through the `kind` schema; throw `WireContractError` if it
+ * does not conform. Returns `value` ITSELF (not Zod's parsed copy), so a
+ * passing check can never alter what is sent.
+ */
+export function assertWire<K extends WireKind>(kind: K, value: WireOf<K>): WireOf<K> {
+    const result = wireSchemas[kind].safeParse(value);
+    if (!result.success) throw new WireContractError(kind, result.error.issues);
+    return value;
+}
+
+/**
+ * Whether `devAssertWire` checks anything: `ACCORD_VALIDATE_WIRE=1`, or
+ * `NODE_ENV=development`. Off in production and in tests by default (tests
+ * call `assertWire` directly).
+ */
+export function wireValidationEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+    const { ACCORD_VALIDATE_WIRE: flag, NODE_ENV } = loadConfig(env);
+    if (flag === '1') return true;
+    if (flag === '0') return false;
+    return NODE_ENV === 'development';
+}
+
+/**
+ * The opt-in dev-mode check: `assertWire` when `wireValidationEnabled()`,
+ * otherwise a no-op. Not wired into the app; a route or worker can wrap its
+ * payload in this.
+ */
+export function devAssertWire<K extends WireKind>(kind: K, value: WireOf<K>): WireOf<K> {
+    return wireValidationEnabled() ? assertWire(kind, value) : value;
+}

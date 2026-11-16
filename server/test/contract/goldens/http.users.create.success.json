@@ -1,0 +1,27 @@
+{
+  "name": "http.users.create.success",
+  "route": "POST /users",
+  "why": "Registration. The only endpoint that returns a raw api_token alongside a user; CreateUserResponse in models.kt depends on both keys.",
+  "request": {
+    "method": "POST",
+    "path": "/users",
+    "as": null,
+    "body": {
+      "name": "Newly Registered"
+    }
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "api_token": "<uuid:1>",
+        "user": {
+          "id": "<uuid:2>",
+          "name": "Newly Registered"
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

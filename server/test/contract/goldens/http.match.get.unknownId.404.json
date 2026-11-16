@@ -1,0 +1,19 @@
+{
+  "name": "http.match.get.unknownId.404",
+  "route": "GET /match/{matchId}",
+  "why": "requireMatch -> renderNotFoundResponse -> 404 {data:null,status:\"not found\"}.",
+  "request": {
+    "method": "GET",
+    "path": "/match/<uuid:1>",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": null,
+      "status": "not found"
+    }
+  }
+}

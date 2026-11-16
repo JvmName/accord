@@ -1,0 +1,39 @@
+{
+  "name": "http.mat.join.viewerCode.anonymous",
+  "route": "POST /mat/{matCode}/join",
+  "why": "Join is the one authenticated-optional route: with no token it CREATES a user and returns a fresh api_token. JoinMatResult in models.kt needs mat+user+api_token.",
+  "request": {
+    "method": "POST",
+    "path": "/mat/<code:join-viewer>/join",
+    "as": null,
+    "body": {
+      "name": "Walk In"
+    }
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "api_token": "<uuid:1>",
+        "mat": {
+          "creator_id": "<user:creator>",
+          "id": "<mat:join>",
+          "judge_count": 2,
+          "judges": [
+            {
+              "id": "<user:judgeA>",
+              "name": "Jordan Judge"
+            }
+          ],
+          "name": "Join Mat"
+        },
+        "user": {
+          "id": "<uuid:2>",
+          "name": "Walk In"
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

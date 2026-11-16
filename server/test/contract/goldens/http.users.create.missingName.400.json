@@ -1,0 +1,25 @@
+{
+  "name": "http.users.create.missingName.400",
+  "route": "POST /users",
+  "why": "Validation envelope: ValidationError -> 400 {data:{errors:{field:[msg]}},status:\"bad request\"}. This is the shape ApiResult.Error(Map<String,List<String>>) decodes.",
+  "request": {
+    "method": "POST",
+    "path": "/users",
+    "as": null,
+    "body": {}
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "name": [
+            "required"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}

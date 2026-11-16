@@ -1,0 +1,28 @@
+{
+  "name": "http.rounds.result.windowClosed.422",
+  "route": "PATCH /match/{matchId}/rounds/result",
+  "why": "A 422 renders status \"unprocessable entity\"; ApiResultSerializer.kt throws on a response without a status.",
+  "request": {
+    "method": "PATCH",
+    "path": "/match/<match:open>/rounds/result",
+    "as": "creator",
+    "body": {
+      "stoppage": false,
+      "winner": "red"
+    }
+  },
+  "response": {
+    "status": 422,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matchId": [
+            "Round result can only be set during the break or at match end"
+          ]
+        }
+      },
+      "status": "unprocessable entity"
+    }
+  }
+}

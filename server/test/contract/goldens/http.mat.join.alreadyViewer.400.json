@@ -1,0 +1,25 @@
+{
+  "name": "http.mat.join.alreadyViewer.400",
+  "route": "POST /mat/{matCode}/join",
+  "why": "Re-joining as a viewer is a 400 with a matCode-keyed error.",
+  "request": {
+    "method": "POST",
+    "path": "/mat/<code:join-viewer>/join",
+    "as": "viewer",
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matCode": [
+            "user is already a viewer"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}

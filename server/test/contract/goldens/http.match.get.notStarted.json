@@ -1,0 +1,47 @@
+{
+  "name": "http.match.get.notStarted",
+  "route": "GET /match/{matchId}",
+  "why": "A created-but-unstarted match: started_at null, rounds [].",
+  "request": {
+    "method": "GET",
+    "path": "/match/<match:upcoming>",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "match": {
+          "blue_competitor": {
+            "id": "<user:blue2>",
+            "name": "Bailey Blue"
+          },
+          "break_duration": null,
+          "break_remaining": null,
+          "break_started_at": null,
+          "creator_id": "<user:creator>",
+          "ended_at": null,
+          "id": "<match:upcoming>",
+          "judges": [],
+          "mat": {
+            "creator_id": "<user:creator>",
+            "id": "<mat:main>",
+            "judge_count": 2,
+            "name": "Main Mat"
+          },
+          "mat_id": "<mat:main>",
+          "red_competitor": {
+            "id": "<user:red2>",
+            "name": "Robin Red"
+          },
+          "rounds": [],
+          "started_at": null,
+          "winner": null
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

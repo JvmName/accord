@@ -1,0 +1,25 @@
+{
+  "name": "http.rounds.resume.notPaused.400",
+  "route": "POST /match/{matchId}/rounds/resume",
+  "why": "Resuming a round that is running (not paused) reaches Round#resume's throw, which the controller renders as a 400 rather than the 422 used for \"no active round\".",
+  "request": {
+    "method": "POST",
+    "path": "/match/<match:toPause>/rounds/resume",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matchId": [
+            "Round is not paused"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}

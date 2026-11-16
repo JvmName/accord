@@ -1,0 +1,19 @@
+{
+  "name": "http.rounds.start.unknownMatch.404",
+  "route": "POST /match/{matchId}/rounds",
+  "why": "authenticateMatch renders 404 before authorizing.",
+  "request": {
+    "method": "POST",
+    "path": "/match/<uuid:1>/rounds",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": null,
+      "status": "not found"
+    }
+  }
+}

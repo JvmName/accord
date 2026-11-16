@@ -1,0 +1,19 @@
+{
+  "name": "http.match.start.asJudge.401",
+  "route": "POST /match/{matchId}/start",
+  "why": "Per-role deny: \"manage\" is mat-creator only, so a match judge is refused.",
+  "request": {
+    "method": "POST",
+    "path": "/match/<match:notStarted>/start",
+    "as": "judgeA",
+    "body": null
+  },
+  "response": {
+    "status": 401,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": null,
+      "status": "unauthorized"
+    }
+  }
+}

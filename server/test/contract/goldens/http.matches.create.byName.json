@@ -1,0 +1,52 @@
+{
+  "name": "http.matches.create.byName",
+  "route": "POST /mat/{matCode}/matches",
+  "why": "Match creation with new competitors by name. Renders includeMat ONLY — no judges, no rounds. This is a PARTIAL payload, which is why models_ext.kt has merge().",
+  "request": {
+    "method": "POST",
+    "path": "/mat/<code:main-admin>/matches",
+    "as": "creator",
+    "body": {
+      "blue": {
+        "name": "Fresh Blue"
+      },
+      "red": {
+        "name": "Fresh Red"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "match": {
+          "blue_competitor": {
+            "id": "<uuid:1>",
+            "name": "Fresh Blue"
+          },
+          "break_duration": null,
+          "break_remaining": null,
+          "break_started_at": null,
+          "creator_id": "<user:creator>",
+          "ended_at": null,
+          "id": "<uuid:2>",
+          "mat": {
+            "creator_id": "<user:creator>",
+            "id": "<mat:main>",
+            "judge_count": 2,
+            "name": "Main Mat"
+          },
+          "mat_id": "<mat:main>",
+          "red_competitor": {
+            "id": "<uuid:3>",
+            "name": "Fresh Red"
+          },
+          "started_at": null,
+          "winner": null
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

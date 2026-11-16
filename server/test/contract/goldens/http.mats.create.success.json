@@ -1,0 +1,40 @@
+{
+  "name": "http.mats.create.success",
+  "route": "POST /mats",
+  "why": "Mat creation renders includeCodes + includeMatJudges, so `codes` is populated here and nowhere else. Both generated codes are placeholdered positionally.",
+  "request": {
+    "method": "POST",
+    "path": "/mats",
+    "as": "creator",
+    "body": {
+      "judge_count": 3,
+      "name": "Created Mat"
+    }
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "mat": {
+          "codes": [
+            {
+              "code": "<code:1>",
+              "role": "admin"
+            },
+            {
+              "code": "<code:2>",
+              "role": "viewer"
+            }
+          ],
+          "creator_id": "<user:creator>",
+          "id": "<uuid:1>",
+          "judge_count": 3,
+          "judges": [],
+          "name": "Created Mat"
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

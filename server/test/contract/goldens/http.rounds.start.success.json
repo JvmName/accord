@@ -1,0 +1,85 @@
+{
+  "name": "http.rounds.start.success",
+  "route": "POST /match/{matchId}/rounds",
+  "why": "Manually starting the next round during a break.",
+  "request": {
+    "method": "POST",
+    "path": "/match/<match:toStartRound>/rounds",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "match": {
+          "blue_competitor": {
+            "id": "<user:blue>",
+            "name": "Blair Blue"
+          },
+          "break_duration": 60,
+          "break_remaining": 55,
+          "break_started_at": "2026-01-01T12:09:55.000Z",
+          "creator_id": "<user:creator>",
+          "ended_at": null,
+          "id": "<match:toStartRound>",
+          "mat": {
+            "creator_id": "<user:creator>",
+            "id": "<mat:flow>",
+            "judge_count": 2,
+            "name": "Flow Mat"
+          },
+          "mat_id": "<mat:flow>",
+          "red_competitor": {
+            "id": "<user:red>",
+            "name": "Rory Red"
+          },
+          "rounds": [
+            {
+              "ended_at": "2026-01-01T12:09:55.000Z",
+              "id": "<round:toStartRound>",
+              "max_duration": 180,
+              "paused": false,
+              "result": {
+                "method": {
+                  "type": "tie",
+                  "value": "0"
+                },
+                "winner": null
+              },
+              "score": {
+                "<user:blue>": 0,
+                "<user:red>": 0
+              },
+              "started_at": "2026-01-01T12:08:50.000Z",
+              "time_remaining": null
+            },
+            {
+              "ended_at": null,
+              "id": "<uuid:1>",
+              "max_duration": 120,
+              "paused": false,
+              "result": {
+                "method": {
+                  "type": null,
+                  "value": null
+                },
+                "winner": null
+              },
+              "score": {
+                "<user:blue>": 0,
+                "<user:red>": 0
+              },
+              "started_at": "2026-01-01T12:10:00.000Z",
+              "time_remaining": 120
+            }
+          ],
+          "started_at": "2026-01-01T12:08:50.000Z",
+          "winner": null
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

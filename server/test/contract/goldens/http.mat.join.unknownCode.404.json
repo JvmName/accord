@@ -1,0 +1,27 @@
+{
+  "name": "http.mat.join.unknownCode.404",
+  "route": "POST /mat/{matCode}/join",
+  "why": "Unknown code on the unauthenticated join path -> 404 with an errors object (not the null-data 404 of renderNotFoundResponse).",
+  "request": {
+    "method": "POST",
+    "path": "/mat/<code:1>/join",
+    "as": null,
+    "body": {
+      "name": "X"
+    }
+  },
+  "response": {
+    "status": 404,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matCode": [
+            "not found"
+          ]
+        }
+      },
+      "status": "not found"
+    }
+  }
+}

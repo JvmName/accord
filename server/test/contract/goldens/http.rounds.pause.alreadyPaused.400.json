@@ -1,0 +1,25 @@
+{
+  "name": "http.rounds.pause.alreadyPaused.400",
+  "route": "POST /match/{matchId}/rounds/pause",
+  "why": "Pausing twice reaches Round#pause's throw — again a 400, not a 422.",
+  "request": {
+    "method": "POST",
+    "path": "/match/<match:toPause>/rounds/pause",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matchId": [
+            "Round is already paused"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}

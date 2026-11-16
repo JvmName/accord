@@ -1,0 +1,27 @@
+{
+  "name": "http.ridingTime.start.invalidRider.400",
+  "route": "POST /match/{matchId}/ridingTime",
+  "why": "isEnum validation on `rider`.",
+  "request": {
+    "method": "POST",
+    "path": "/match/<match:toVote>/ridingTime",
+    "as": "judgeA",
+    "body": {
+      "rider": "purple"
+    }
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "rider": [
+            "must be one of [red, blue]"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}

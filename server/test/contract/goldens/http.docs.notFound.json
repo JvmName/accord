@@ -1,0 +1,18 @@
+{
+  "name": "http.docs.notFound",
+  "route": "GET /docs",
+  "why": "DocsController is registered only when CONSTANTS.DEV; this pins the production 404.",
+  "request": {
+    "method": "GET",
+    "path": "/docs",
+    "as": null,
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "content_type": "text/html; charset=utf-8",
+    "body": {
+      "<non-json-text>": 143
+    }
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "name": "http.match.get.asOutsider",
+  "route": "GET /match/{matchId}",
+  "why": "Per-role variant: even a user with no relationship to the mat sees the full match.",
+  "request": {
+    "method": "GET",
+    "path": "/match/<match:done>",
+    "as": "outsider",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "match": {
+          "blue_competitor": {
+            "id": "<user:blue>",
+            "name": "Blair Blue"
+          },
+          "break_duration": null,
+          "break_remaining": null,
+          "break_started_at": null,
+          "creator_id": "<user:creator>",
+          "ended_at": "2026-01-01T12:03:20.000Z",
+          "id": "<match:done>",
+          "judges": [
+            {
+              "id": "<user:judgeA>",
+              "name": "Jordan Judge"
+            },
+            {
+              "id": "<user:judgeB>",
+              "name": "Jamie Judge"
+            }
+          ],
+          "mat": {
+            "creator_id": "<user:creator>",
+            "id": "<mat:main>",
+            "judge_count": 2,
+            "name": "Main Mat"
+          },
+          "mat_id": "<mat:main>",
+          "red_competitor": {
+            "id": "<user:red>",
+            "name": "Rory Red"
+          },
+          "rounds": [
+            {
+              "ended_at": "2026-01-01T12:01:30.000Z",
+              "id": "<round:done-1>",
+              "max_duration": 180,
+              "paused": false,
+              "result": {
+                "method": {
+                  "type": "points",
+                  "value": "20"
+                },
+                "winner": {
+                  "id": "<user:red>",
+                  "name": "Rory Red"
+                }
+              },
+              "score": {
+                "<user:blue>": 0,
+                "<user:red>": 20
+              },
+              "started_at": "2026-01-01T12:00:20.000Z",
+              "time_remaining": null
+            },
+            {
+              "ended_at": "2026-01-01T12:02:40.000Z",
+              "id": "<round:done-2>",
+              "max_duration": 120,
+              "paused": false,
+              "result": {
+                "method": {
+                  "type": "submission",
+                  "value": null
+                },
+                "winner": {
+                  "id": "<user:blue>",
+                  "name": "Blair Blue"
+                }
+              },
+              "score": {
+                "<user:blue>": 0,
+                "<user:red>": 0
+              },
+              "started_at": "2026-01-01T12:01:40.000Z",
+              "time_remaining": null
+            },
+            {
+              "ended_at": "2026-01-01T12:03:20.000Z",
+              "id": "<round:done-3>",
+              "max_duration": 60,
+              "paused": false,
+              "result": {
+                "method": {
+                  "type": "stoppage",
+                  "value": null
+                },
+                "winner": {
+                  "id": "<user:red>",
+                  "name": "Rory Red"
+                }
+              },
+              "score": {
+                "<user:blue>": 0,
+                "<user:red>": 0
+              },
+              "started_at": "2026-01-01T12:02:50.000Z",
+              "time_remaining": null
+            }
+          ],
+          "started_at": "2026-01-01T12:00:20.000Z",
+          "winner": {
+            "id": "<user:red>",
+            "name": "Rory Red"
+          }
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

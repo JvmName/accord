@@ -1,0 +1,26 @@
+{
+  "name": "http.mat.viewers.success",
+  "route": "GET /mat/{matCode}/viewers",
+  "why": "Viewer roster. Distinct key (`viewers`) from the judges route.",
+  "request": {
+    "method": "GET",
+    "path": "/mat/<code:main-viewer>/viewers",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "viewers": [
+          {
+            "id": "<user:viewer>",
+            "name": "Val Viewer"
+          }
+        ]
+      },
+      "status": "ok"
+    }
+  }
+}

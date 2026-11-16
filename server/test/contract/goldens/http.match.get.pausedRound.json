@@ -1,0 +1,76 @@
+{
+  "name": "http.match.get.pausedRound",
+  "route": "GET /match/{matchId}",
+  "why": "paused: true, from an unresolved RoundPause. time_remaining freezes at the pause instant rather than tracking the clock.",
+  "request": {
+    "method": "GET",
+    "path": "/match/<match:paused>",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "match": {
+          "blue_competitor": {
+            "id": "<user:blue>",
+            "name": "Blair Blue"
+          },
+          "break_duration": null,
+          "break_remaining": null,
+          "break_started_at": null,
+          "creator_id": "<user:creator>",
+          "ended_at": null,
+          "id": "<match:paused>",
+          "judges": [
+            {
+              "id": "<user:judgeA>",
+              "name": "Jordan Judge"
+            },
+            {
+              "id": "<user:judgeB>",
+              "name": "Jamie Judge"
+            }
+          ],
+          "mat": {
+            "creator_id": "<user:creator>",
+            "id": "<mat:main>",
+            "judge_count": 2,
+            "name": "Main Mat"
+          },
+          "mat_id": "<mat:main>",
+          "red_competitor": {
+            "id": "<user:red2>",
+            "name": "Robin Red"
+          },
+          "rounds": [
+            {
+              "ended_at": null,
+              "id": "<round:paused>",
+              "max_duration": 180,
+              "paused": true,
+              "result": {
+                "method": {
+                  "type": null,
+                  "value": null
+                },
+                "winner": null
+              },
+              "score": {
+                "<user:blue>": 0,
+                "<user:red2>": 0
+              },
+              "started_at": "2026-01-01T12:08:00.000Z",
+              "time_remaining": 160
+            }
+          ],
+          "started_at": "2026-01-01T12:08:00.000Z",
+          "winner": null
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

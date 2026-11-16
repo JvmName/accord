@@ -1,0 +1,37 @@
+{
+  "name": "http.mat.join.viewerCode.noName.anonymous",
+  "route": "POST /mat/{matCode}/join",
+  "why": "Omitting `name` defaults the created user to \"Anonymous\".",
+  "request": {
+    "method": "POST",
+    "path": "/mat/<code:join-viewer>/join",
+    "as": null,
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "api_token": "<uuid:1>",
+        "mat": {
+          "creator_id": "<user:creator>",
+          "id": "<mat:join>",
+          "judge_count": 2,
+          "judges": [
+            {
+              "id": "<user:judgeA>",
+              "name": "Jordan Judge"
+            }
+          ],
+          "name": "Join Mat"
+        },
+        "user": {
+          "id": "<uuid:2>",
+          "name": "Anonymous"
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

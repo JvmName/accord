@@ -1,0 +1,25 @@
+{
+  "name": "http.rounds.start.activeRound.400",
+  "route": "POST /match/{matchId}/rounds",
+  "why": "Model-thrown Error is caught by the controller and rendered as a 400, NOT a 500.",
+  "request": {
+    "method": "POST",
+    "path": "/match/<match:toStartRound>/rounds",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matchId": [
+            "Cannot start a new round while there is an active round"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}

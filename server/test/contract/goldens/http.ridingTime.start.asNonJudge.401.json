@@ -1,0 +1,21 @@
+{
+  "name": "http.ridingTime.start.asNonJudge.401",
+  "route": "POST /match/{matchId}/ridingTime",
+  "why": "Per-role deny: the ridingTime controller authorizes \"judge\", so the mat CREATOR (who manages everything else) is refused here unless they are also a judge. This is the one route where manager < judge.",
+  "request": {
+    "method": "POST",
+    "path": "/match/<match:toVote>/ridingTime",
+    "as": "outsider",
+    "body": {
+      "rider": "red"
+    }
+  },
+  "response": {
+    "status": 401,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": null,
+      "status": "unauthorized"
+    }
+  }
+}

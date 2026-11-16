@@ -1,0 +1,52 @@
+{
+  "name": "http.matches.create.byId",
+  "route": "POST /mat/{matCode}/matches",
+  "why": "Match creation reusing existing users by id.",
+  "request": {
+    "method": "POST",
+    "path": "/mat/<code:flow-admin>/matches",
+    "as": "creator",
+    "body": {
+      "blue": {
+        "id": "<user:blue>"
+      },
+      "red": {
+        "id": "<user:red>"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "match": {
+          "blue_competitor": {
+            "id": "<user:blue>",
+            "name": "Blair Blue"
+          },
+          "break_duration": null,
+          "break_remaining": null,
+          "break_started_at": null,
+          "creator_id": "<user:creator>",
+          "ended_at": null,
+          "id": "<uuid:1>",
+          "mat": {
+            "creator_id": "<user:creator>",
+            "id": "<mat:flow>",
+            "judge_count": 2,
+            "name": "Flow Mat"
+          },
+          "mat_id": "<mat:flow>",
+          "red_competitor": {
+            "id": "<user:red>",
+            "name": "Rory Red"
+          },
+          "started_at": null,
+          "winner": null
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

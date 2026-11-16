@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `round_pauses_one_open_per_round` ON `round_pauses` (`round_id`) WHERE `resumed_at` IS NULL;

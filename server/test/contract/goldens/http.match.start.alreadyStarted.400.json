@@ -1,0 +1,25 @@
+{
+  "name": "http.match.start.alreadyStarted.400",
+  "route": "POST /match/{matchId}/start",
+  "why": "renderErrors default status is 400 with status text \"bad request\".",
+  "request": {
+    "method": "POST",
+    "path": "/match/<match:toStart>/start",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matchId": [
+            "match has already started"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "http.mat.judges.unauthenticated.401",
+  "route": "GET /mat/{matCode}/judges",
+  "why": "Unlike GET /mat/{matId}, the mat-scoped user routes DO authenticate.",
+  "request": {
+    "method": "GET",
+    "path": "/mat/<code:main-admin>/judges",
+    "as": null,
+    "body": null
+  },
+  "response": {
+    "status": 401,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": null,
+      "status": "unauthorized"
+    }
+  }
+}

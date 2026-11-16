@@ -1,0 +1,19 @@
+{
+  "name": "http.mat.get.unknownId.404",
+  "route": "GET /mat/{matId}",
+  "why": "An unknown mat is a 404, like the other not-found routes.",
+  "request": {
+    "method": "GET",
+    "path": "/mat/<uuid:1>",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": null,
+      "status": "not found"
+    }
+  }
+}

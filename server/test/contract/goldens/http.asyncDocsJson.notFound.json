@@ -1,0 +1,18 @@
+{
+  "name": "http.asyncDocsJson.notFound",
+  "route": "GET /async-docs.json",
+  "why": "DEV-only route; pins the production 404. See INTENTIONALLY_UNCOVERED.",
+  "request": {
+    "method": "GET",
+    "path": "/async-docs.json",
+    "as": null,
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "content_type": "text/html; charset=utf-8",
+    "body": {
+      "<non-json-text>": 154
+    }
+  }
+}

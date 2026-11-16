@@ -1,0 +1,25 @@
+{
+  "name": "http.match.end.notStarted.400",
+  "route": "POST /match/{matchId}/end",
+  "why": "Ending an unstarted match is a 400 keyed on matchId.",
+  "request": {
+    "method": "POST",
+    "path": "/match/<match:notStarted>/end",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matchId": [
+            "this match has not started"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}

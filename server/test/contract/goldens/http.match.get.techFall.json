@@ -1,0 +1,79 @@
+{
+  "name": "http.match.get.techFall",
+  "route": "GET /match/{matchId}",
+  "why": "result.method.type === \"tech-fall\" with value = the winning score as a STRING. The hyphen matters: RoundResultType in models.kt maps @SerialName(\"tech-fall\").",
+  "request": {
+    "method": "GET",
+    "path": "/match/<match:techfall>",
+    "as": "creator",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "match": {
+          "blue_competitor": {
+            "id": "<user:blue2>",
+            "name": "Bailey Blue"
+          },
+          "break_duration": null,
+          "break_remaining": null,
+          "break_started_at": null,
+          "creator_id": "<user:creator>",
+          "ended_at": null,
+          "id": "<match:techfall>",
+          "judges": [
+            {
+              "id": "<user:judgeA>",
+              "name": "Jordan Judge"
+            },
+            {
+              "id": "<user:judgeB>",
+              "name": "Jamie Judge"
+            }
+          ],
+          "mat": {
+            "creator_id": "<user:creator>",
+            "id": "<mat:main>",
+            "judge_count": 2,
+            "name": "Main Mat"
+          },
+          "mat_id": "<mat:main>",
+          "red_competitor": {
+            "id": "<user:red2>",
+            "name": "Robin Red"
+          },
+          "rounds": [
+            {
+              "ended_at": "2026-01-01T12:05:10.000Z",
+              "id": "<round:techfall>",
+              "max_duration": 180,
+              "paused": false,
+              "result": {
+                "method": {
+                  "type": "tech-fall",
+                  "value": "30"
+                },
+                "winner": {
+                  "id": "<user:red2>",
+                  "name": "Robin Red"
+                }
+              },
+              "score": {
+                "<user:blue2>": 0,
+                "<user:red2>": 30
+              },
+              "started_at": "2026-01-01T12:03:30.000Z",
+              "time_remaining": null
+            }
+          ],
+          "started_at": "2026-01-01T12:03:30.000Z",
+          "winner": null
+        }
+      },
+      "status": "ok"
+    }
+  }
+}

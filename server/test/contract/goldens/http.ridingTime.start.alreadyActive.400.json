@@ -1,0 +1,27 @@
+{
+  "name": "http.ridingTime.start.alreadyActive.400",
+  "route": "POST /match/{matchId}/ridingTime",
+  "why": "\"Riding time is already active\" from the model, rendered 400.",
+  "request": {
+    "method": "POST",
+    "path": "/match/<match:toVote>/ridingTime",
+    "as": "judgeA",
+    "body": {
+      "rider": "blue"
+    }
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matchId": [
+            "Riding time is already active"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}

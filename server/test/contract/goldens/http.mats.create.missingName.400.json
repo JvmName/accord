@@ -1,0 +1,25 @@
+{
+  "name": "http.mats.create.missingName.400",
+  "route": "POST /mats",
+  "why": "400 validation on an authenticated route.",
+  "request": {
+    "method": "POST",
+    "path": "/mats",
+    "as": "creator",
+    "body": {}
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "name": [
+            "required"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}

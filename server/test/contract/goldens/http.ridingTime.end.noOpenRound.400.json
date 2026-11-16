@@ -1,0 +1,25 @@
+{
+  "name": "http.ridingTime.end.noOpenRound.400",
+  "route": "DELETE /match/{matchId}/ridingTime",
+  "why": "RidingTimeVoteController#authenticateMatch rejects with a 400 (not 404/401) when the match has no active round.",
+  "request": {
+    "method": "DELETE",
+    "path": "/match/<match:notStarted>/ridingTime?rider=red",
+    "as": "judgeA",
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "matchId": [
+            "no active round available"
+          ]
+        }
+      },
+      "status": "bad request"
+    }
+  }
+}
