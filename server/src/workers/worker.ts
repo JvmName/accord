@@ -70,6 +70,11 @@ export abstract class Worker {
         this.#db          = db;
     }
 
+    /** Whether this job's socket is connected to the web process right now. */
+    get connected(): boolean {
+        return this.#ioClient?.connected === true;
+    }
+
     async start(): Promise<void> {
         await this.connect();
         this.queueJob();

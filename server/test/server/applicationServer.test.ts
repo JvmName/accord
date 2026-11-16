@@ -61,13 +61,13 @@ describe('ApplicationServer', () => {
             server.mountRoutes();
 
             const names = server.expressApp.router.stack.map(layer => layer.route ? 'route' : layer.name);
-            expect(names.slice(0, 8)).toEqual([
+            expect(names.slice(0, 6)).toEqual([
                 'corsMiddleware', 'jsonParser', 'urlencodedParser', 'responseTime',
-                'serveStatic', 'result', 'serveStatic', 'connectionAbortedMiddleware',
+                'result', 'connectionAbortedMiddleware',
             ]);
             const validator  = names.indexOf('pathParamsMiddleware');
             const firstRoute = names.indexOf('route');
-            expect(validator).toBeGreaterThan(7);
+            expect(validator).toBeGreaterThan(5);
             expect(firstRoute).toBeGreaterThan(validator);
         });
 

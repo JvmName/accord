@@ -13,6 +13,7 @@ The web process and the worker (`bin/worker.ts`) each open their own SQLite conn
 - **Transactions** are for all-or-nothing routes only: `POST /mats` and `POST /match/:id/start` (`transaction()` in `src/db/transaction.ts`, `BEGIN IMMEDIATE`). bun-sqlite is synchronous, so Drizzle's own `db.transaction()` commits at the first `await`; the helper drives BEGIN/COMMIT itself. Keep a callback to database work: another query on the same connection while one is open joins the transaction.
 - **Busy timeout** is 1000 ms (`PRAGMA busy_timeout`). A wait blocks the event loop of the waiting process.
 - **The worker is supervised.** `bin/www.ts` restarts it with a doubling delay (1 s to 30 s, reset after a minute of uptime). A job that throws is logged and re-queued.
+- **Monitoring the worker.** With `HEARTBEAT_URL` set, `HeartbeatWorker` requests that URL once a minute, but only while its socket is connected to the web process. An external dead-man's-switch monitor that expects the request alerts when it stops: a dead or disconnected worker, or a dead host. The health check stays a plain liveness probe, so it does not change when the worker does.
 
 ## Wire contract the Kotlin client depends on
 

@@ -1,4 +1,5 @@
 export { BreakTransitionWorker } from './breakTransitionWorker';
+export { HEARTBEAT_INTERVAL_MS, HeartbeatWorker } from './heartbeatWorker';
 export { MatchUpdateWorker } from './matchUpdateWorker';
 export { RoundTimerWorker } from './roundTimerWorker';
 export { TechFallTrackerWorker } from './techFallTrackerWorker';

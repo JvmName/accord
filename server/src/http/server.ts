@@ -156,9 +156,7 @@ export class ApplicationServer {
         this.use(express.json({ type: ['application/json', 'text/plain'] }));
         this.use(express.urlencoded({ extended: true }));
         this.use(responseTime());
-        this.use(express.static('public'));
         this.use(loggingMiddleware());
-        this.use('/static', express.static(`${process.cwd()}/public`));
         this.use(connectionAbortedMiddleware);
     }
 
