@@ -12,7 +12,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import express from 'express';
 import { createDb, migrateDb } from '../../src/db';
-import { routeResponses } from '../../src/contract/responses';
+import { emptyResponse } from '../support/emptyResponse';
 import { AuthorizationError, ValidationError } from '../../src/http/errors';
 import { defineRoute } from '../../src/http/route';
 import { bodyParsers, registerRoutes } from '../../src/http/router';
@@ -24,7 +24,7 @@ const probe = defineRoute({
     method:    'get',
     path:      '/probe',
     authorize: { scope: 'none', level: 'public' },
-    response:  routeResponses['GET /system/healthCheck'],
+    response:  emptyResponse,
     tags:      ['test'],
     handler:   async () => { throw thrown; },
 });

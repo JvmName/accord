@@ -25,7 +25,7 @@ import {
 } from '../../src/http/errors';
 import { defineRoute } from '../../src/http/route';
 import type { AnyRouteDefinition } from '../../src/http/types';
-import { routeResponses } from '../../src/contract/responses';
+import { emptyResponse } from '../support/emptyResponse';
 import {
     createMatch,
     createStartedMatch,
@@ -48,9 +48,9 @@ const golden = (name: string) => JSON.parse(fs.readFileSync(path.join(GOLDENS, `
 // ---------------------------------------------------------------------------
 
 describe('envelope: statusText', () => {
-    it('maps exactly 200/400/401/404/422/500 and nothing else', () => {
-        expect([200, 400, 401, 404, 422, 500].map(statusText)).toEqual(['ok', 'bad request', 'unauthorized', 'not found', 'unprocessable entity', 'server error']);
-        for (const code of [201, 204, 403, 409, 503]) expect(statusText(code)).toBeUndefined();
+    it('maps exactly 200/400/401/404/422/500/503 and nothing else', () => {
+        expect([200, 400, 401, 404, 422, 500, 503].map(statusText)).toEqual(['ok', 'bad request', 'unauthorized', 'not found', 'unprocessable entity', 'server error', 'service unavailable']);
+        for (const code of [201, 204, 403, 409, 502]) expect(statusText(code)).toBeUndefined();
     });
 
     it('a 422 envelope carries status "unprocessable entity"', () => {
@@ -95,7 +95,7 @@ function stubFromGolden(name: string, routeKey: string, handler: AnyRouteDefinit
     handlerGoldens[name] = { routeKey, handler };
 }
 
-stubFromGolden('http.healthCheck', 'GET /system/healthCheck', (async () => ({})) as AnyRouteDefinition['handler']);
+stubFromGolden('http.healthCheck', 'GET /system/healthCheck', (async () => ({ worker: 'connected' })) as AnyRouteDefinition['handler']);
 stubFromGolden('http.root', 'GET /', (async () => 'Hello World v1.0.0-rc08') as AnyRouteDefinition['handler']);
 stubFromGolden('http.rounds.pause.noActiveRound.422', 'POST /match/:matchId/rounds/pause',
     (async (ctx: any) => ctx.renderErrors({ matchId: ['No active round to pause'] }, 422)) as AnyRouteDefinition['handler']);
@@ -202,7 +202,7 @@ beforeAll(async () => {
         method:    'get',
         path:      PROBE_PATH,
         authorize: { scope: 'none', level: 'public' },
-        response:  routeResponses['GET /system/healthCheck'],
+        response:  emptyResponse,
         tags:      ['test'],
         handler:   async () => { throw thrown; },
     });

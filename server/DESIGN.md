@@ -13,6 +13,7 @@ The web process and the worker (`bin/worker.ts`) each open their own SQLite conn
 - **Transactions** are for all-or-nothing routes only: `POST /mats` and `POST /match/:id/start` (`transaction()` in `src/db/transaction.ts`, `BEGIN IMMEDIATE`). bun-sqlite is synchronous, so Drizzle's own `db.transaction()` commits at the first `await`; the helper drives BEGIN/COMMIT itself. Keep a callback to database work: another query on the same connection while one is open joins the transaction.
 - **Busy timeout** is 1000 ms (`PRAGMA busy_timeout`). A wait blocks the event loop of the waiting process.
 - **The worker is supervised.** `bin/www.ts` restarts it with a doubling delay (1 s to 30 s, reset after a minute of uptime). A job that throws is logged and re-queued.
+- **Health check.** `GET /system/healthCheck` is 200 while any socket of the worker process is connected to the web process, and 503 otherwise, because without the worker no real-time event is sent. Docker's `HEALTHCHECK`, the deploy workflow and the uptime monitor all read it.
 
 ## Wire contract the Kotlin client depends on
 
@@ -60,4 +61,4 @@ The client (`app/shared/.../network/`) decodes these bytes exactly; `test/contra
 
 - **Scale.** Sized for about 2 mats with 3 judges each. At that size the default rollback journal and the 1 s busy timeout are enough; WAL is not enabled and `rounds.match_id` has no index. Revisit both if the load changes.
 - **Development validator.** In development the server checks requests and responses against `openapi.json` (`ACCORD_OPENAPI_VALIDATION`); it never runs in production.
-- **Production hosting and cutover** are not decided here; see the deployment section of `CLAUDE.md`.
+- **Hosting.** One VPS runs the API container and Caddy; see the deployment section of `CLAUDE.md` and `deploy/README.md`.

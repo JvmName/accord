@@ -1,0 +1,12 @@
+node_modules
+coverage
+test
+config
+*.sqlite
+*.sqlite-journal
+.git
+Dockerfile
+.dockerignore
+README.md
+DESIGN.md
+openapi.json

@@ -137,6 +137,14 @@ function normalizeHttp(routePath, requestBody, body) {
 
 const canonical = (v) => JSON.stringify(v);
 
+/** The health check is 200 only while a worker is connected; this connects one the way the worker does. */
+async function connectWorker(origin) {
+    const { io } = require('socket.io-client');
+    const socket = io(origin, { query: { workerToken: 'contract-capture-worker' } });
+    await new Promise((resolve, reject) => { socket.on('connect', resolve); socket.on('connect_error', reject); });
+    return socket;
+}
+
 async function replayHttp(origin) {
     const { IDS, CODES } = seedModule;
     for (const name of capturePlanOrder()) {
@@ -148,8 +156,10 @@ async function replayHttp(origin) {
         const headers = {};
         if (as) headers['x-api-token'] = IDS[`token:${as}`];
         if (requestBody !== undefined) headers['content-type'] = 'application/json';
+        const worker = name === 'http.healthCheck' ? await connectWorker(origin) : null;
         const res  = await fetch(`${origin}${routePath}`, { method, headers, body: requestBody === undefined ? undefined : JSON.stringify(requestBody) });
         const text = await res.text();
+        worker?.close();
         let live; // exactly as capture.ts parses
         try { live = text === '' ? null : JSON.parse(text); } catch { live = { '<non-json-text>': text.length }; }
 

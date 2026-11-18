@@ -36,3 +36,26 @@ jobs:
       # `bun run test`, never a bare `bun test`: the script passes --isolate.
       - name: Test
         run: bun run test
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build the image
+        run: docker build -t accord-server server
+
+      - name: Start it and check the web process and the worker
+        run: |
+          docker run -d --name accord -p 3000:3000 -v accord-data:/data accord-server
+          for i in $(seq 1 30); do
+            [ "$(docker inspect --format '{{.State.Health.Status}}' accord)" = healthy ] && break
+            sleep 2
+          done
+          docker inspect --format '{{.State.Health.Status}}' accord | grep -x healthy
+          curl -fsS -X POST localhost:3000/users -H 'content-type: application/json' -d '{"name":"ci"}' | grep -q '"status":"ok"'
+          docker logs accord 2>&1 | grep -q 'WORKER.*Web socket connected'
+
+      - name: Show the logs if it failed
+        if: failure()
+        run: docker logs accord

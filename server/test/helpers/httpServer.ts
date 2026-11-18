@@ -60,7 +60,7 @@ function freePort(): Promise<number> {
  *
  * `ApplicationServer#listen()` is fire-and-forget and exposes neither the http
  * server nor a ready promise, so readiness is established by polling the
- * always-registered health check.
+ * version banner (the health check needs a connected worker).
  */
 async function startServer({ timeoutMs = 10000, serverOptions = {} } = {}) {
     const { ApplicationServer } = require('../../src/http/server');
@@ -74,7 +74,7 @@ async function startServer({ timeoutMs = 10000, serverOptions = {} } = {}) {
     const deadline = Date.now() + timeoutMs;
     for (;;) {
         try {
-            const res = await fetch(`${origin}/system/healthCheck`);
+            const res = await fetch(`${origin}/`);
             if (res.ok) break;
         } catch (err) {
             if (Date.now() > deadline) throw new Error(`server did not come up on ${origin}: ${(err as Error).message}`);

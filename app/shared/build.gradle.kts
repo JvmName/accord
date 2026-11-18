@@ -231,6 +231,11 @@ tasks.withType<KspAATask>().configureEach {
 }
 
 val isRelease = providers.gradleProperty("release").isPresent
+// `-Paccord.baseUrl=https://host` (or `ACCORD_BASE_URL`) points any build at another server.
+val baseUrlOverride = providers.gradleProperty("accord.baseUrl")
+    .orElse(providers.environmentVariable("ACCORD_BASE_URL"))
+    .orNull
+fun baseUrl(release: String, debug: String): String = baseUrlOverride ?: if (isRelease) release else debug
 val versionName = providers.gradleProperty("VERSION_NAME").get()
 buildConfig {
     useKotlinOutput()
@@ -243,21 +248,21 @@ buildConfig {
     sourceSets.named("jvmMain") {
         buildConfigField(
             "BASE_URL",
-            if (isRelease) "https://rdk.api.jvmname.dev" else "http://localhost:3000"
+            baseUrl(release = "https://rdk.api.jvmname.dev", debug = "http://localhost:3000")
         )
     }
 
     sourceSets.named("androidMain") {
         buildConfigField(
             "BASE_URL",
-            if (isRelease) "https://rdk.api.jvmname.dev" else "http://[fec0::2]:3000"
+            baseUrl(release = "https://rdk.api.jvmname.dev", debug = "http://[fec0::2]:3000")
         )
     }
 
     sourceSets.named("wasmJsMain") {
         buildConfigField(
             "BASE_URL",
-            if (isRelease) "https://rdk.api.jvmname.dev" else "http://localhost:3000"
+            baseUrl(release = "https://rdk.api.jvmname.dev", debug = "http://localhost:3000")
         )
     }
 }

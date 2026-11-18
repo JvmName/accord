@@ -1,0 +1,25 @@
+{
+  "name": "http.healthCheck.noWorker.503",
+  "route": "GET /system/healthCheck",
+  "why": "Before any worker connects the server is not healthy: 503, so Docker and uptime monitors see it.",
+  "request": {
+    "method": "GET",
+    "path": "/system/healthCheck",
+    "as": null,
+    "body": null
+  },
+  "response": {
+    "status": 503,
+    "content_type": "application/json; charset=utf-8",
+    "body": {
+      "data": {
+        "errors": {
+          "worker": [
+            "not connected"
+          ]
+        }
+      },
+      "status": "service unavailable"
+    }
+  }
+}

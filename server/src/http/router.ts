@@ -41,6 +41,8 @@ export interface HttpDeps {
     /** Register DEV-only routes (the docs routes) and log 400/500 errors. */
     dev?: boolean;
     logger?: ErrorLogger;
+    /** Whether the worker process has a socket connected. Defaults to true. */
+    workerConnected?: () => boolean;
 }
 
 /**
@@ -58,6 +60,7 @@ function handlerMiddleware(route: AnyRouteDefinition, deps: HttpDeps) {
             renderErrors,
             renderNotFound,
             renderUnauthorized,
+            workerConnected: deps.workerConnected ?? (() => true),
             authorize: (action, scope, subject?: Subject) =>
                 assertCan(subject ?? { user: state.currentUser, matCode: state.currentMatCode }, action, scope, loaders),
         };

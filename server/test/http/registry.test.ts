@@ -11,6 +11,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { z } from 'zod';
 import { routeResponses } from '../../src/contract/responses';
+import { emptyResponse } from '../support/emptyResponse';
 import type { matchSchema } from '../../src/contract/match';
 import type { Mat, MatCode, Match, Round, User } from '../../src/db/types';
 import { defineRoute, noInput, notImplemented } from '../../src/http/route';
@@ -80,7 +81,7 @@ export const samplePublicRoute = defineRoute({
     path:      '/sample-public',
     authorize: { scope: 'none', level: 'public' },
     request:   { body: createUserBody },
-    response:  routeResponses['GET /system/healthCheck'],
+    response:  emptyResponse,
     tags:      ['sample'],
     handler:   async ctx => {
         assertType<Equals<typeof ctx.currentUser, User | null>>();
@@ -169,12 +170,12 @@ const capture = (key: string): AnyRouteDefinition['handler'] =>
 
 const putRoute = defineRoute({
     method: 'put', path: '/__put', authorize: { scope: 'none', level: 'public' },
-    response: routeResponses['GET /system/healthCheck'], tags: ['test'],
+    response: emptyResponse, tags: ['test'],
     handler: async () => undefined as never,
 });
 const falsyRoute = defineRoute({
     method: 'get', path: '/__falsy', authorize: { scope: 'none', level: 'public' },
-    response: routeResponses['GET /system/healthCheck'], tags: ['test'],
+    response: emptyResponse, tags: ['test'],
     handler: async () => null,
 });
 

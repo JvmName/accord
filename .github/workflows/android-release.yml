@@ -87,13 +87,6 @@ jobs:
           path: ${{ steps.apk.outputs.path }}
           retention-days: 1
 
-      - name: Prepare wasm deployment bundle
-        if: steps.check_release.outputs.exists == 'false'
-        run: |
-          cp app/shared/railway.web.json app/shared/build/dist/wasmJs/productionExecutable/railway.json
-          cp app/shared/Staticfile.web app/shared/build/dist/wasmJs/productionExecutable/Staticfile
-          cp app/shared/Caddyfile.web app/shared/build/dist/wasmJs/productionExecutable/Caddyfile.override
-
       - name: Upload wasm artifact
         if: steps.check_release.outputs.exists == 'false'
         uses: actions/upload-artifact@v4
@@ -150,12 +143,12 @@ jobs:
             $PRERELEASE_FLAG \
             release-apk/accord-${{ needs.build.outputs.version }}.apk
 
+  # Runs only when the repository variable VPS_HOST is set, so a release while
+  # there is no server still builds the client and attaches the release files.
   web-deploy:
     needs: build
-    if: needs.build.outputs.exists == 'false'
+    if: needs.build.outputs.exists == 'false' && vars.VPS_HOST != ''
     runs-on: ubuntu-latest
-    env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
     steps:
       - name: Download wasm distribution
@@ -164,9 +157,23 @@ jobs:
           name: wasm-dist
           path: wasm-dist
 
-      - name: Install Railway CLI
-        run: npm i -g @railway/cli
+      - name: Set up ssh
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          echo "${{ vars.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
 
-      - name: Deploy to Railway
-        working-directory: wasm-dist
-        run: railway up --service=${{ secrets.RAILWAY_WEB_SERVICE_ID }} --detach
+      # Copy into a new release directory, then point `current` at it, so the site never serves a half-copied release.
+      - name: Deploy to the VPS
+        env:
+          TARGET: ${{ vars.VPS_USER || 'deploy' }}@${{ vars.VPS_HOST }}
+          RELEASE: ${{ github.sha }}
+        run: |
+          SSH="ssh -i $HOME/.ssh/id_deploy"
+          rsync -az --delete -e "$SSH" wasm-dist/ "$TARGET:/srv/web/releases/$RELEASE/"
+          $SSH "$TARGET" "
+            set -e
+            ln -sfn /srv/web/releases/$RELEASE /srv/web/current
+            cd /srv/web/releases && ls -1t | tail -n +4 | xargs -r rm -rf
+          "

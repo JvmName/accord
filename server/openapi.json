@@ -68,7 +68,7 @@
         "tags": [
           "system"
         ],
-        "description": "Liveness probe.",
+        "description": "Health check: 200 while the worker is connected, 503 otherwise.",
         "security": [],
         "responses": {
           "200": {
@@ -82,7 +82,17 @@
                       "anyOf": [
                         {
                           "type": "object",
-                          "properties": {},
+                          "properties": {
+                            "worker": {
+                              "type": "string",
+                              "enum": [
+                                "connected"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "worker"
+                          ],
                           "additionalProperties": false
                         },
                         {
@@ -108,6 +118,9 @@
           },
           "500": {
             "$ref": "#/components/responses/ServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
           }
         }
       }
@@ -1372,6 +1385,16 @@
             }
           }
         }
+      },
+      "ServiceUnavailable": {
+        "description": "Service Unavailable",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ServiceUnavailableEnvelope"
+            }
+          }
+        }
       }
     },
     "schemas": {
@@ -2020,6 +2043,40 @@
             "type": "string",
             "enum": [
               "server error"
+            ]
+          }
+        },
+        "required": [
+          "data",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "ServiceUnavailableEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "errors": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "required": [
+              "errors"
+            ],
+            "additionalProperties": false
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "service unavailable"
             ]
           }
         },
