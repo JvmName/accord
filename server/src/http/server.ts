@@ -147,7 +147,7 @@ export class ApplicationServer {
         this.#routesMounted = true;
 
         if (this.#openApiValidation) this.use(...openApiValidatorMiddleware());
-        registerRoutes(this.#app, routes, { db: this.db, dev: this.#dev, logger });
+        registerRoutes(this.#app, routes, { db: this.db, dev: this.#dev, logger, workerConnected: () => this.#webSocketServer?.hasWorker() ?? false });
     }
 
     setupMiddleware(): void {

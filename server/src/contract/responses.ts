@@ -40,8 +40,8 @@ export const viewersResponseSchema = z.strictObject({ viewers: z.array(userSchem
 /** `GET /` renders a bare version-banner string inside the envelope. */
 export const rootResponseSchema = z.string();
 
-/** `GET /system/healthCheck` renders an empty object, not a null. */
-export const healthCheckResponseSchema = z.strictObject({});
+/** `GET /system/healthCheck`: the worker is connected (the answer is 503 otherwise). */
+export const healthCheckResponseSchema = z.strictObject({ worker: z.literal('connected') });
 
 /**
  * Every route's SUCCESS envelope. Error responses are not route-specific —

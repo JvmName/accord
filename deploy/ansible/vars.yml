@@ -1,0 +1,8 @@
+web_host: rdk.jvmname.dev
+api_host: rdk.api.jvmname.dev
+acme_email: CHANGE_ME
+# The deploy workflow's key: the private half is the DEPLOY_SSH_KEY secret.
+deploy_ssh_public_key: "CHANGE_ME"
+# Your own key, so you can log in as the deploy user.
+admin_ssh_public_keys:
+  - "CHANGE_ME"

@@ -1,14 +1,22 @@
 # Prepares a fresh Ubuntu 24.04 VPS to run the stack. Safe to run again.
-#   ansible-playbook -i inventory.ini -e @vars.yml site.yml
+#   ansible-playbook -i <ip>, -u <login user> -e @vars.yml site.yml
 # Needs the community.general and ansible.posix collections (both are in the `ansible` package).
 - name: Accord server
-  hosts: accord
+  hosts: all
   become: true
   vars:
     deploy_user: deploy
     app_dir: /srv/accord
     web_dir: /srv/web
   tasks:
+    - name: Check that vars.yml is filled in
+      ansible.builtin.assert:
+        that:
+          - "'CHANGE_ME' not in (acme_email ~ deploy_ssh_public_key ~ (admin_ssh_public_keys | join(',')))"
+        fail_msg: Fill in acme_email and the SSH keys in vars.yml.
+      delegate_to: localhost
+      become: false
+
     - name: Install packages
       ansible.builtin.apt:
         update_cache: true
@@ -120,7 +128,6 @@
           API_HOST={{ api_host }}
           ACME_EMAIL={{ acme_email }}
           API_TAG=latest
-          HEARTBEAT_URL={{ heartbeat_url }}
 
     - name: Back up the database every night
       ansible.builtin.cron:

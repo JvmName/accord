@@ -20,8 +20,6 @@ const EnvSchema = z.object({
     WEB_ORIGIN:              z.string().url().optional(),
     /** Shared secret between the web process and its worker; the web process makes one up when unset. */
     WORKER_TOKEN:            z.string().min(1).optional(),
-    /** URL the worker requests once a minute while it is connected, for an external dead-man's-switch monitor. */
-    HEARTBEAT_URL:           z.string().url().optional(),
     LOG_LEVEL:               z.string().min(1).transform(level => level.toLowerCase()).default('info'),
     PROC_NAME:               z.string().min(1).default('SERVER'),
     ACCORD_VALIDATE_WIRE:    flag,

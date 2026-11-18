@@ -10,7 +10,7 @@ import type { Response } from 'express';
 import type { ErrorMap } from '../contract/envelope';
 
 /**
- * The `status` text for a status code: 200/400/401/404/422/500. Any other
+ * The `status` text for a status code: 200/400/401/404/422/500/503. Any other
  * code yields `undefined`, and `JSON.stringify` then DROPS the `status` key,
  * which the Kotlin client cannot decode. 422 used to be missing; no
  * route renders a code outside this list.
@@ -29,6 +29,8 @@ export function statusText(statusCode: number): string | undefined {
             return 'unprocessable entity';
         case 500:
             return 'server error';
+        case 503:
+            return 'service unavailable';
     }
     return undefined;
 }

@@ -17,15 +17,21 @@ export const getRoot = defineRoute({
     handler:   async () => `Hello World v${version}`,
 });
 
-/** Platform health checks call this; it renders `{}` (not null) inside the envelope. */
+/**
+ * Health check for Docker and uptime monitors. The web process is up if it
+ * answers; it is healthy only while the worker is connected, because without
+ * the worker no real-time event is sent.
+ */
 export const getHealthCheck = defineRoute({
     method:    'get',
     path:      '/system/healthCheck',
     authorize: { scope: 'none', level: 'public' },
     response:  routeResponses['GET /system/healthCheck'],
     tags:      ['system'],
-    openapi:   { description: 'Liveness probe.' },
-    handler:   async () => ({}),
+    openapi:   { description: 'Health check: 200 while the worker is connected, 503 otherwise.', errors: [503] },
+    handler:   async ctx => ctx.workerConnected()
+        ? { worker: 'connected' as const }
+        : ctx.renderErrors({ worker: ['not connected'] }, 503),
 });
 
 let openApiDocument: unknown;

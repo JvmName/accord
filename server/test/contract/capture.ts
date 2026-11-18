@@ -212,6 +212,19 @@ export interface CaptureResult {
 export interface Clock { set(ms: number): void; }
 
 
+/** A socket.io connection authenticated as the worker, resolved once connected. */
+async function connectWorkerSocket(origin: string): Promise<{ close(): void }> {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { io } = require('socket.io-client');
+    const socket = io(origin, { query: { workerToken: 'contract-capture-worker' } });
+    await new Promise<void>((resolve, reject) => {
+        socket.on('connect', resolve);
+        socket.on('connect_error', reject);
+    });
+    return socket;
+}
+
+
 export async function runAll(clock: Clock): Promise<CaptureResult> {
     const { seed, IDS, CODES, NOW } = require('./seed.ts');
 
@@ -279,9 +292,15 @@ export async function runAll(clock: Clock): Promise<CaptureResult> {
                    'Version banner. Confirms the {data,status} envelope wraps bare strings too.',
                    'GET', '/');
 
-        await http('http.healthCheck', 'GET /system/healthCheck',
-                   'Liveness probe: an empty object inside the envelope, not a null.',
+        await http('http.healthCheck.noWorker.503', 'GET /system/healthCheck',
+                   'Before any worker connects the server is not healthy: 503, so Docker and uptime monitors see it.',
                    'GET', '/system/healthCheck');
+
+        const worker = await connectWorkerSocket(origin);
+        await http('http.healthCheck', 'GET /system/healthCheck',
+                   'With a worker connected the server is healthy.',
+                   'GET', '/system/healthCheck');
+        worker.close();
 
         // DEV-only routes. What production actually serves is a 404, and that
         // is the contract a deployed client would meet.

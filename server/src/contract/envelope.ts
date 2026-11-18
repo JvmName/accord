@@ -30,6 +30,7 @@ export const statusTextSchema = z.enum([
     'not found',
     'unprocessable entity',
     'server error',
+    'service unavailable',
 ]);
 export type StatusText = z.infer<typeof statusTextSchema>;
 

@@ -9,7 +9,6 @@ services:
     environment:
       NODE_ENV: production
       WEB_ORIGIN: https://${WEB_HOST}
-      HEARTBEAT_URL: ${HEARTBEAT_URL:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
       - /srv/accord/data:/data

@@ -65,7 +65,7 @@ describe('generated OpenAPI paths', () => {
             checked++;
         }
         expect(failures).toEqual([]);
-        expect(checked).toBe(78);
+        expect(checked).toBe(79);
     });
 
     it('overrides the global ApiToken requirement only on the public routes', () => {

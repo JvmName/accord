@@ -38,6 +38,7 @@ export class WebSocketServer implements SocketHost {
     #db: DbOrTx | undefined;
     #workerToken: string | undefined;
     #_ioServer: IoServer | undefined;
+    #workerSockets = new Set<string>();
 
     constructor(httpServer?: HttpServer, corsOrigin?: string[], db?: DbOrTx, workerToken?: string) {
         this.#httpServer  = httpServer;
@@ -105,6 +106,7 @@ export class WebSocketServer implements SocketHost {
         try {
             await socket.init();
             logger.info(`WebSocket initialized as ${type} (${ioSocket.id})`);
+            if (type === 'worker') this.#trackWorker(ioSocket);
             next();
         } catch (err) {
             if (err instanceof SocketAuthError) {
@@ -114,6 +116,16 @@ export class WebSocketServer implements SocketHost {
             }
             return next(err as Error); // socket.io's `next` takes an Error; whatever was thrown is passed on
         }
+    }
+
+    #trackWorker(ioSocket: Socket): void {
+        this.#workerSockets.add(ioSocket.id);
+        ioSocket.on('disconnect', () => this.#workerSockets.delete(ioSocket.id));
+    }
+
+    /** Whether any socket of the worker process is connected. */
+    hasWorker(): boolean {
+        return this.#workerSockets.size > 0;
     }
 
     #isWorkerToken(token: unknown): boolean {

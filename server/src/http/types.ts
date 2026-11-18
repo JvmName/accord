@@ -98,6 +98,8 @@ export interface ContextHelpers {
     renderErrors(errors: ErrorMap, statusCode?: number): Rendered;
     /** `renderNotFoundResponse()`: 404 `{ data: null, status: 'not found' }`. */
     renderNotFound(): Rendered;
+    /** Whether the worker process has a socket connected. */
+    workerConnected(): boolean;
     /** `renderUnauthorizedResponse()`: 401 `{ data: null, status: 'unauthorized' }`. */
     renderUnauthorized(): Rendered;
     /**

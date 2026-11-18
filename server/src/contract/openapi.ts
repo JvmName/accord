@@ -138,6 +138,14 @@ const errorEnvelopes = {
             status: z.literal('unprocessable entity'),
         })),
     },
+    503: {
+        response: 'ServiceUnavailable',
+        description: 'Service Unavailable',
+        schema: tagSchema('ServiceUnavailableEnvelope', z.strictObject({
+            data: contract.validationErrorDataSchema,
+            status: z.literal('service unavailable'),
+        })),
+    },
     500: {
         response: 'ServerError',
         description: 'Server Error',

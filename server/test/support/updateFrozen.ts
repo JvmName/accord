@@ -16,6 +16,7 @@ import path from 'path';
 import { setSystemTime } from 'bun:test';
 
 import * as F from './frozen';
+import { emptyResponse } from './emptyResponse';
 import * as D from './rowDelta';
 import * as H from '../services/support';
 
@@ -99,13 +100,12 @@ const SUITES = {
     async errorRendering() {
         const { ERROR_CASES } = require('../http/errorCases');
         const { startRegistryApp } = require('../http/support/registryApp');
-        const { routeResponses } = require('../../src/contract/responses');
         const { defineRoute } = require('../../src/http/route');
         const { AuthorizationError, ValidationError } = require('../../src/http/errors');
         let thrown;
         const probe = defineRoute({
             method: 'get', path: '/__probe', authorize: { scope: 'none', level: 'public' },
-            response: routeResponses['GET /system/healthCheck'], tags: ['test'],
+            response: emptyResponse, tags: ['test'],
             handler: async () => { throw thrown; },
         });
         const app = await startRegistryApp({ routes: [probe] });

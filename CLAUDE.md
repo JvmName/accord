@@ -96,7 +96,7 @@ RoundPauses (pause/resume intervals with paused_at/resumed_at timestamps)
   - `BreakTransitionWorker`: Checks matches in break state; when break expires, starts the next round and broadcasts `break.ended`
   - `RoundTimerWorker`: Checks open rounds for timer expiry; if elapsed time (minus pauses) ≥ max duration, ends the round and broadcasts `match.update`
   - **Critical**: Route handlers never emit WebSocket events directly — all WebSocket emissions go through the worker process exclusively.
-  - **Errors in a job**: `Worker._performJob` logs a throw from `performJob()` and queues the next tick, so one bad round does not stop the worker. If the worker process itself exits, `bin/www.ts` restarts it (`src/workers/supervisor.ts`: a delay that doubles from 1 s to 30 s). Set `HEARTBEAT_URL` to have the worker request a monitor's URL once a minute while it is connected (`HeartbeatWorker`).
+  - **Errors in a job**: `Worker._performJob` logs a throw from `performJob()` and queues the next tick, so one bad round does not stop the worker. If the worker process itself exits, `bin/www.ts` restarts it (`src/workers/supervisor.ts`: a delay that doubles from 1 s to 30 s).
   - **Races**: the web process and the worker write the same rows. Ending a round, ending a match and starting a match are claimed with a conditional `UPDATE ... WHERE <not yet done>` (`claimRoundEnd`, `claimMatchEnd`, `claimMatchStart`); the caller that loses writes nothing. Partial unique indexes allow one open vote per judge per round and one open pause per round. `RoundTimerWorker` and `TechFallTrackerWorker` call `tryEndRound` and emit only if they ended the round, so a tech fall in the same second as the timer, or a master tap as the timer fires, ends the round once.
 
 - **Break lifecycle**: When a round ends and the match is not over, `finishRound` (`/server/src/services/roundLifecycle.ts`) sets `break_started_at` and `break_duration` on the match. `MatchUpdateWorker` picks this up within 1 second and starts broadcasting `match.update` with `break_remaining` (computed seconds). `BreakTransitionWorker` auto-starts the next round when elapsed >= `break_duration` and emits `break.ended`.
@@ -376,7 +376,7 @@ One VPS runs everything (`/deploy`): Docker Compose with the API image (the web 
 - **GitHub settings**: variables `VPS_HOST` (empty or unset turns deploys off), `VPS_USER` (default `deploy`) and `VPS_KNOWN_HOSTS`; secret `DEPLOY_SSH_KEY`.
 - **CSP for WebAssembly**: the web block of `deploy/Caddyfile` must include `'wasm-unsafe-eval'` in `script-src`, or the browser will block `.wasm` instantiation. The browser error is `CompileError: call to WebAssembly.instantiateStreaming() blocked by CSP`.
 - **CORS**: the API allows `http://localhost:8080` for local dev and reads `WEB_ORIGIN` for the production web client (set from `WEB_HOST` in `deploy/compose.yaml`).
-- **Monitoring**: set `HEARTBEAT_URL` in `/srv/accord/.env` to a dead-man's-switch URL; the worker requests it once a minute while connected. An external uptime monitor should also check the API and web hostnames.
+- **Monitoring**: `GET /system/healthCheck` answers 503 while the worker is not connected; point an external uptime monitor at it and at the web hostname.
 - **Clients**: release builds call `https://rdk.api.jvmname.dev` (`BASE_URL` in `app/shared/build.gradle.kts`). `-Paccord.baseUrl=...` points a build elsewhere.
 
 ## Plans

@@ -1,7 +1,7 @@
 {
   "name": "http.healthCheck",
   "route": "GET /system/healthCheck",
-  "why": "Liveness probe: an empty object inside the envelope, not a null.",
+  "why": "With a worker connected the server is healthy.",
   "request": {
     "method": "GET",
     "path": "/system/healthCheck",
@@ -12,7 +12,9 @@
     "status": 200,
     "content_type": "application/json; charset=utf-8",
     "body": {
-      "data": {},
+      "data": {
+        "worker": "connected"
+      },
       "status": "ok"
     }
   }

@@ -87,8 +87,8 @@ const describeFailure = (name: string, error: z.ZodError) =>
 
 describe('contract schemas vs. goldens', () => {
     it('found the goldens (guards against a silently vacuous suite)', () => {
-        expect(goldenFiles.length).toBe(85);
-        expect(httpGoldens.length).toBe(81);
+        expect(goldenFiles.length).toBe(86);
+        expect(httpGoldens.length).toBe(82);
         expect(wsGoldens.length).toBe(4);
     });
 
